@@ -234,6 +234,16 @@ textarea{min-height:70px;resize:vertical}
 #cfScrim{z-index:30}
 #shScrim{z-index:31}
 #ckScrim{z-index:25}
+.covLine{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 2px 52px;font-size:12px;color:var(--muted);font-weight:600}
+.covLine button{min-height:32px;padding:0 10px;border-radius:9px;background:var(--chip);font-weight:700;font-size:12px;color:var(--text)}
+.covLine button[aria-pressed=true]{background:#d11f26;color:#fff}
+.howseg{display:flex;gap:6px;flex-wrap:wrap}.howseg button{flex:1 1 30%;min-height:44px;border-radius:10px;background:var(--chip);font-weight:700;font-size:13px;padding:0 6px}
+.howseg button[aria-pressed=true]{background:var(--accent);color:#fff}
+.tag.late{background:#d11f26;color:#fff}
+.tag.link{background:var(--chip);color:var(--muted);text-transform:none;letter-spacing:0}
+.shmk{font-size:10px;font-weight:800;color:#fff;background:#d11f26;border-radius:5px;padding:0 4px;margin-top:2px;display:inline-block}
+.covRow{color:#d11f26}
+
 .logBtn{margin-top:12px;min-height:50px}
 .ckPrompt{margin-top:12px;padding:10px 12px;border-radius:12px;background:#f59e0b18;border:1px solid #f59e0b55;font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between}
 .ckPrompt button{flex:0 0 auto;min-height:38px;padding:0 12px;border-radius:10px;background:#f59e0b;color:#fff;font-weight:700}
@@ -249,6 +259,7 @@ textarea{min-height:70px;resize:vertical}
 .payShort div+div{margin-top:4px}
 .duerow.short .bill{border:1px solid rgba(209,31,38,.35)}
 .duerow.short .meta{white-space:normal;overflow:visible}
+.duerow.short .nm{white-space:normal;overflow:visible}
 
 details.more{margin-top:12px}
 details.more>summary{list-style:none;cursor:pointer;background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:14px 16px;font-weight:700;display:flex;justify-content:space-between;align-items:center;min-height:50px}
@@ -519,8 +530,12 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <h3><span id="shTitle">Didn’t set aside for this</span><button type="button" class="iconbtn" id="shClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></h3>
     <div class="field hidden" id="shPickWrap"><label for="shBill">Which bill?</label><select id="shBill"></select><div class="hint" style="margin:4px 2px 0">Only bills with a due date are listed.</div></div>
     <div class="hint" id="shInfo" style="margin:0 2px 10px"></div>
-    <div class="field"><label for="shHave">How much did you set aside for this payment?</label><input id="shHave" inputmode="decimal" placeholder="0.00"></div>
+    <div class="field" id="shHaveWrap"><label for="shHave">How much did you set aside for this payment?</label><input id="shHave" inputmode="decimal" placeholder="0.00"></div>
     <div class="hint" id="shCalc" style="margin:6px 2px 0"></div>
+    <div class="field" id="shHowWrap" style="margin-top:12px"><label>How will you cover it?</label>
+      <div class="howseg" id="shHow"><button type="button" data-how="leftover">Cover from this week’s leftover</button><button type="button" data-how="borrow">Borrow from another bill’s set-aside</button><button type="button" data-how="unpaid">Leave unpaid</button></div>
+      <div class="hidden" id="shBorrowWrap" style="margin-top:8px"><div class="row2"><div class="field"><label for="shLender">Borrow from</label><select id="shLender"></select></div><div class="field"><label for="shLent">Amount</label><input id="shLent" inputmode="decimal"></div></div></div>
+      <div class="hint" id="shHowHint" style="margin:6px 2px 0"></div></div>
     <div class="btns"><button type="button" class="btn primary" id="shSave">Add to Behind</button><button type="button" class="btn danger hidden" id="shDel">Remove shortfall</button></div>
   </div>
 </div>
@@ -811,7 +826,8 @@ function renderAvg(){
     (incP>0?'<div class="row"><span>Take-home income'+(logMode()?'<span class="expl">'+(s.period==='day'||s.period==='week'||s.period==='month'?'this '+s.period+' · ':'from this month · ')+incLabel(aR.s,aR.e)+'</span>':'')+'</span><b class="pos-t" id="avgInc">'+money(incP)+'</b></div>':'')+
     FG.filter(function(g){return gs[g.k]>0;}).map(function(g){ return '<div class="row" style="color:'+fcol(g.k)+'"><span>− '+g.label+' bills</span><b>'+money(gs[g.k])+'</b></div>'; }).join('')+
     '<div class="row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span><b>Total bills</b></span><b class="billtot" id="avgBills">'+money(gs.total)+'</b></div>';
-  if (incP>0){ var pv=incP-gs.total; ph+='<div class="row" style="font-size:20px;padding-top:8px"><span><b>'+(pv>=0?'Income left after bills':'Bills exceed income')+'</b><span class="expl">'+P.per+'</span></span><b id="avgProfit" class="'+plCls(pv)+'" style="font-size:24px">'+plMoney(pv)+'</b></div>'; }
+  var acov=coversIn(aR.s,aR.e); if (acov.length) ph+=coverRowsHTML(acov);
+  if (incP>0){ var pv=incP-gs.total-acov.reduce(function(a,x){return a+x.amt;},0); ph+='<div class="row" style="font-size:20px;padding-top:8px"><span><b>'+(pv>=0?'Income left after bills':'Bills exceed income')+'</b><span class="expl">'+P.per+'</span></span><b id="avgProfit" class="'+plCls(pv)+'" style="font-size:24px">'+plMoney(pv)+'</b></div>'; }
 
   $('avgPL').innerHTML=ph;
 
@@ -844,7 +860,7 @@ function renderAvg(){
     var past1=isOne(b)&&dueNum(b)!=null&&dueNum(b)<todayNum();
     return '<button class="bill'+(b.active===false||isEnded(b)?' inactive':'')+(past1?' pastbill':'')+'" data-id="'+b.id+'">'+
       '<span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
-      '<span class="mid"><div class="nm">'+esc(b.name)+(b.example?'<span class="tag">Example</span>':'')+(b.active===false?'<span class="tag past">Paused</span>':'')+endTag(b)+'</div>'+
+      '<span class="mid"><div class="nm">'+esc(b.name)+(b.example?'<span class="tag">Example</span>':'')+(b.active===false?'<span class="tag past">Paused</span>':'')+endTag(b)+linkTags(b)+'</div>'+
       '<div class="meta">'+meta.join(' · ')+'</div></span>'+
       (isOne(b)?'<span class="amt"><b style="color:var(--f-onetime)">'+money(+b.amount||0)+'</b><small>'+(past1?'past · ':'')+'one-time</small></span></button>'
         :'<span class="amt"><b>'+money(x.v)+'</b><small>'+P.per.replace('per ','/ ')+'</small></span></button>'); }).join('')
@@ -925,7 +941,8 @@ function waterfall(perKey){
     var c=activeBills().filter(function(b){return tierOf(b)===T.k;}).reduce(function(a,b){return a+annualCost(b);},0)/P.per;
     if (c>0){ run-=c; steps.push({t:T,cost:c,after:run}); }
   });
-  return {income:inc, steps:steps, pl:run, P:P};
+  var R=avgRange(perKey), cov=coversIn(R.s,R.e), cs=cov.reduce(function(a,x){return a+x.amt;},0);
+  return {income:inc, steps:steps, bills:inc-run, covers:cov, cov:cs, pl:run-cs, P:P};
 }
 function waterfallHTML(){
   var pk=state.settings.wfPeriod||'week', W=waterfall(pk);
@@ -936,7 +953,7 @@ function waterfallHTML(){
     h+='<div class="row" style="color:'+fcol(x.t.col)+'"><span>− '+x.t.label+'</span><b>−'+money(x.cost)+'</b></div>'+
        '<div class="row subt"><span>= left after '+x.t.label.replace(' bills','').toLowerCase()+'</span><b class="'+(x.after<0?'neg-t':'')+'">'+(x.after<0?'−':'')+money(Math.abs(x.after))+'</b></div>';
   });
-  h+='<div class="row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span>Total bills</span><b class="billtot wfCost">−'+money(W.income-W.pl)+'</b></div>';
+  h+='<div class="row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span>Total bills</span><b class="billtot wfCost">−'+money(W.bills)+'</b></div>'+coverRowsHTML(W.covers);
   h+='<div class="row final"><span>'+(W.pl>=0?'Income left after bills':'Bills exceed income')+'<span class="expl">per '+W.P.word+'</span></span><b class="wfFinal '+plCls(W.pl)+'">'+plMoney(W.pl)+'</b></div>';
   return h;
 }
@@ -981,24 +998,25 @@ function renderCal(){
   $('calHint').classList.toggle('hidden', !act.length || act.some(function(b){return parseISO(b.due);}));
   var dues=dueInRange(M.s,M.e), dueBy={};
   dues.forEach(function(x){ (dueBy[x.n]=dueBy[x.n]||[]).push(x); });
+  var shortDay={}; allShorts().forEach(function(x){ if(!x.done&&!x.e.nodue&&x.n>=M.s&&x.n<=M.e) shortDay[x.n]=(shortDay[x.n]||0)+x.amt; });
   var startDow=s.weekMon?1:0, firstDow=new Date(M.s*864e5).getUTCDay();
   var gs=M.s-((firstDow-startDow+7)%7);
   var dows=[]; for(var i=0;i<7;i++) dows.push(DOW[(startDow+i)%7]);
   var h='<div class="calrow">'+dows.map(function(d){return '<div class="dow">'+d.slice(0,2)+'</div>';}).join('')+'</div>';
-  var mtd={total:0}, wkNo=0, weeks=[], incD=hasIncome()?1:0, mtdInc=0, firstFull=false;
+  var mtdCov=0, shortBy={}, mtd={total:0}, wkNo=0, weeks=[], incD=hasIncome()?1:0, mtdInc=0, firstFull=false;
   for (var ws=gs; ws<=M.e; ws+=7){
     wkNo++; var wk={total:0}, inDays=0, wkInc=0, row='<div class="calrow">';
     for (var d=ws; d<ws+7; d++){
       var o=fromDayNum(d);
       if (d<M.s||d>M.e){ row+='<div class="cell out"><div class="dn">'+o.d+'</div></div>'; continue; }
       inDays++;
-      var sh=dayShares(d), iDay=incD?incomeDay(d):0; wkInc+=iDay; addShares(wk,sh); addShares(mtd,sh);
+      var sh=dayShares(d), cvD=coverSum(d,d), iDay=incD?incomeDay(d)-cvD:0; wkInc+=iDay; mtdCov+=cvD; addShares(wk,sh); addShares(mtd,sh);
       var du=dueBy[d]||[], mk='', names='';
       if (du.length){
         var byG={}; du.forEach(function(x){ var g=groupOf(x.b); byG[g]=(byG[g]||0)+1; });
         names='<div class="dnames">'+du.map(function(x){return '<div style="color:'+fcol(groupOf(x.b))+'" title="'+esc(x.b.name)+'">'+(isOne(x.b)?'1x ':'▲')+abbr(+x.b.amount)+' '+esc(x.b.name)+'</div>';}).join('')+'</div>';
       }
-      row+='<button class="cell'+(d===t?' today':'')+'" data-day="'+d+'" aria-label="'+fmtDay(d,true)+'"><div class="dn">'+o.d+'</div>'+mk+names+
+      row+='<button class="cell'+(d===t?' today':'')+'" data-day="'+d+'" aria-label="'+fmtDay(d,true)+'"><div class="dn">'+o.d+'</div>'+mk+names+(shortDay[d]?'<div class="shmk" title="short — not set aside">short '+abbr(shortDay[d])+'</div>':'')+
         (incD>0?(function(v){ return '<div class="dp '+(v>=0?'gold':'neg-t')+'">'+(v>=0?'+':'−')+abbr(Math.abs(v))+'</div>'; })(iDay-sh.total):'')+'</button>';
     }
     row+='</div>';
@@ -1019,19 +1037,23 @@ function renderCal(){
   }
   $('calGrid').innerHTML=h;
   // month total
+  var calBehind=behindModel(state.settings.dueSpan==='week'?'week':'month').total;
+  mtdInc+=0; // (covered shortfalls already taken out of the daily income)
   var nDays=M.e-M.s+1, dueTot=dues.reduce(function(a,x){return a+(+x.b.amount||0);},0);
   var yr=act.reduce(function(a,b){return a+annualCost(b);},0);
   $('calTotal').innerHTML='<div class="total"><div class="lbl">'+MONTHS_FULL[M.m]+' bills total</div><div class="big billtot" id="calMonthTotal">'+money(mtd.total)+'</div>'+
       '<div class="sub">this month — '+nDays+' days'+(nDays>DAYS_PER_YEAR/12?', so more weekly bills fall in it than in an average month':', so fewer weekly bills fall in it than in an average month')+'</div></div>'+
     FG.filter(function(g){return mtd[g.k]>0;}).map(function(g){ return '<div class="row" style="color:'+fcol(g.k)+'"><span>'+g.label+' bills</span><b>'+money(mtd[g.k])+'</b></div>'; }).join('')+
-    (incD>0 ? '<div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span>Income '+(logMode()?'<span class="expl">'+incLabel(M.s,M.e)+'</span>':'(prorated, '+nDays+' days)')+'</span><b class="pos-t">'+money(mtdInc)+'</b></div>'+
-      '<div class="row" style="font-size:18px"><span><b>'+(mtdInc-mtd.total>=0?'Income left after bills':'Bills exceed income')+'</b><span class="expl">this month</span></span><b id="calMonthPL" class="'+plCls(mtdInc-mtd.total)+'">'+plMoney(mtdInc-mtd.total)+'</b></div>'
+    (incD>0 ? '<div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span>Income '+(logMode()?'<span class="expl">'+incLabel(M.s,M.e)+'</span>':'(prorated, '+nDays+' days)')+'</span><b class="pos-t">'+money(mtdInc+mtdCov)+'</b></div>'+
+      coverRowsHTML(coversIn(M.s,M.e))+
+      '<div class="row" style="font-size:18px"><span><b>'+(mtdInc-mtd.total>=0?'Income left after bills':'Bills exceed income')+'</b><span class="expl">this month</span></span><b id="calMonthPL" class="'+plCls(mtdInc-mtd.total)+'">'+plMoney(mtdInc-mtd.total)+'</b></div>'+
+      (calOffset===0&&calBehind>0.0049?'<div class="row" id="calBehindLine" style="font-size:13px"><span style="color:var(--muted)">Behind <b class="billtot">−'+money(calBehind)+'</b> · left after catching up</span><b class="'+plCls(mtdInc-mtd.total-calBehind)+'">'+plMoney(mtdInc-mtd.total-calBehind)+'</b></div>':'')
       : '')+
     '<div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span>Bills with a due date'+(dues.length?' ('+dues.length+')':'')+'<span class="expl">only bills with a due date this month</span></span><b id="calDueTotal" class="billtot">'+money(dueTot)+'</b></div>'+
     '<div class="row"><span>Average month<span class="expl">average month (yearly total ÷ 12)</span></span><b class="billtot">'+money(yr/12)+'</b></div>'+
     (dues.length?'':'<div class="hint" style="margin:6px 0 0">No due dates in this month'+(act.some(function(b){return parseISO(b.due);})?'.':' — add due dates to see when bills hit.')+'</div>');
   renderWF('wfCal'); renderOutlook();
-  calCache={weeks:weeks, M:M, monthInc:mtdInc, monthPL:mtdInc-mtd.total};
+  calCache={weeks:weeks, M:M, monthInc:mtdInc+mtdCov, monthCov:mtdCov, monthPL:mtdInc-mtd.total, behind:calBehind};
 }
 /* 3-month outlook: this month + next 2, stacked like a column */
 var outlookCache=null;
@@ -1040,7 +1062,7 @@ function renderOutlook(){
   for (var k=0;k<3;k++){
     var mi=T.y*12+T.m+calOffset+k, y=Math.floor(mi/12), m=mi-y*12, s=dayNum(y,m,1), e=dayNum(y,m,dim(y,m)), sh={total:0};
     for (var d=s; d<=e; d++) addShares(sh, dayShares(d));
-    var n=e-s+1, inc=incD?incomeRange(s,e):0, pl=inc-sh.total; cum+=pl; cumInc+=inc; addShares(cumCost, sh);
+    var n=e-s+1, inc=incD?incomeRange(s,e):0, pl=inc-sh.total-coverSum(s,e); cum+=pl; cumInc+=inc; addShares(cumCost, sh);
     rows.push({m:MONTHS_FULL[m]+' '+y, cost:sh.total, inc:inc, pl:pl, cum:cum});
     h+=(k?'<div class="olarrow">↓</div>':'')+'<div class="olbox"><div class="h"><span>'+MON[m]+' '+y+' <small style="color:var(--muted);font-weight:500">'+n+' days</small></span><span class="billtot">'+money(sh.total)+'</span></div>'+
       '<div class="fl">'+famHTML(sh)+'</div>'+
@@ -1061,7 +1083,7 @@ function openRange(s,e){
   $('dayTitle').textContent = nd===1 ? fmtDay(s,true) : fmtShort(s)+' – '+fmtShort(e)+' ('+nd+' days)';
   var act=enabledBills(), h='<div class="card total" style="margin-top:0"><div class="lbl">Bills · prorated '+(nd===1?'today':(nd<=7?'this week':'these '+nd+' days'))+'</div><div class="big billtot">'+money(sh.total)+'</div>'+
     '<div class="sub">Month-to-date through '+fmtShort(e)+': <b>'+money(mtd.total)+'</b></div>'+
-    (hasIncome()?(function(){ var inc=incomeRange(s,e); return '<div class="sub">Income '+money(inc)+(logMode()?' <small>('+incLabel(s,e)+')</small>':'')+' · income left after bills <b class="'+plCls(inc-sh.total)+'">'+plMoney(inc-sh.total)+'</b></div>'; })():'')+'</div>';
+    (hasIncome()?(function(){ var inc=incomeRange(s,e), cv=coverSum(s,e); return '<div class="sub">Income '+money(inc)+(logMode()?' <small>('+incLabel(s,e)+')</small>':'')+(cv?' · covered shortfall −'+money(cv):'')+' · income left after bills <b class="'+plCls(inc-sh.total-cv)+'">'+plMoney(inc-sh.total-cv)+'</b></div>'; })():'')+'</div>';
   FG.forEach(function(g){
     var bs=act.filter(function(b){return groupOf(b)===g.k && billRangeShare(b,s,e)>0;}); if(!bs.length) return;
     h+='<div class="dsec"><h4 style="color:'+fcol(g.k)+'"><span>'+g.label+'</span><span>'+money(sh[g.k]||0)+'</span></h4>'+
@@ -1120,11 +1142,12 @@ function renderPay(){
   $('paySub').innerHTML = (hasCheck?'<b>'+(savTot/check*100).toFixed(1)+'%</b> of your check · ':'')+
     'plus <b>'+money(dirTot)+'</b> for bills paid from the check · all bills ≈ '+money(savTot+dirTot)+' per paycheck';
   if (hasCheck){
-    var left=check-savTot-dirTot, pct=function(v){return Math.max(0,Math.min(100,v/check*100)).toFixed(2)+'%';};
+    var pcov=coversIn(cpP.s,cpP.e), pcs=pcov.reduce(function(a,x){return a+x.amt;},0), left=check-savTot-dirTot-pcs, pct=function(v){return Math.max(0,Math.min(100,v/check*100)).toFixed(2)+'%';};
     $('payBreak').innerHTML='<div class="paygrid"><span>'+ckLbl+'</span><span class="r" id="payCheck">'+money(check)+'</span>'+
       '<span>− Set aside</span><span class="r">'+money(savTot)+' <small style="color:var(--muted)">'+(savTot/check*100).toFixed(1)+'%</small></span>'+
       '<span>= Left after set-aside</span><span class="r" id="leftAfterAside">'+money(check-savTot)+'</span>'+
       '<span>− Bills from this check</span><span class="r">'+money(dirTot)+' <small style="color:var(--muted)">'+(dirTot/check*100).toFixed(1)+'%</small></span>'+
+      pcov.map(function(x){ return '<span class="covRow">− Covered shortfall: '+esc(x.b.name)+'</span><span class="r covRow">−'+money(x.amt)+'</span>'; }).join('')+
       '<span class="tot">= Left over</span><span class="r tot'+(left<0?' neg-text':'')+'" id="leftOver">'+money(left)+'</span></div>'+
       '<div class="stack" aria-hidden="true"><div style="width:'+pct(savTot)+';background:var(--accent)"></div><div style="width:'+pct(dirTot)+';background:#f59e0b"></div><div style="width:'+pct(Math.max(0,left))+';background:var(--ok)"></div></div>'+
       '<div class="hint" style="margin:6px 0 0">■ <span style="color:var(--accent)">set aside</span> ■ <span style="color:#f59e0b">bills</span> ■ <span style="color:var(--ok)">left over</span>'+(left<0?' — <b class="neg-text">bills exceed this check</b>':'')+'</div>';
@@ -1141,7 +1164,7 @@ function renderPay(){
       '<div class="bar"><div style="width:'+(f.frac*100).toFixed(1)+'%;background:'+colorFor(c,cats)+'"></div></div></div>';
     else if (showFund) fund='<div class="fund"><small>Add a due date to estimate how much should be set aside by now.</small></div>';
     return '<div class="prow" data-id="'+b.id+'"><button class="phead" type="button" aria-expanded="false"><span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
-      '<span class="mid"><div class="nm">'+esc(b.name)+(b.example?'<span class="tag">Example</span>':'')+endTag(b)+openShorts(b).map(function(e){return shortTag(b,e.due);}).join('')+'</div>'+
+      '<span class="mid"><div class="nm">'+esc(b.name)+(b.example?'<span class="tag">Example</span>':'')+endTag(b)+openShorts(b).map(function(e){return shortTag(b,e.due);}).join('')+linkTags(b)+'</div>'+
       '<div class="meta">'+(showFund?'Reserve':'Pay')+' <b class="billtot">'+money(x.v)+'</b> per paycheck</div></span><span class="chev">▾</span></button>'+
       '<div class="pdet"><div>'+calc+'</div>'+fund+'<button type="button" class="pedit">Edit bill</button></div></div>'; }
   ones.sort(function(a,b){ return ((a.past?1:0)-(b.past?1:0)) || (a.past? b.n-a.n : a.n-b.n); });
@@ -1271,19 +1294,51 @@ function unimply(P, bill, kind, n){ // un-check ONE auto-done item: track this p
    Shortfall = amount − have. Shown in Behind until ✓ (done) — or cleared automatically once the due date has passed and that payment is checked paid. */
 function shortList(b){ return Array.isArray(b.short)?b.short:[]; }
 function shortAt(b, iso){ return shortList(b).filter(function(e){return e.due===iso;})[0]||null; }
-function shortAmt(b, e){ return Math.max(0, (+b.amount||0)-(+e.have||0)); }
-function shortLive(b, e){ var n=dueNum({due:e.due}); if(n==null||shortAmt(b,e)<=0.0049) return false; return !(n<todayNum() && isPaid(b,n)) && !(e.done && n<todayNum()); }
-function shortOpen(b, e){ return shortLive(b,e) && !e.done; }
+function shortAmt(b, e){ return Math.max(0, e.amt!=null ? +e.amt||0 : (+b.amount||0)-(+e.have||0)); }
+/* cover choice per shortfall (v12): e.how = 'unpaid' (default) | 'leftover' (e.covOn = day it comes out of income left) | 'borrow' (e.lender, e.lenderDue, e.lent).
+   A lender's own entry carries e.amt (explicit amount) and e.lentTo = [{id, due, amt}]. */
+function shortResolved(b,e){ return e.how==='leftover' || (e.how==='borrow' && shortAmt(b,e)-(+e.lent||0)<=0.0049); }
+function shortOpenAmt(b,e){ if(e.done||e.how==='leftover') return 0; var a=shortAmt(b,e); if(e.how==='borrow') a-=(+e.lent||0); return Math.max(0,a); }
+function billById(id){ return state.bills.find(function(x){return x.id===id;})||null; }
+function lenderAdd(L, x, fromB, fromDue){
+  var nd=nextDue(L), iso=nd!=null?isoOf(nd):isoOf(todayNum()), e=shortAt(L,iso);
+  if (!e){ e={due:iso, amt:0, have:0, done:false}; if(nd==null) e.nodue=true; L.short=shortList(L).concat([e]); }
+  if (e.amt==null) e.amt=shortAmt(L,e);
+  e.amt=Math.round((+e.amt+x)*100)/100; e.done=false; e.lentTo=(e.lentTo||[]).concat([{id:fromB.id, due:fromDue, amt:x}]); return iso; }
+function undoChoice(b,e,depth){ depth=depth||0; if(depth>5) return;
+  if (e.how==='borrow'){ var L=billById(e.lender), le=L&&shortAt(L,e.lenderDue);
+    if (le && Array.isArray(le.lentTo)){ var lk=le.lentTo.filter(function(k){return k.id===b.id&&k.due===e.due;})[0];
+      if (lk){ le.lentTo=le.lentTo.filter(function(k){return k!==lk;}); le.amt=Math.round(((+le.amt||0)-lk.amt)*100)/100;
+        if (le.amt<=0.0049 && !le.lentTo.length){ undoChoice(L,le,depth+1); L.short=shortList(L).filter(function(z){return z!==le;}); if(!L.short.length) delete L.short; }
+        if (le.lentTo && !le.lentTo.length) delete le.lentTo; } } }
+  delete e.how; delete e.covOn; delete e.lender; delete e.lenderDue; delete e.lent; }
+function applyChoice(b, e, how, lenderId, lent){
+  undoChoice(b,e);
+  if (how==='leftover'){ e.how='leftover'; e.covOn=isoOf(todayNum()); e.done=false; }
+  else if (how==='borrow'){ var L=billById(lenderId); if(!L||L===b) return false; var x=Math.round(Math.max(0,Math.min(lent,shortAmt(b,e)))*100)/100; if(!(x>0)) return false;
+    e.how='borrow'; e.lender=L.id; e.lent=x; e.lenderDue=lenderAdd(L,x,b,e.due); e.done=false; }
+  return true; }
+function removeShort(b, iso){ var e=shortAt(b,iso); if(!e) return; undoChoice(b,e);
+  // borrowers pointing at this lender entry keep their (resolved) choice; the gap is considered repaid
+  b.short=shortList(b).filter(function(z){return z!==e;}); if(!b.short.length) delete b.short; }
+function coversIn(s,e){ var out=[]; state.bills.forEach(function(b){ shortList(b).forEach(function(x){ if(x.how!=='leftover') return; var n=dueNum({due:x.covOn}); if(n!=null&&n>=s&&n<=e) out.push({b:b,e:x,n:n,amt:shortAmt(b,x)}); }); }); return out; }
+function coverSum(s,e){ return coversIn(s,e).reduce(function(a,x){return a+x.amt;},0); }
+function coverRowsHTML(list, cls){ return list.map(function(x){ return '<div class="row covRow '+(cls||'')+'"><span>Covered shortfall: '+esc(x.b.name)+'</span><b>−'+money(x.amt)+'</b></div>'; }).join(''); }
+function linkTags(b){ var h=''; shortList(b).forEach(function(e){ if(!shortLive(b,e)) return;
+    if (e.how==='borrow'){ var L=billById(e.lender); h+='<span class="tag link">borrowed '+money(+e.lent||0)+' from '+esc(L?L.name:'a bill')+'</span>'; }
+    if (Array.isArray(e.lentTo)) e.lentTo.forEach(function(k){ var B=billById(k.id); h+='<span class="tag link">lent '+money(k.amt)+' to '+esc(B?B.name:'a bill')+'</span>'; }); }); return h; }
+function shortLive(b, e){ var n=dueNum({due:e.due}); if(n==null||shortAmt(b,e)<=0.0049) return false; return !(n<todayNum() && isPaid(b,n) && !e.nodue) && !((e.done||shortResolved(b,e)) && n<todayNum() && !(e.nodue&&!e.done&&!shortResolved(b,e))); }
+function shortOpen(b, e){ return shortLive(b,e) && shortOpenAmt(b,e)>0.0049; }
 function dueInText(n){ var d=n-todayNum(); return d<0?'was due '+fmtShort(n):d===0?'due today':d===1?'due tomorrow':'due in '+d+' days'; }
-function shortTag(b, iso){ var e=shortAt(b,iso); if(!e||!shortOpen(b,e)) return ''; return '<span class="tag short">Short '+money(shortAmt(b,e))+' — '+dueInText(dueNum({due:iso}))+'</span>'; }
+function shortTag(b, iso){ var e=shortAt(b,iso); if(!e||!shortOpen(b,e)) return ''; var n=dueNum({due:iso}); return '<span class="tag short">Short '+money(shortOpenAmt(b,e))+(e.nodue?'':' — '+dueInText(n))+'</span>'+(n<todayNum()&&!e.nodue?'<span class="tag late">late</span>':''); }
 function openShorts(b){ return shortList(b).filter(function(e){return shortOpen(b,e);}); }
-function allShorts(){ var out=[]; enabledBills().forEach(function(b){ shortList(b).forEach(function(e){ if(shortLive(b,e)) out.push({b:b,e:e,n:dueNum({due:e.due}),amt:shortAmt(b,e),done:!!e.done}); }); });
+function allShorts(){ var out=[]; enabledBills().forEach(function(b){ shortList(b).forEach(function(e){ if(shortLive(b,e)){ var oa=shortOpenAmt(b,e); out.push({b:b,e:e,n:dueNum({due:e.due}),amt:oa,full:shortAmt(b,e),done:oa<=0.0049,covered:!!e.done}); } }); });
   return out.sort(function(a,b){return a.n-b.n;}); }
 function setShort(b, iso, have){ var l=shortList(b).filter(function(e){return e.due!==iso;});
   if (have!=null && have < (+b.amount||0)-0.0049) l.push({due:iso, have:Math.max(0,Math.round(have*100)/100), done:false});
   l.sort(function(x,y){return x.due<y.due?-1:1;}); if (l.length>60) l=l.slice(-60); if (l.length) b.short=l; else delete b.short; }
 function pruneShorts(){ var t=todayNum(); state.bills.forEach(function(b){ if(!Array.isArray(b.short)) return;
-  b.short=b.short.filter(function(e){ var n=dueNum({due:e.due}); return n!=null && !(n<t-90 && (e.done||isPaid(b,n))); }); if(!b.short.length) delete b.short; }); }
+  b.short=b.short.filter(function(e){ var n=dueNum({due:e.due}); var cn=e.how==='leftover'?dueNum({due:e.covOn}):null; return n!=null && !(n<t-90 && (e.done||isPaid(b,n)||shortResolved(b,e)) && !(cn!=null&&cn>=t-400)); }); if(!b.short.length) delete b.short; }); }
 function periodName(P){ return P.kind==='month' ? MONTHS_FULL[fromDayNum(P.s).m] : 'week of '+fmtShort(P.s); }
 function renderDue(){
   var s=state.settings, w=windowRange(), t=todayNum();
@@ -1301,7 +1356,7 @@ function renderDue(){
   $('behindBox').classList.toggle('hidden', winOffset!==0); $('behindLbl').textContent='Behind — earlier '+per+'s'; $('behindTot').textContent=money(B.total);
   $('dueAll').innerHTML = winOffset===0 ? 'Total to cover now: <b class="billtot" id="dueAllTot">'+money(unpaid+shareOpen+B.total)+'</b> <span style="color:var(--muted)">(unpaid + set aside + behind)</span>' : '';
   var dInc=hasIncome()?incomeRange(w.s,w.e):0;
-  $('dueIncome').innerHTML = dInc>0 ? 'Income this '+per+': <b class="pos-t" id="dueIncTot">'+money(dInc)+'</b>'+(logMode()?' <small>('+incLabel(w.s,w.e)+')</small>':'')+' · income left after bills <b id="duePL" class="'+plCls(dInc-M.aside)+'">'+plMoney(dInc-M.aside)+'</b>' : '';
+  $('dueIncome').innerHTML = dInc>0 ? 'Income this '+per+': <b class="pos-t" id="dueIncTot">'+money(dInc)+'</b>'+(logMode()?' <small>('+incLabel(w.s,w.e)+')</small>':'')+(coverSum(w.s,w.e)?' · covered shortfall −'+money(coverSum(w.s,w.e)):'')+' · income left after bills <b id="duePL" class="'+plCls(dInc-M.aside-coverSum(w.s,w.e))+'">'+plMoney(dInc-M.aside-coverSum(w.s,w.e))+'</b>' : '';
   $('cashLine').innerHTML = M.cash>0 ? 'Cash actually leaving this '+per+' (full bills dated in it): '+money(M.cash) : '';
   var all=M.direct.concat(M.shares), nd=all.filter(function(x){return x.done;}).length;
   $('dueDiff').innerHTML = all.length ? nd+' of '+all.length+' checked off. Tap ✓ when it’s paid or set aside; tap again to undo. Set-aside checks reset each '+per+'.' : '';
@@ -1314,7 +1369,7 @@ function renderDue(){
       meta=money(+b.amount||0)+' '+freqText(b).toLowerCase()+(x.undated?'':' · due '+fmtShort(nextDue(b)!=null?nextDue(b):dueNum(b)));
       small=(x.undated&&payFromPeriod(b,per))?(P!==w?'that '+per:'this '+per)+' · no date':per+'’s share'; }
     else { tags+=x.done?'<span class="tag paid">Paid</span>':(x.n<t?'<span class="tag past">Past</span>':'');
-      tags+=shortTag(b,isoOf(x.n)); meta='due '+fmtShort(x.n)+' — paid from set-aside'; small='not in total'; }
+      tags+=shortTag(b,isoOf(x.n))+linkTags(b); meta='due '+fmtShort(x.n)+' — paid from set-aside'; small='not in total'; }
     if (P!==w) meta='<b>from '+periodName(P)+'</b> · '+meta;
     var dataN = (kind==='share' ? 'data-share="'+periodKey(P)+'"' : 'data-n="'+x.n+'"')+' data-ps="'+P.s+'" data-pe="'+P.e+'" data-pk="'+P.kind+'"'+(x.implied?' data-implied="1"':'');
     return '<div class="duerow'+(x.done?' paid':'')+(kind==='info'?' info':'')+(P!==w?' behind':'')+'" data-kind="'+kind+'"><button class="chk" data-pay="'+b.id+'" '+dataN+' aria-pressed="'+x.done+'" aria-label="'+(x.done?'Undo: ':(kind==='share'?'Mark set aside: ':'Mark paid: '))+esc(b.name)+'">✓</button>'+
@@ -1322,11 +1377,20 @@ function renderDue(){
       '<span class="mid"><div class="nm">'+esc(b.name)+tags+'</div><div class="meta">'+meta+'</div></span>'+
       '<span class="amt"><b class="'+(x.done||kind==='info'?'':'billtot')+'">'+money(x.amt)+'</b><small>'+small+'</small></span></button></div>'+
       (kind==='info'&&!x.done&&P===w&&x.n>=t-31?'<div class="shortLine"><button type="button" class="shortBtn" data-sb="'+b.id+'" data-sn="'+isoOf(x.n)+'">'+(shortAt(b,isoOf(x.n))&&shortOpen(b,shortAt(b,isoOf(x.n)))?'Edit: didn’t set aside':'Didn’t set aside for this')+'</button></div>':''); }
-  function shortRowHTML(x){ var b=x.b, c=(b.category||'').trim()||'Uncategorized';
-    return '<div class="duerow short'+(x.done?' paid':'')+'" data-kind="short"><button class="chk" data-short="'+b.id+'" data-due="'+x.e.due+'" aria-pressed="'+x.done+'" aria-label="'+(x.done?'Undo: ':'Covered: ')+esc(b.name)+'">✓</button>'+
-      '<button class="bill" data-sid="'+b.id+'" data-sdue="'+x.e.due+'"><span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
-      '<span class="mid"><div class="nm">'+esc(b.name)+(x.done?'<span class="tag paid">Covered</span>':'')+'</div><div class="meta">not set aside, '+dueInText(x.n).replace(/^due /,'due ')+' · '+fmtShort(x.n)+' · had '+money(+x.e.have||0)+' of '+money(+b.amount||0)+' · tap to edit</div></span>'+
-      '<span class="amt"><b class="'+(x.done?'':'billtot')+'">'+money(x.amt)+'</b><small>not set aside</small></span></button></div>'; }
+  function shortRowHTML(x){ var b=x.b, e=x.e, c=(b.category||'').trim()||'Uncategorized', late=x.n<t&&!e.nodue&&!x.done;
+    var lentTo=Array.isArray(e.lentTo)?e.lentTo.map(function(k){ var B=billById(k.id); return B?B.name:'a bill'; }):[];
+    var nm=esc(b.name)+(lentTo.length?' — short '+money(x.full)+' (lent to '+esc(lentTo.join(', '))+')':'');
+    var st = e.done?'<span class="tag paid">Covered</span>' : e.how==='leftover'?'<span class="tag paid">Covered from leftover</span>' : (e.how==='borrow'&&x.done)?'<span class="tag paid">Borrowed</span>' : '';
+    var meta = (lentTo.length?'lent from this bill’s set-aside':'not set aside')+(e.nodue?'':', '+dueInText(x.n)+' · '+fmtShort(x.n))+(lentTo.length||e.amt!=null?'':' · had '+money(+e.have||0)+' of '+money(+b.amount||0))+' · tap to edit';
+    var cov;
+    if (e.done) cov='';
+    else if (e.how==='leftover') cov='<div class="covLine" data-sid="'+b.id+'" data-sdue="'+e.due+'">Covered from '+fmtShort(dueNum({due:e.covOn}))+' week’s leftover (−'+money(x.full)+') <button type="button" data-cov="unpaid">Undo</button></div>';
+    else if (e.how==='borrow'){ var L=billById(e.lender); cov='<div class="covLine" data-sid="'+b.id+'" data-sdue="'+e.due+'">Borrowed '+money(+e.lent||0)+' from '+esc(L?L.name:'a bill')+(x.amt>0.0049?' · '+money(x.amt)+' still short':'')+' <button type="button" data-cov="unpaid">Undo</button><button type="button" data-cov="borrow">Change</button></div>'; }
+    else cov='<div class="covLine" data-sid="'+b.id+'" data-sdue="'+e.due+'">How will you cover it? <button type="button" data-cov="leftover">This week’s leftover</button><button type="button" data-cov="borrow">Borrow from a bill</button><button type="button" data-cov="unpaid" aria-pressed="true">Leave unpaid</button></div>';
+    return '<div class="duerow short'+(x.done?' paid':'')+'" data-kind="short"><button class="chk" data-short="'+b.id+'" data-due="'+e.due+'" aria-pressed="'+x.done+'" aria-label="'+(x.done?'Undo: ':'Covered: ')+esc(b.name)+'">✓</button>'+
+      '<button class="bill" data-sid="'+b.id+'" data-sdue="'+e.due+'"><span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
+      '<span class="mid"><div class="nm">'+nm+st+(late?'<span class="tag late">late</span>':'')+linkTags(b).replace(/<span class="tag link">lent[^<]*<\/span>/g,'')+'</div><div class="meta">'+meta+'</div></span>'+
+      '<span class="amt"><b class="'+(x.done?'':'billtot')+'">'+money(x.done?x.full:x.amt)+'</b><small>'+(lentTo.length?'lent out':'not set aside')+'</small></span></button></div>'+cov; }
   var h='';
   function sec(title, list, kind, note){ if(!list.length) return;
     var open=list.reduce(function(a,x){return a+(kind==='info'||x.done?0:x.amt);},0);
@@ -1476,12 +1540,13 @@ $('expChecks').addEventListener('click',function(){
 /* ---- shortfall sheet ---- */
 var shCtx=null;
 function shortCandidates(){ return activeBills().filter(function(b){ return nextDue(b)!=null; }).sort(function(a,b){ return nextDue(a)-nextDue(b); }); }
-function openShort(id, iso){
+var shHow='unpaid';
+function openShort(id, iso, how){
   var pick=!id; $('shPickWrap').classList.toggle('hidden',!pick);
   if (pick){ var cs=shortCandidates();
     $('shBill').innerHTML=cs.length?cs.map(function(b){ return '<option value="'+b.id+'">'+esc(b.name)+' — '+money(+b.amount||0)+', due '+fmtShort(nextDue(b))+'</option>'; }).join(''):'<option value="">No bills with a due date yet</option>';
     id=cs.length?cs[0].id:null; }
-  shCtx={id:id, iso:iso, pick:pick}; fillShort(); $('shScrim').classList.add('open');
+  shCtx={id:id, iso:iso, pick:pick, how:how}; fillShort(); $('shScrim').classList.add('open');
 }
 function fillShort(){
   var b=shCtx.id&&state.bills.find(function(x){return x.id===shCtx.id;});
@@ -1489,20 +1554,53 @@ function fillShort(){
   var ok=!!(b&&shCtx.iso), e=ok&&shortAt(b,shCtx.iso);
   $('shSave').disabled=!ok; $('shDel').classList.toggle('hidden',!e);
   $('shInfo').innerHTML = ok ? '<b>'+esc(b.name)+'</b> · '+money(+b.amount||0)+' · '+dueInText(dueNum({due:shCtx.iso}))+' ('+fmtDay(dueNum({due:shCtx.iso}))+')' : (b?'Add a due date to this bill first.':'');
-  $('shHave').value = e ? (+e.have||0).toFixed(2) : '0.00'; calcShort();
+  $('shHave').value = e ? (+e.have||0).toFixed(2) : '0.00';
+  $('shHaveWrap').classList.toggle('hidden', !!(e&&e.amt!=null));
+  if (e&&e.amt!=null) $('shInfo').innerHTML+='<br>Short <b class="billtot">'+money(shortAmt(b,e))+'</b>'+(Array.isArray(e.lentTo)?' (lent to '+esc(e.lentTo.map(function(k){var B=billById(k.id);return B?B.name:'a bill';}).join(', '))+')':'');
+  shHow = shCtx.how || (e&&e.how) || 'unpaid';
+  var ls=activeBills().filter(function(x){return !b||x.id!==b.id;}).sort(function(x,y){ var a=nextDue(x),c=nextDue(y); return (a==null)-(c==null) || (a||0)-(c||0) || annualCost(y)-annualCost(x); });
+  $('shLender').innerHTML=ls.map(function(x){ var nd=nextDue(x); return '<option value="'+x.id+'">'+esc(x.name)+' — '+money(+x.amount||0)+(nd!=null?', due '+fmtShort(nd):' (no due date)')+'</option>'; }).join('');
+  if (e&&e.how==='borrow'&&e.lender) $('shLender').value=e.lender;
+  $('shLent').value = e&&e.how==='borrow' ? (+e.lent||0).toFixed(2) : '';
+  calcShort();
 }
+function shortNow(){ var b=shCtx&&shCtx.id&&billById(shCtx.id); if(!b) return 0; var e=shCtx.iso&&shortAt(b,shCtx.iso); if(e&&e.amt!=null) return shortAmt(b,e);
+  var h=parseAmt($('shHave').value); if(!isFinite(h)) h=0; return Math.max(0,(+b.amount||0)-h); }
+function howUI(){ var sh=shortNow();
+  Array.prototype.forEach.call($('shHow').querySelectorAll('button'),function(x){ x.setAttribute('aria-pressed', x.dataset.how===shHow); });
+  $('shBorrowWrap').classList.toggle('hidden', shHow!=='borrow');
+  if (shHow==='borrow' && !parseAmt($('shLent').value)) $('shLent').value=sh.toFixed(2);
+  var L=billById($('shLender').value);
+  $('shHowHint').innerHTML = shHow==='leftover' ? 'Takes '+money(sh)+' out of this week’s income left after bills (shown as “Covered shortfall”). Resolved.'
+    : shHow==='borrow' ? (L?'Moves the gap to <b>'+esc(L.name)+'</b> — it will show as short until you repay it.':'Pick a bill to borrow from.')
+    : 'Stays red in Behind (tagged “late” after its due date) until you ✓ it.';
+  $('shHowWrap').classList.toggle('hidden', !(sh>0.0049));
+  $('shSave').textContent = !(sh>0.0049)?'Save':shHow==='leftover'?'Cover from leftover':shHow==='borrow'?'Borrow it':'Add to Behind'; }
 function calcShort(){ var b=shCtx&&shCtx.id&&state.bills.find(function(x){return x.id===shCtx.id;}); if(!b){ $('shCalc').textContent=''; return; }
   var h=parseAmt($('shHave').value); if(!isFinite(h)) h=0; var sh=Math.max(0,(+b.amount||0)-h);
-  $('shCalc').innerHTML = sh>0.0049 ? 'Short <b class="billtot">'+money(sh)+'</b> — goes into <b>Behind</b> until you ✓ it.' : 'That covers it — nothing short.'; }
+  var e=shCtx.iso&&shortAt(b,shCtx.iso); if(e&&e.amt!=null){ $('shCalc').textContent=''; howUI(); return; }
+  $('shCalc').innerHTML = sh>0.0049 ? 'Short <b class="billtot">'+money(sh)+'</b> — goes into <b>Behind</b> until you ✓ it.' : 'That covers it — nothing short.'; howUI(); }
 function closeShort(){ $('shScrim').classList.remove('open'); shCtx=null; }
 $('shBill').addEventListener('change',function(){ shCtx.id=this.value||null; shCtx.iso=null; fillShort(); });
 $('shHave').addEventListener('input',calcShort);
+$('shHow').addEventListener('click',function(e){ var x=e.target.closest('[data-how]'); if(!x) return; shHow=x.dataset.how; howUI(); });
+$('shLender').addEventListener('change',howUI);
 $('shClose').addEventListener('click',closeShort);
 $('shScrim').addEventListener('click',function(e){ if(e.target===this) closeShort(); });
 $('shSave').addEventListener('click',function(){ var b=state.bills.find(function(x){return x.id===shCtx.id;}); if(!b||!shCtx.iso) return;
-  var h=parseAmt($('shHave').value); if(!isFinite(h)||h<0) h=0; setShort(b,shCtx.iso,h); save(); closeShort(); render(); updateShortBtn();
-  var e=shortAt(b,shCtx?shCtx.iso:null); toast(shortList(b).length&&h<(+b.amount||0)?'Added to Behind: '+b.name+' short '+money(Math.max(0,(+b.amount||0)-h)):'Nothing short — removed'); });
-$('shDel').addEventListener('click',function(){ var b=state.bills.find(function(x){return x.id===shCtx.id;}); if(!b) return; setShort(b,shCtx.iso,null); save(); closeShort(); render(); updateShortBtn(); toast('Shortfall removed'); });
+  var iso=shCtx.iso, e=shortAt(b,iso), h=parseAmt($('shHave').value); if(!isFinite(h)||h<0) h=0;
+  if (!(e&&e.amt!=null)){
+    if (h >= (+b.amount||0)-0.0049){ removeShort(b,iso); save(); closeShort(); render(); updateShortBtn(); toast('Nothing short — removed'); return; }
+    if (!e){ e={due:iso, have:0, done:false}; b.short=shortList(b).concat([e]); b.short.sort(function(x,y){return x.due<y.due?-1:1;}); if(b.short.length>60) b.short=b.short.slice(-60); }
+    e.have=Math.round(h*100)/100; e.done=false; }
+  var how=shHow, msg;
+  if (how==='borrow'){ var L=billById($('shLender').value), x=parseAmt($('shLent').value);
+    if (!L){ toast('Pick a bill to borrow from'); return; } if(!(x>0)){ toast('Enter how much to borrow'); return; }
+    applyChoice(b,e,'borrow',L.id,x); msg='Borrowed '+money(+e.lent)+' from '+L.name+' — '+L.name+' is now short'; }
+  else if (how==='leftover'){ applyChoice(b,e,'leftover'); msg='Covered from this week’s leftover: −'+money(shortAmt(b,e)); }
+  else { if (e.how) undoChoice(b,e); msg='Added to Behind: '+b.name+' short '+money(shortAmt(b,e)); }
+  save(); closeShort(); render(); updateShortBtn(); toast(msg); });
+$('shDel').addEventListener('click',function(){ var b=state.bills.find(function(x){return x.id===shCtx.id;}); if(!b) return; removeShort(b,shCtx.iso); save(); closeShort(); render(); updateShortBtn(); toast('Shortfall removed'); });
 function updateShortBtn(){ var b=editingId&&state.bills.find(function(x){return x.id===editingId;}), nd=b&&nextDue(b);
   $('fShortWrap').classList.toggle('hidden', !(b&&nd!=null&&!isEnded(b)));
   if (b&&nd!=null){ var e=shortAt(b,isoOf(nd)), on=e&&shortOpen(b,e);
@@ -1574,7 +1672,12 @@ $('billList').addEventListener('click',function(e){ var b=e.target.closest('.bil
 $('dueList').addEventListener('click',function(e){
   var c=e.target.closest('.chk');
   if (c && c.dataset.short){ var sb=state.bills.find(function(x){return x.id===c.dataset.short;}), se=sb&&shortAt(sb,c.dataset.due); if(!se) return;
+    if (!se.done && shortResolved(sb,se)){ undoChoice(sb,se); save(); render(); toast('Choice undone — back in Behind: '+sb.name); return; }
     se.done=!se.done; save(); render(); toast(se.done?'Covered ✓ '+sb.name:'Back in Behind: '+sb.name); return; }
+  var cv=e.target.closest('[data-cov]'); if (cv){ var line=cv.closest('[data-sdue]'), cb=billById(line.dataset.sid), ce=cb&&shortAt(cb,line.dataset.sdue); if(!ce) return;
+    if (cv.dataset.cov==='borrow'){ openShort(cb.id, ce.due, 'borrow'); return; }
+    if (cv.dataset.cov==='leftover'){ applyChoice(cb,ce,'leftover'); save(); render(); toast('Covered from this week’s leftover: '+cb.name+' −'+money(shortAmt(cb,ce))); return; }
+    undoChoice(cb,ce); save(); render(); toast('Left unpaid — '+cb.name+' stays in Behind'); return; }
   var sbt=e.target.closest('[data-sb]'); if (sbt){ openShort(sbt.dataset.sb, sbt.dataset.sn); return; }
   var se2=e.target.closest('[data-sdue]'); if (se2){ openShort(se2.dataset.sid, se2.dataset.sdue); return; }
   if (e.target.closest('#missedBtn')){ openShort(null,null); return; }
@@ -1649,7 +1752,7 @@ $('fileIn').addEventListener('change',function(){
       bills=bills.filter(function(b){return b&&b.name!=null&&isFinite(parseFloat(b.amount));}).map(function(b){
         return {id:b.id||uid(), name:String(b.name), amount:parseFloat(b.amount), freq:valid[b.freq]?b.freq:'monthly', n:parseInt(b.n,10)||1,
           unit:['days','weeks','months'].indexOf(b.unit)>=0?b.unit:'months', category:b.category?String(b.category):'', due:parseISO(b.due)?b.due:'',
-          notes:b.notes?String(b.notes):'', active:b.active!==false, example:!!b.example, source:b.source||undefined, spreadUnit:['weeks','months'].indexOf(b.spreadUnit)>=0?b.spreadUnit:'none', spreadN:parseInt(b.spreadN,10)||0, paid:Array.isArray(b.paid)?b.paid.filter(function(x){return !!parseISO(x);}):undefined, dom:(parseInt(b.dom,10)>=1&&parseInt(b.dom,10)<=31)?parseInt(b.dom,10):undefined, ends:parseISO(b.ends)?b.ends:undefined, short:Array.isArray(b.short)?b.short.filter(function(e){return e&&parseISO(e.due);}).map(function(e){return {due:e.due, have:Math.max(0,parseFloat(e.have)||0), done:!!e.done};}):undefined, created:parseISO(b.created)?b.created:undefined, setAside:Array.isArray(b.setAside)?b.setAside.filter(function(k){return /^(w:\d{4}-\d{2}-\d{2}|m:\d{4}-\d{2})$/.test(k);}):undefined};
+          notes:b.notes?String(b.notes):'', active:b.active!==false, example:!!b.example, source:b.source||undefined, spreadUnit:['weeks','months'].indexOf(b.spreadUnit)>=0?b.spreadUnit:'none', spreadN:parseInt(b.spreadN,10)||0, paid:Array.isArray(b.paid)?b.paid.filter(function(x){return !!parseISO(x);}):undefined, dom:(parseInt(b.dom,10)>=1&&parseInt(b.dom,10)<=31)?parseInt(b.dom,10):undefined, ends:parseISO(b.ends)?b.ends:undefined, short:Array.isArray(b.short)?b.short.filter(function(e){return e&&parseISO(e.due);}).map(function(e){ var o={due:e.due, have:Math.max(0,parseFloat(e.have)||0), done:!!e.done}; if(isFinite(parseFloat(e.amt))) o.amt=Math.max(0,parseFloat(e.amt)); if(e.nodue) o.nodue=true; if(e.how==='leftover'&&parseISO(e.covOn)){ o.how='leftover'; o.covOn=e.covOn; } if(e.how==='borrow'&&e.lender&&parseISO(e.lenderDue)){ o.how='borrow'; o.lender=String(e.lender); o.lenderDue=e.lenderDue; o.lent=Math.max(0,parseFloat(e.lent)||0); } if(Array.isArray(e.lentTo)){ var lt=e.lentTo.filter(function(k){return k&&k.id&&parseISO(k.due);}).map(function(k){return {id:String(k.id),due:k.due,amt:Math.max(0,parseFloat(k.amt)||0)};}); if(lt.length) o.lentTo=lt; } return o;}):undefined, created:parseISO(b.created)?b.created:undefined, setAside:Array.isArray(b.setAside)?b.setAside.filter(function(k){return /^(w:\d{4}-\d{2}-\d{2}|m:\d{4}-\d{2})$/.test(k);}):undefined};
       });
       appConfirm('Import '+bills.length+' bills?','This REPLACES your current '+state.bills.length+' bills.','Import',function(){
       state.bills=bills; state.settings.examplesCleared=true;
@@ -1667,7 +1770,7 @@ $('fileIn').addEventListener('change',function(){
 document.addEventListener('visibilitychange',function(){ if(!document.hidden) render(); });
 
 // test hook
-window.BillsApp={incomeDay:incomeDay, incomeRange:incomeRange, periodMainIncome:periodMainIncome, payPeriodAt:payPeriodAt, checkTotals:checkTotals, logMode:logMode, allShorts:allShorts, setShort:setShort, lastDay:lastDay, isEnded:isEnded, behindModel:behindModel, periodAt:periodAt, endFromForm:endFromForm, dueModel:dueModel, windowRange:windowRange, periodKey:periodKey, markPaid:markPaid, unmarkPaid:unmarkPaid, isPaid:isPaid, oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
+window.BillsApp={coversIn:coversIn, applyChoice:applyChoice, shortOpenAmt:shortOpenAmt, incomeDay:incomeDay, incomeRange:incomeRange, periodMainIncome:periodMainIncome, payPeriodAt:payPeriodAt, checkTotals:checkTotals, logMode:logMode, allShorts:allShorts, setShort:setShort, lastDay:lastDay, isEnded:isEnded, behindModel:behindModel, periodAt:periodAt, endFromForm:endFromForm, dueModel:dueModel, windowRange:windowRange, periodKey:periodKey, markPaid:markPaid, unmarkPaid:unmarkPaid, isPaid:isPaid, oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
 render();
 })();
 </script>

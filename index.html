@@ -251,7 +251,7 @@ textarea{min-height:70px;resize:vertical}
   <section id="payView" class="hidden">
     <div class="chips" id="payChips"></div>
     <div class="card total">
-      <div class="lbl" id="payLbl">To savings each payday</div>
+      <div class="lbl" id="payLbl">Set aside each payday</div>
       <div class="big" id="payBig">$0.00</div>
       <div class="sub" id="paySub"></div>
       <div class="checkrow"><label for="checkAmt">Take-home pay per check</label><input id="checkAmt" inputmode="decimal" placeholder="optional, e.g. 1,250.00"></div>
@@ -262,14 +262,14 @@ textarea{min-height:70px;resize:vertical}
     </div>
     <div class="card wf" id="wfPay"></div>
     <button class="btn addBillBtn" style="margin-top:14px;min-height:46px">＋ Add bill (recurring or one-time)</button>
-    <div class="sechead"><h2>Into savings</h2><span id="savTot" class="billtot"></span></div>
-    <div class="hint" style="margin:4px 2px 0">Bills due less often than you're paid. Put each one's per-check share into savings so the money is there when it comes due.</div>
+    <div class="sechead"><h2>Set aside for future bills</h2><span id="savTot" class="billtot"></span></div>
+    <div class="hint" style="margin:4px 2px 0">Bills due less often than you're paid. Put each one's per-check share aside so the money is there when it comes due.</div>
     <div id="savList"></div>
     <div class="sechead"><h2>Paid from this check</h2><span id="dirTot" class="billtot"></span></div>
     <div class="hint" style="margin:4px 2px 0">Bills due every paycheck or more often (per-check average shown).</div>
     <div id="dirList"></div>
     <div id="oneSec"><div class="sechead"><h2>Upcoming one-time</h2><span id="oneTot"></span></div>
-    <div class="hint" style="margin:4px 2px 0">One-time bills with no savings spread hit in full on their date.</div>
+    <div class="hint" style="margin:4px 2px 0">One-time bills with no set-aside spread hit in full on their date.</div>
     <div id="oneList"></div></div>
   </section>
 
@@ -352,7 +352,7 @@ textarea{min-height:70px;resize:vertical}
         <select id="fUnit"><option value="days">days</option><option value="weeks">weeks</option><option value="months" selected>months</option></select></div>
     </div>
     <div class="row2 hidden" id="spreadRow">
-      <div class="field"><label for="fSpreadUnit">Save up for it?</label>
+      <div class="field"><label for="fSpreadUnit">Set aside ahead for it?</label>
         <select id="fSpreadUnit"><option value="none">No — hits on its date</option><option value="weeks">Spread over N weeks</option><option value="months">Spread over N months</option></select></div>
       <div class="field"><label for="fSpreadN">N</label><input id="fSpreadN" inputmode="numeric" value="4"></div>
     </div>
@@ -453,7 +453,7 @@ function annualCost(b){ return (+b.amount||0) * timesPerYear(b); }
 function prorate(b, periodKey){ return annualCost(b) / periodByKey(periodKey).perYear; }
 function periodByKey(k){ for (var i=0;i<PERIODS.length;i++) if (PERIODS[i].k===k) return PERIODS[i]; return PERIODS[2]; }
 function freqText(b){
-  if (b.freq==='onetime'){ var sn=+b.spreadN||0; return 'One-time'+(sn&&b.spreadUnit&&b.spreadUnit!=='none'?' · saving over '+sn+' '+(sn===1?b.spreadUnit.replace(/s$/,''):b.spreadUnit):''); }
+  if (b.freq==='onetime'){ var sn=+b.spreadN||0; return 'One-time'+(sn&&b.spreadUnit&&b.spreadUnit!=='none'?' · set aside over '+sn+' '+(sn===1?b.spreadUnit.replace(/s$/,''):b.spreadUnit):''); }
   if (b.freq==='custom'){ var n=+b.n||1; var u=b.unit||'months'; return 'Every '+(n===1?u.replace(/s$/,''):n+' '+u); }
   return FREQ_LABEL[b.freq]||b.freq;
 }
@@ -871,7 +871,7 @@ function renderPay(){
     if (timesPerYear(b) >= PF.per - 1e-6){ dir.push(x); dirTot+=share; } else { x.f=sinking(b,PF.per); sav.push(x); savTot+=share; }
   });
   sav.sort(function(a,b){return b.v-a.v;}); dir.sort(function(a,b){return b.v-a.v;});
-  $('payLbl').textContent='To savings each payday · '+PF.label.toLowerCase();
+  $('payLbl').textContent='Set aside each payday · '+PF.label.toLowerCase();
   $('payBig').textContent=money(savTot);
   var check=parseAmt(s.checkAmt), hasCheck=isFinite(check)&&check>0;
   $('paySub').innerHTML = (hasCheck?'<b>'+(savTot/check*100).toFixed(1)+'%</b> of your check · ':'')+
@@ -879,16 +879,16 @@ function renderPay(){
   if (hasCheck){
     var left=check-savTot-dirTot, pct=function(v){return Math.max(0,Math.min(100,v/check*100)).toFixed(2)+'%';};
     $('payBreak').innerHTML='<div class="paygrid"><span>Check</span><span class="r">'+money(check)+'</span>'+
-      '<span>− To savings</span><span class="r">'+money(savTot)+' <small style="color:var(--muted)">'+(savTot/check*100).toFixed(1)+'%</small></span>'+
+      '<span>− Set aside</span><span class="r">'+money(savTot)+' <small style="color:var(--muted)">'+(savTot/check*100).toFixed(1)+'%</small></span>'+
       '<span>− Bills from this check</span><span class="r">'+money(dirTot)+' <small style="color:var(--muted)">'+(dirTot/check*100).toFixed(1)+'%</small></span>'+
       '<span class="tot">= Left over</span><span class="r tot'+(left<0?' neg-text':'')+'" id="leftOver">'+money(left)+'</span></div>'+
       '<div class="stack" aria-hidden="true"><div style="width:'+pct(savTot)+';background:var(--accent)"></div><div style="width:'+pct(dirTot)+';background:#f59e0b"></div><div style="width:'+pct(Math.max(0,left))+';background:var(--ok)"></div></div>'+
-      '<div class="hint" style="margin:6px 0 0">■ <span style="color:var(--accent)">savings</span> ■ <span style="color:#f59e0b">bills</span> ■ <span style="color:var(--ok)">left over</span>'+(left<0?' — <b class="neg-text">bills exceed this check</b>':'')+'</div>';
+      '<div class="hint" style="margin:6px 0 0">■ <span style="color:var(--accent)">set aside</span> ■ <span style="color:#f59e0b">bills</span> ■ <span style="color:var(--ok)">left over</span>'+(left<0?' — <b class="neg-text">bills exceed this check</b>':'')+'</div>';
   } else $('payBreak').innerHTML='';
   $('savTot').textContent=money(savTot); $('dirTot').textContent=money(dirTot);
   function row(x, showFund){ var b=x.b, c=(b.category||'').trim()||'Uncategorized', f=showFund&&x.f;
     var fund='';
-    if (f) fund='<div class="fund"><small>'+(x.one?'Savings goal':'Sinking fund')+' ≈ <b>'+money(f.bal)+'</b> of '+money(f.amt)+' · due '+fmtShort(f.next)+' · '+(f.checksLeft?f.checksLeft+' paycheck'+(f.checksLeft===1?'':'s')+' left':'<b>due before next payday</b>')+'</small>'+
+    if (f) fund='<div class="fund"><small>'+(x.one?'Set-aside goal':'Sinking fund')+' ≈ <b>'+money(f.bal)+'</b> of '+money(f.amt)+' · due '+fmtShort(f.next)+' · '+(f.checksLeft?f.checksLeft+' paycheck'+(f.checksLeft===1?'':'s')+' left':'<b>due before next payday</b>')+'</small>'+
       '<div class="bar"><div style="width:'+(f.frac*100).toFixed(1)+'%;background:'+colorFor(c,cats)+'"></div></div></div>';
     else if (showFund) fund='<div class="fund"><small>Add a next due date to track the sinking-fund balance.</small></div>';
     return '<button class="bill col" data-id="'+b.id+'"><span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
@@ -900,11 +900,11 @@ function renderPay(){
   $('oneSec').classList.toggle('hidden', !ones.length); $('oneTot').textContent=upTot?money(upTot):'';
   $('oneList').innerHTML=ones.map(function(o){ var b=o.b;
     var when = o.past ? 'was due '+fmtShort(o.n) : (o.n===t0 ? '<b>due today</b>' : 'due '+fmtShort(o.n)+' · '+(o.away? o.away+' paycheck'+(o.away===1?'':'s')+' away' : '<b>before next payday</b>'));
-    if (o.startsOn) when+=' · saving starts '+fmtShort(o.startsOn);
+    if (o.startsOn) when+=' · set aside starts '+fmtShort(o.startsOn);
     return '<button class="bill'+(o.past?' pastbill':'')+'" data-id="'+b.id+'"><span class="dot" style="background:var(--f-onetime)"></span>'+
       '<span class="mid"><div class="nm">'+esc(b.name)+(o.past?'<span class="tag past">Past</span>':'')+'</div><div class="meta">'+when+'</div></span>'+
       '<span class="amt"><b style="color:var(--f-onetime)">'+money(+b.amount||0)+'</b><small>one-time</small></span></button>'; }).join('');
-  $('savList').innerHTML = sav.length ? sav.map(function(x){return row(x,true);}).join('') : '<div class="empty">No bills need saving ahead at this pay frequency.</div>';
+  $('savList').innerHTML = sav.length ? sav.map(function(x){return row(x,true);}).join('') : '<div class="empty">No bills need setting aside at this pay frequency.</div>';
   var incs=state.settings.incomes||[];
   $('incList').innerHTML=incs.map(function(i){ return '<button type="button" class="incrow" data-inc="'+i.id+'"><span><b>'+esc(i.name||'Income')+'</b> <small style="color:var(--muted)">'+(PAY[i.freq]?PAY[i.freq].label:FREQ_LABEL[i.freq]||i.freq)+'</small></span><b class="pos-t">'+money(+i.amount||0)+'</b></button>'; }).join('');
   $('incOtherTot').textContent=incs.length?'≈ '+money(incs.reduce(function(a,i){return a+(+i.amount||0)*timesPerYear({freq:i.freq});},0)/PF.per)+' per check':'';
@@ -954,7 +954,7 @@ function renderDue(){
   $('dueTot').textContent=money(dueTotal); $('asideTot').textContent=money(aside);
   var d=dueTotal-aside;
   $('dueDiff').innerHTML = Math.abs(d)<0.005 ? 'Cash-flow matches the smoothed amount.' :
-    (d>0 ? 'This '+w.kind+' is <b class="pos">'+money(d)+' heavier</b> than the smoothed average — dip into savings.' :
+    (d>0 ? 'This '+w.kind+' is <b class="pos">'+money(d)+' heavier</b> than the smoothed average — dip into your set-aside money.' :
            'This '+w.kind+' is <b class="neg">'+money(-d)+' lighter</b> than average — set the difference aside.') +
     (noDate?'<br>'+noDate+' active bill'+(noDate===1?' has':'s have')+' no due date and '+(noDate===1?'is':'are')+' excluded from “Actually due” (still counted in set-aside).':'');
   var cats=categories(), h='', lastDay=null;
@@ -1000,7 +1000,7 @@ function updateFreqUI(){
   $('fSpreadN').disabled=$('fSpreadUnit').value==='none';
   if (one){ var a1=isFinite(fb.amount)?fb.amount:0, su=$('fSpreadUnit').value, sn=parseInt($('fSpreadN').value,10)||0;
     $('freqHint').textContent = 'One-time: not counted in recurring rates; shows on its date in Calendar & Actual due.'+
-      (su!=='none'&&sn>0&&a1>0 ? ' Saving ≈ '+money(su==='weeks'?a1/sn:a1/(sn*WEEKS_PER_YEAR/12))+'/wk over '+sn+' '+su+'.' : '');
+      (su!=='none'&&sn>0&&a1>0 ? ' Set aside ≈ '+money(su==='weeks'?a1/sn:a1/(sn*WEEKS_PER_YEAR/12))+'/wk over '+sn+' '+su+'.' : '');
     return; }
   var a=isFinite(fb.amount)?fb.amount:0, yr=a*timesPerYear(fb);
   $('freqHint').textContent = a>0 ? '≈ '+money(yr/WEEKS_PER_YEAR)+'/wk · '+money(yr/12)+'/mo · '+money(yr)+'/yr ('+(Math.round(timesPerYear(fb)*1000)/1000)+'× per year)' : '';

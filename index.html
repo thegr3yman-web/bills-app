@@ -76,6 +76,15 @@ textarea{min-height:70px;resize:vertical}
 .bill.inactive{opacity:.5}
 .tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;background:#f59e0b22;color:#d97706;margin-left:6px;vertical-align:1px;text-transform:uppercase;letter-spacing:.03em}
 .tag.past{background:var(--chip);color:var(--muted)}
+.tag.ends{background:var(--chip);color:var(--muted);text-transform:none;letter-spacing:0}
+.tag.soon{background:#16a34a22;color:var(--ok);text-transform:none;letter-spacing:0}
+.behindSec{margin-top:14px;padding:12px;border-radius:14px;background:rgba(209,31,38,.06);border:1px solid rgba(209,31,38,.25)}
+.behindSec .dsec2{margin-top:0}
+.bbtns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.bbtns button{flex:1 1 140px;min-height:44px;border-radius:12px;font-weight:700;background:var(--chip);padding:0 10px}
+.bbtns button.ok{background:var(--ok);color:#fff}
+.pastBar{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--chip);font-size:13px}
+.cmp .wide{grid-column:1/-1}
+
 .empty{text-align:center;color:var(--muted);padding:28px 10px}
 .banner{display:flex;align-items:center;gap:10px;justify-content:space-between;background:#f59e0b18;border:1px solid #f59e0b55;border-radius:14px;padding:10px 12px;margin-top:12px;font-size:14px}
 .banner button{background:#f59e0b;color:#1a1200;font-weight:700;border-radius:10px;min-height:40px;padding:0 12px;white-space:nowrap}
@@ -368,7 +377,9 @@ details.more[open]>summary::after{transform:rotate(180deg)}
         <div class="cmp">
           <div><div class="lbl" id="dueLbl">Unpaid bills this week</div><div class="v billtot" id="dueTot">$0.00</div></div>
           <div><div class="lbl" id="dueShareLbl">Money to set aside this week</div><div class="v" id="dueShareTot">$0.00</div></div>
+          <div class="wide" id="behindBox"><div class="lbl" id="behindLbl">Behind — earlier weeks</div><div class="v billtot" id="behindTot">$0.00</div></div>
         </div>
+        <div class="sub" id="dueAll"></div>
         <div class="sub"><span id="asideLbl">set aside per week</span> <b id="asideTot">$0.00</b> <span style="color:var(--muted)">(smooth average — doesn’t change as you check bills off)</span></div>
         <div class="sub" id="cashLine" style="font-size:13px;color:var(--muted)"></div>
       </div>
@@ -419,6 +430,12 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <div class="field"><label for="fCat">Category (optional)</label><input id="fCat" list="catList" placeholder="e.g. Housing" maxlength="40"><datalist id="catList"></datalist></div>
     <div class="field"><label for="fDue" id="fDueLbl">Next due date (optional)</label><div class="datewrap"><input id="fDue" type="date"><button type="button" id="fDueClear" aria-label="Clear due date">Clear</button></div>
       <div class="hint" style="margin:6px 2px 0">Add a due date so it shows on the calendar and in Bills due.</div></div>
+    <div class="field" id="endsRow"><label for="fEnds">Ends</label>
+      <select id="fEnds"><option value="never">Never</option><option value="date">On a date</option><option value="count">After N more payments</option></select>
+      <div class="datewrap hidden" id="fEndDateWrap" style="margin-top:8px"><input id="fEndDate" type="date" aria-label="End date"></div>
+      <div class="hidden" id="fEndNWrap" style="margin-top:8px"><input id="fEndN" inputmode="numeric" placeholder="Payments left, e.g. 6" aria-label="Payments left"></div>
+      <div class="hint" id="endHint" style="margin:6px 2px 0"></div>
+      <div class="datewrap hidden" id="reenWrap" style="margin-top:8px"><button type="button" id="fReenable" style="flex:1">Re-enable this bill (never ends)</button></div></div>
     <div class="field"><label for="fNotes">Notes (optional)</label><textarea id="fNotes" maxlength="500"></textarea></div>
     <div class="toggle"><span>Active</span><label class="switch"><input type="checkbox" id="fActive" checked aria-label="Active"><span></span></label></div>
     <div class="btns">
@@ -571,7 +588,7 @@ function oneTimeShare(b, dn){
   return (dn>st && dn<=an) ? amt/(an-st) : 0;
 }
 function billRangeShare(b, s, e){
-  if (!isOne(b)) return annualCost(b)/DAYS_PER_YEAR*(e-s+1);
+  if (!isOne(b)) return annualCost(b)/DAYS_PER_YEAR*liveDays(b,s,e);
   var v=0; for (var d=s; d<=e; d++) v+=oneTimeShare(b,d); return v;
 }
 function domOf(b,a){ var d=parseInt(b.dom,10); return (d>=1&&d<=31)?d:a.d; }
@@ -592,7 +609,7 @@ function unmarkPaid(b,n){
   if (Array.isArray(b.paid)) b.paid=b.paid.filter(function(x){return x!==isoOf(n);});
   var dn=dueNum(b); if (!isOne(b) && dn!=null && n<dn) b.due=isoOf(n);
 }
-function occurrences(b, s, e){
+function occRaw(b, s, e){
   var a = parseISO(b.due); if (!a) return [];
   if (b.freq==='onetime'){ var on=dayNum(a.y,a.m,a.d); return (on>=s&&on<=e)?[on]:[]; }
   var out=[], an=dayNum(a.y,a.m,a.d), k, n;
@@ -622,6 +639,20 @@ function occurrences(b, s, e){
   }
   return out;
 }
+/* ---- bill expiry: b.ends = 'YYYY-MM-DD' (optional; '' / missing = never). Nothing counts after the last payment on/before it. ---- */
+function endNum(b){ if(isOne(b)) return null; var a=parseISO(b.ends); return a?dayNum(a.y,a.m,a.d):null; }
+function occurrences(b, s, e){ var en=endNum(b); if (en!=null && e>en) e=en; return s>e?[]:occRaw(b,s,e); }
+var _ldMemo={};
+function lastDay(b){ var en=endNum(b); if(en==null) return null; if(!parseISO(b.due)) return en;
+  var k=[b.ends,b.due,b.freq,b.n,b.unit,b.dom].join('|'); if(k in _ldMemo) return _ldMemo[k];
+  var o=occRaw(b,en-1500,en); return (_ldMemo[k]=o.length?o[o.length-1]:en); }
+function liveOn(b,d){ var L=lastDay(b); return L==null||d<=L; }
+function isEnded(b){ var L=lastDay(b); return L!=null && L<todayNum(); }
+function liveDays(b,s,e){ var L=lastDay(b); if(L!=null&&e>L) e=L; return Math.max(0,e-s+1); }
+function endTag(b){ var L=lastDay(b); if(L==null) return ''; var t=todayNum(), o=fromDayNum(L);
+  if (L<t) return '<span class="tag past">Ended '+MON[o.m]+' '+o.y+'</span>';
+  if (L-t<=31) return '<span class="tag soon">Paid off soon · last '+fmtShort(L)+'</span>';
+  return '<span class="tag ends">ends '+MON[o.m]+' '+o.y+'</span>'; }
 /* next due on/after today (null if no anchor) */
 function nextDue(b){
   if (!parseISO(b.due)) return null;
@@ -667,13 +698,17 @@ function seedExamples(){
 }
 if (FIRST_VISIT) seedExamples();
 state.settings.mode='pay'; // Payday is the start screen on launch
+/* one-time migration (v9): everything before the current week counts as done, so unchecked history isn't shown as Behind */
+if (!state.settings.behindMigrated){ (function(){ var t=todayNum(), dw=new Date(t*864e5).getUTCDay();
+  state.settings.behindFrom=isoOf(t-((dw-(state.settings.weekMon?1:0)+7)%7)); state.settings.behindMigrated=true; save(); })(); }
 
 
 /* ---------- DOM helpers ---------- */
 function $(id){ return document.getElementById(id); }
 var toastT; function toast(msg){ var t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){t.classList.remove('show');},2200); }
-function visibleBills(){ return state.bills.filter(function(b){ return state.settings.showInactive || b.active!==false; }); }
-function activeBills(){ return state.bills.filter(function(b){ return b.active!==false; }); }
+function visibleBills(){ return state.bills.filter(function(b){ return state.settings.showInactive || (b.active!==false && !isEnded(b)); }); }
+function activeBills(){ return state.bills.filter(function(b){ return b.active!==false && !isEnded(b); }); } // live today
+function enabledBills(){ return state.bills.filter(function(b){ return b.active!==false; }); } // incl. ended (for dated views)
 function categories(){
   var seen={},list=[]; state.bills.forEach(function(b){ var c=(b.category||'').trim()||'Uncategorized'; if(!seen[c]){seen[c]=1;list.push(c);} }); return list;
 }
@@ -736,7 +771,7 @@ function renderAvg(){
   // list
   var list=visibleBills().map(function(b){ return {b:b, v:prorate(b,s.period), nd:nextDue(b)}; });
   var cmp={
-    amount:function(x,y){ return (y.b.active!==false)-(x.b.active!==false) || y.v-x.v; },
+    amount:function(x,y){ return (y.b.active!==false&&!isEnded(y.b))-(x.b.active!==false&&!isEnded(x.b)) || y.v-x.v; },
     name:function(x,y){ return x.b.name.localeCompare(y.b.name,undefined,{sensitivity:'base'}); },
     due:function(x,y){ return (x.nd==null?1e9:x.nd)-(y.nd==null?1e9:y.nd) || y.v-x.v; },
     category:function(x,y){ return ((x.b.category||'~')+'').localeCompare((y.b.category||'~')+'') || y.v-x.v; }
@@ -749,9 +784,9 @@ function renderAvg(){
     if (isOne(b)) { var dn1=dueNum(b); if(dn1!=null) meta.push((dn1<todayNum()?'was ':'on ')+fmtShort(dn1)); }
     else if (x.nd!=null) meta.push('next '+fmtShort(x.nd));
     var past1=isOne(b)&&dueNum(b)!=null&&dueNum(b)<todayNum();
-    return '<button class="bill'+(b.active===false?' inactive':'')+(past1?' pastbill':'')+'" data-id="'+b.id+'">'+
+    return '<button class="bill'+(b.active===false||isEnded(b)?' inactive':'')+(past1?' pastbill':'')+'" data-id="'+b.id+'">'+
       '<span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
-      '<span class="mid"><div class="nm">'+esc(b.name)+(b.example?'<span class="tag">Example</span>':'')+(b.active===false?'<span class="tag past">Paused</span>':'')+'</div>'+
+      '<span class="mid"><div class="nm">'+esc(b.name)+(b.example?'<span class="tag">Example</span>':'')+(b.active===false?'<span class="tag past">Paused</span>':'')+endTag(b)+'</div>'+
       '<div class="meta">'+meta.join(' · ')+'</div></span>'+
       (isOne(b)?'<span class="amt"><b style="color:var(--f-onetime)">'+money(+b.amount||0)+'</b><small>'+(past1?'past · ':'')+'one-time</small></span></button>'
         :'<span class="amt"><b>'+money(x.v)+'</b><small>'+P.per.replace('per ','/ ')+'</small></span></button>'); }).join('')
@@ -810,7 +845,7 @@ function groupOf(b){ return b.freq||'monthly'; }
 /* prorated share of each frequency group for one calendar day = yearly cost / 365.25 */
 function dayShares(dn){
   var r={total:0};
-  activeBills().forEach(function(b){ var v=isOne(b)?oneTimeShare(b,dn):annualCost(b)/DAYS_PER_YEAR, g=groupOf(b); if(!v) return; r[g]=(r[g]||0)+v; r.total+=v; });
+  enabledBills().forEach(function(b){ if(!isOne(b)&&!liveOn(b,dn)) return; var v=isOne(b)?oneTimeShare(b,dn):annualCost(b)/DAYS_PER_YEAR, g=groupOf(b); if(!v) return; r[g]=(r[g]||0)+v; r.total+=v; });
   return r;
 }
 function addShares(acc, d){ Object.keys(d).forEach(function(k){ acc[k]=(acc[k]||0)+d[k]; }); return acc; }
@@ -822,7 +857,7 @@ function famHTML(sh, cents){ // colored per-frequency amounts
 var calOffset=0, calCache=null;
 function calMonth(){ var T=fromDayNum(todayNum()), mi=T.y*12+T.m+calOffset, y=Math.floor(mi/12), m=mi-y*12; return {y:y,m:m,s:dayNum(y,m,1),e:dayNum(y,m,dim(y,m))}; }
 function dueInRange(s,e){
-  var out=[]; activeBills().forEach(function(b){ occurrences(b,s,e).forEach(function(n){ out.push({b:b,n:n}); }); });
+  var out=[]; enabledBills().forEach(function(b){ occurrences(b,s,e).forEach(function(n){ out.push({b:b,n:n}); }); });
   return out.sort(function(a,b){return a.n-b.n || b.b.amount-a.b.amount;});
 }
 function renderCal(){
@@ -917,7 +952,7 @@ function openRange(s,e){
   var mtd={total:0}; for(d=M.s; d<=e; d++) addShares(mtd, dayShares(d));
   var nd=e-s+1;
   $('dayTitle').textContent = nd===1 ? fmtDay(s,true) : fmtShort(s)+' – '+fmtShort(e)+' ('+nd+' days)';
-  var act=activeBills(), h='<div class="card total" style="margin-top:0"><div class="lbl">Bills · prorated '+(nd===1?'today':(nd<=7?'this week':'these '+nd+' days'))+'</div><div class="big billtot">'+money(sh.total)+'</div>'+
+  var act=enabledBills(), h='<div class="card total" style="margin-top:0"><div class="lbl">Bills · prorated '+(nd===1?'today':(nd<=7?'this week':'these '+nd+' days'))+'</div><div class="big billtot">'+money(sh.total)+'</div>'+
     '<div class="sub">Month-to-date through '+fmtShort(e)+': <b>'+money(mtd.total)+'</b></div>'+
     (hasIncome()?(function(){ var inc=incomeYearly()/DAYS_PER_YEAR*nd; return '<div class="sub">Income '+money(inc)+' · income left after bills <b class="'+plCls(inc-sh.total)+'">'+plMoney(inc-sh.total)+'</b></div>'; })():'')+'</div>';
   FG.forEach(function(g){
@@ -962,7 +997,8 @@ function renderPay(){
       }
       ones.push({b:b,n:an,away:away,startsOn:(st!=null&&t0<st)?st:null}); return;
     }
-    var share=annualCost(b)/PF.per, x={b:b, v:share};
+    var share=annualCost(b)/PF.per, Lb=lastDay(b); if (Lb!=null && Lb-t0+1<payDays) share*=Math.max(0,Lb-t0+1)/payDays; // ends before next payday: only the days left
+    var x={b:b, v:share};
     // a bill is "direct" if it comes due at least as often as you get paid (tiny tolerance for 52.1775 vs 52.18)
     if (timesPerYear(b) >= PF.per - 1e-6){ dir.push(x); dirTot+=share; } else { x.f=sinking(b,PF.per); sav.push(x); savTot+=share; }
   });
@@ -990,7 +1026,7 @@ function renderPay(){
       '<div class="bar"><div style="width:'+(f.frac*100).toFixed(1)+'%;background:'+colorFor(c,cats)+'"></div></div></div>';
     else if (showFund) fund='<div class="fund"><small>Add a due date to estimate how much should be set aside by now.</small></div>';
     return '<div class="prow" data-id="'+b.id+'"><button class="phead" type="button" aria-expanded="false"><span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
-      '<span class="mid"><div class="nm">'+esc(b.name)+(b.example?'<span class="tag">Example</span>':'')+'</div>'+
+      '<span class="mid"><div class="nm">'+esc(b.name)+(b.example?'<span class="tag">Example</span>':'')+endTag(b)+'</div>'+
       '<div class="meta">'+(showFund?'Reserve':'Pay')+' <b class="billtot">'+money(x.v)+'</b> per paycheck</div></span><span class="chev">▾</span></button>'+
       '<div class="pdet"><div>'+calc+'</div>'+fund+'<button type="button" class="pedit">Edit bill</button></div></div>'; }
   ones.sort(function(a,b){ return ((a.past?1:0)-(b.past?1:0)) || (a.past? b.n-a.n : a.n-b.n); });
@@ -1025,16 +1061,25 @@ function drawDonut(rows, cats, total){
 
 /* --- actual due mode --- */
 var winOffset=0;
-function windowRange(){
+function periodAt(kind, off){
   var s=state.settings, t=todayNum();
-  if (s.dueSpan==='week'){
+  if (kind==='week'){
     var dow=new Date(t*864e5).getUTCDay(), startDow=s.weekMon?1:0;
-    var st=t-((dow-startDow+7)%7)+7*winOffset;
+    var st=t-((dow-startDow+7)%7)+7*off;
     return {s:st, e:st+6, kind:'week'};
   }
-  var T=fromDayNum(t), mi=T.y*12+T.m+winOffset, y=Math.floor(mi/12), m=mi-y*12;
+  var T=fromDayNum(t), mi=T.y*12+T.m+off, y=Math.floor(mi/12), m=mi-y*12;
   return {s:dayNum(y,m,1), e:dayNum(y,m,dim(y,m)), kind:'month', y:y, m:m};
 }
+function windowRange(){ return periodAt(state.settings.dueSpan==='week'?'week':'month', winOffset); }
+/* ---- Behind / catch-up ----
+   settings.behindFrom = 'YYYY-MM-DD' (set once by migration = start of the week the update first ran): periods that START before it
+   count as done automatically, so old unchecked weeks don't become back-debt. settings.behindKeys = period keys the user marked
+   "not paid" (overrides the automatic done). b.created = date a bill was added (periods that ended before it are skipped). */
+var BEHIND_CAP={week:8, month:2};
+function createdNum(b){ var a=parseISO(b.created); return a?dayNum(a.y,a.m,a.d):null; }
+function cutNum(){ var a=parseISO(state.settings.behindFrom); return a?dayNum(a.y,a.m,a.d):-1e9; }
+function implied(w){ return w.e<todayNum() && w.s<cutNum() && (state.settings.behindKeys||[]).indexOf(periodKey(w))<0; }
 /* Actual due: "Still to pay this week/month".
    - pay-from-check bills (due at least as often as the view period): full amount per occurrence, ✓ = paid (rolls due date)
    - bigger bills (less frequent than the period), undated bills, spread one-time bills: this period's prorated share, ✓ = share set aside
@@ -1052,23 +1097,50 @@ function payFromPeriod(b, kind){ // true -> paid in full from this period's mone
   return timesPerYear(b) >= (kind==='month' ? 12 : 24) - 1e-6;
 }
 function dueModel(w){
-  var act=activeBills(), key=periodKey(w), direct=[], shares=[], infos=[];
-  act.forEach(function(b){
-    var dated=!!parseISO(b.due);
+  var key=periodKey(w), direct=[], shares=[], infos=[], imp=implied(w), aside=0;
+  enabledBills().forEach(function(b){
+    var L=lastDay(b), cn=createdNum(b); if ((L!=null && w.s>L) || (cn!=null && w.e<cn)) return; // ended before / added after this period
+    var dated=!!parseISO(b.due), frac=isOne(b)?1:liveDays(b,w.s,w.e)/(w.e-w.s+1);
+    aside+=prorate(b,w.kind)*frac;
     if (payFromPeriod(b,w.kind) && dated){
-      occurrences(b,w.s,w.e).forEach(function(n){ direct.push({b:b,n:n,amt:+b.amount||0,done:isPaid(b,n)}); });
+      occurrences(b,w.s,w.e).forEach(function(n){ var ex=isPaid(b,n); direct.push({b:b,n:n,amt:+b.amount||0,done:ex||imp,implied:!ex&&imp}); });
       return;
     }
-    var share = isOne(b) ? billRangeShare(b,w.s,w.e) : prorate(b,w.kind);
-    if (share>0.0049) shares.push({b:b,amt:share,done:isSetAside(b,key),undated:!dated});
+    var share = isOne(b) ? billRangeShare(b,w.s,w.e) : prorate(b,w.kind)*frac;
+    if (share>0.0049){ var ex2=isSetAside(b,key); shares.push({b:b,amt:share,done:ex2||imp,implied:!ex2&&imp,undated:!dated}); }
     if (!payFromPeriod(b,w.kind) && dated) occurrences(b,w.s,w.e).forEach(function(n){ infos.push({b:b,n:n,amt:+b.amount||0,done:isPaid(b,n)}); });
   });
   direct.sort(function(a,b){return a.n-b.n || b.amt-a.amt;}); shares.sort(function(a,b){return b.amt-a.amt;}); infos.sort(function(a,b){return a.n-b.n;});
   var still=direct.concat(shares).reduce(function(a,x){return a+(x.done?0:x.amt);},0);
   var cash=direct.concat(infos).reduce(function(a,x){return a+x.amt;},0);
-  var aside=act.reduce(function(a,b){ return a+prorate(b, w.kind); },0);
-  return {key:key, direct:direct, shares:shares, infos:infos, still:still, cash:cash, aside:aside};
+  return {key:key, direct:direct, shares:shares, infos:infos, still:still, cash:cash, aside:aside, implied:imp, w:w};
 }
+function behindModel(kind){
+  var items=[], tot=0;
+  for (var k=1;k<=BEHIND_CAP[kind];k++){ var P=periodAt(kind,-k), M=dueModel(P);
+    M.direct.forEach(function(x){ if(!x.done){ items.push({x:x,kind:'direct',P:P}); tot+=x.amt; } });
+    M.shares.forEach(function(x){ if(!x.done){ items.push({x:x,kind:'share',P:P}); tot+=x.amt; } }); }
+  items.sort(function(a,b){ return a.P.s-b.P.s || b.x.amt-a.x.amt; });
+  return {items:items, total:tot};
+}
+function setItem(b, kind, P, n, on){ // set an item's explicit check state
+  if (kind==='share'){ var key=periodKey(P); if (isSetAside(b,key)!==on) toggleSetAside(b,key); }
+  else if (on){ if(!isPaid(b,n)) markPaid(b,n); } else if (isPaid(b,n)) unmarkPaid(b,n);
+}
+function addBehindKey(P){ var bk=state.settings.behindKeys=state.settings.behindKeys||[], key=periodKey(P);
+  if (bk.indexOf(key)<0){ bk.push(key); bk.sort(); if (bk.length>120) bk.splice(0,bk.length-120); } }
+function markPeriod(P, paid){ // paid=true: check everything off (paid / skipped); false: mark as NOT paid -> shows in Behind
+  if (!paid) addBehindKey(P);
+  var M=dueModel(P), n=0;
+  M.direct.forEach(function(x){ setItem(x.b,'direct',P,x.n,paid); n++; }); M.shares.forEach(function(x){ setItem(x.b,'share',P,null,paid); n++; });
+  return n;
+}
+function unimply(P, bill, kind, n){ // un-check ONE auto-done item: track this period explicitly, keep the rest checked
+  addBehindKey(P); var M=dueModel(P);
+  M.direct.forEach(function(x){ setItem(x.b,'direct',P,x.n,!(kind==='direct'&&x.b===bill&&x.n===n)); });
+  M.shares.forEach(function(x){ setItem(x.b,'share',P,null,!(kind==='share'&&x.b===bill)); });
+}
+function periodName(P){ return P.kind==='month' ? MONTHS_FULL[fromDayNum(P.s).m] : 'week of '+fmtShort(P.s); }
 function renderDue(){
   var s=state.settings, w=windowRange(), t=todayNum();
   $('dueChips').innerHTML=[['week','Week'],['month','Month']].map(function(p){ return '<button data-span="'+p[0]+'" aria-pressed="'+(p[0]===s.dueSpan)+'">'+p[1]+'</button>'; }).join('')+
@@ -1081,20 +1153,25 @@ function renderDue(){
   var unpaid=M.direct.reduce(function(a,x){return a+(x.done?0:x.amt);},0), shareOpen=M.shares.reduce(function(a,x){return a+(x.done?0:x.amt);},0);
   $('dueLbl').textContent='Unpaid bills this '+per; $('dueShareLbl').textContent='Money to set aside this '+per;
   $('dueTot').textContent=money(unpaid); $('dueShareTot').textContent=money(shareOpen); $('asideTot').textContent=money(M.aside); $('asideLbl').textContent='set aside per '+per;
+  var B = winOffset===0 ? behindModel(w.kind) : {items:[], total:0};
+  $('behindBox').classList.toggle('hidden', winOffset!==0); $('behindLbl').textContent='Behind — earlier '+per+'s'; $('behindTot').textContent=money(B.total);
+  $('dueAll').innerHTML = winOffset===0 ? 'Total to cover now: <b class="billtot" id="dueAllTot">'+money(unpaid+shareOpen+B.total)+'</b> <span style="color:var(--muted)">(unpaid + set aside + behind)</span>' : '';
   $('cashLine').innerHTML = M.cash>0 ? 'Cash actually leaving this '+per+' (full bills dated in it): '+money(M.cash) : '';
   var all=M.direct.concat(M.shares), nd=all.filter(function(x){return x.done;}).length;
   $('dueDiff').innerHTML = all.length ? nd+' of '+all.length+' checked off. Tap ✓ when it’s paid or set aside; tap again to undo. Set-aside checks reset each '+per+'.' : '';
-  function rowHTML(x, kind){ var b=x.b, c=(b.category||'').trim()||'Uncategorized';
-    var tags=(b.example?'<span class="tag">Example</span>':''), meta, small;
-    if (kind==='direct'){ tags+=x.done?'<span class="tag paid">Paid</span>':(x.n<t?'<span class="tag past">Past</span>':'');
+  function rowHTML(x, kind, P){ P=P||w; var b=x.b, c=(b.category||'').trim()||'Uncategorized';
+    var tags=(b.example?'<span class="tag">Example</span>':'')+endTag(b), meta, small;
+    if (x.implied) tags+='<span class="tag paid">Done (auto)</span>';
+    if (kind==='direct'){ if(!x.implied) tags+=x.done?'<span class="tag paid">Paid</span>':(x.n<t?'<span class="tag past">Past</span>':'');
       meta=fmtShort(x.n)+' · '+freqText(b)+(b.category?' · '+esc(b.category):''); small=isOne(b)?'one-time':'pay in full'; }
-    else if (kind==='share'){ tags+=x.done?'<span class="tag paid">Set aside</span>':'';
+    else if (kind==='share'){ if(!x.implied) tags+=x.done?'<span class="tag paid">Set aside</span>':'';
       meta=money(+b.amount||0)+' '+freqText(b).toLowerCase()+(x.undated?'':' · due '+fmtShort(nextDue(b)!=null?nextDue(b):dueNum(b)));
       small=(x.undated&&payFromPeriod(b,per))?'this '+per+' · no date':per+'’s share'; }
     else { tags+=x.done?'<span class="tag paid">Paid</span>':(x.n<t?'<span class="tag past">Past</span>':'');
       meta='due '+fmtShort(x.n)+' — paid from set-aside'; small='not in total'; }
-    var dataN = kind==='share' ? 'data-share="'+M.key+'"' : 'data-n="'+x.n+'"';
-    return '<div class="duerow'+(x.done?' paid':'')+(kind==='info'?' info':'')+'" data-kind="'+kind+'"><button class="chk" data-pay="'+b.id+'" '+dataN+' aria-pressed="'+x.done+'" aria-label="'+(x.done?'Undo: ':(kind==='share'?'Mark set aside: ':'Mark paid: '))+esc(b.name)+'">✓</button>'+
+    if (P!==w) meta='<b>from '+periodName(P)+'</b> · '+meta;
+    var dataN = (kind==='share' ? 'data-share="'+periodKey(P)+'"' : 'data-n="'+x.n+'"')+' data-ps="'+P.s+'" data-pe="'+P.e+'" data-pk="'+P.kind+'"'+(x.implied?' data-implied="1"':'');
+    return '<div class="duerow'+(x.done?' paid':'')+(kind==='info'?' info':'')+(P!==w?' behind':'')+'" data-kind="'+kind+'"><button class="chk" data-pay="'+b.id+'" '+dataN+' aria-pressed="'+x.done+'" aria-label="'+(x.done?'Undo: ':(kind==='share'?'Mark set aside: ':'Mark paid: '))+esc(b.name)+'">✓</button>'+
       '<button class="bill" data-id="'+b.id+'"><span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
       '<span class="mid"><div class="nm">'+esc(b.name)+tags+'</div><div class="meta">'+meta+'</div></span>'+
       '<span class="amt"><b class="'+(x.done||kind==='info'?'':'billtot')+'">'+money(x.amt)+'</b><small>'+small+'</small></span></button></div>'; }
@@ -1102,6 +1179,19 @@ function renderDue(){
   function sec(title, list, kind, note){ if(!list.length) return;
     var open=list.reduce(function(a,x){return a+(kind==='info'||x.done?0:x.amt);},0);
     h+='<div class="dsec2"><h2>'+title+'</h2><span>'+(kind==='info'?note:(open>0?'<b class="billtot">'+money(open)+'</b> left':'all checked ✓'))+'</span></div>'+list.map(function(x){return rowHTML(x,kind);}).join(''); }
+  if (winOffset===0){
+    var lastP=periodAt(w.kind,-1), lastM=dueModel(lastP), lastItems=lastM.direct.concat(lastM.shares), lastOpen=lastItems.length&&lastItems.every(function(x){return !x.done;});
+    h+='<div class="behindSec" id="behindSec"><div class="dsec2"><h2>Behind — catch up</h2><span>'+(B.total>0?'<b class="billtot">'+money(B.total)+'</b> behind':'nothing behind ✓')+'</span></div>'+
+      B.items.map(function(it){ return rowHTML(it.x, it.kind, it.P); }).join('')+
+      '<div class="bbtns">'+(B.items.length?'<button type="button" class="ok" id="caughtUp">✓ I’m caught up</button>':'')+
+      (lastItems.length&&!lastOpen?'<button type="button" id="markLast">Mark last '+per+' as not paid</button>':'')+'</div>'+
+      '<div class="hint" style="margin:8px 2px 0">Behind a '+per+'? Tap “Mark last '+per+' as not paid” (or go back with ‹ and uncheck items) — they stay here until you ✓ them.</div></div>';
+  } else if (winOffset<0){
+    var allIt=M.direct.concat(M.shares);
+    h+='<div class="pastBar">'+(-winOffset>BEHIND_CAP[w.kind] ? 'Older than '+BEHIND_CAP[w.kind]+' '+per+'s — not counted in Behind.' :
+      (M.implied?'Counted as done automatically (before you started checking off). ':'')+'Unchecked items here show in <b>Behind</b> on this '+per+'’s page.'+
+      (allIt.length?'<div class="bbtns"><button type="button" id="markNotPaid">Mark this '+per+' as not paid</button><button type="button" id="markPaidWk">Mark this '+per+' paid / skipped</button></div>':''))+'</div>';
+  }
   sec('Pay this '+per+' in full', M.direct, 'direct');
   sec('Set aside this '+per+'’s share', M.shares, 'share');
   sec('Big bills due this '+per, M.infos, 'info', 'paid from set-aside · not in total');
@@ -1122,13 +1212,36 @@ function openEdit(id){
   $('fFreq').value=b?b.freq:'monthly'; $('fN').value=b&&b.n?b.n:1; $('fUnit').value=b&&b.unit?b.unit:'months';
   $('fCat').value=b?(b.category||''):''; $('fDue').value=b?(b.due||''):''; $('fNotes').value=b?(b.notes||''):'';
   $('fActive').checked=b?b.active!==false:true;
+  $('fEnds').value=b&&parseISO(b.ends)?'date':'never'; $('fEndDate').value=b&&parseISO(b.ends)?b.ends:''; $('fEndN').value='';
   $('delBtn').classList.toggle('hidden',!b);
   $('catList').innerHTML=categories().filter(function(c){return c!=='Uncategorized';}).map(function(c){return '<option value="'+esc(c)+'">';}).join('');
-  updateFreqUI(); openSheet('editScrim');
+  updateFreqUI(); updateEndsUI(); openSheet('editScrim');
   if (!b && window.matchMedia('(min-width:700px)').matches) setTimeout(function(){$('fName').focus();},50);
 }
 function formBill(){
   return {freq:$('fFreq').value, n:parseInt($('fN').value,10)||1, unit:$('fUnit').value, amount:parseAmt($('fAmt').value)};
+}
+function addMonthsNum(n, k){ var o=fromDayNum(n), mi=o.y*12+o.m+k, y=Math.floor(mi/12), m=mi-y*12; return dayNum(y,m,Math.min(o.d,dim(y,m))); }
+/* end date from the form: '' = never, null = invalid. "After N more payments": Nth payment from the next due date (or from today + one period). */
+function endFromForm(){
+  var mode=$('fEnds').value; if (mode==='never' || $('fFreq').value==='onetime') return '';
+  if (mode==='date') return parseISO($('fEndDate').value)?$('fEndDate').value:null;
+  var N=parseInt($('fEndN').value,10); if(!(N>=1&&N<=600)) return null;
+  var fb=formBill(), t=todayNum(), tb={freq:fb.freq,n:fb.n,unit:fb.unit,due:$('fDue').value};
+  var eb=editingId&&state.bills.find(function(x){return x.id===editingId;}); if (eb&&eb.due===tb.due&&eb.dom) tb.dom=eb.dom;
+  var from=t; if (!parseISO(tb.due)){ var sd=stepDays(tb), sm=stepMonths(tb); from=sd?t+sd:(sm?addMonthsNum(t,sm):t+15); tb.due=isoOf(from); } // undated: first payment one period from today
+  var o=occRaw(tb,from,from+N*800+60); return o.length>=N?isoOf(o[N-1]):null;
+}
+function updateEndsUI(){
+  var one=$('fFreq').value==='onetime', mode=$('fEnds').value; $('endsRow').classList.toggle('hidden',one); if(one) return;
+  $('fEndDateWrap').classList.toggle('hidden',mode!=='date'); $('fEndNWrap').classList.toggle('hidden',mode!=='count');
+  var en=endFromForm(), h='', ended=false;
+  if (en===''){ h='Keeps going until you change it — e.g. set an end once a phone is paid off.'; }
+  else if (en===null){ h=mode==='date'?'Pick the last date this bill applies.':'Enter how many payments are left (1 or more).'; }
+  else { var fb=formBill(), tb={freq:fb.freq,n:fb.n,unit:fb.unit,due:$('fDue').value,ends:en}, L=lastDay(tb); ended=L<todayNum();
+    h=(ended?'<b>This bill has ended</b> — it’s kept (dimmed) but no longer counts. ':'Last payment counted: <b>'+fmtDay(L,true)+'</b> — after that it stops counting everywhere. ')+
+      (mode==='count'?'(Saved as an end date.)':''); }
+  $('endHint').innerHTML=h; $('reenWrap').classList.toggle('hidden',!ended);
 }
 function parseAmt(v){ v=String(v||'').replace(/[$,\s]/g,''); var n=parseFloat(v); return isFinite(n)?n:NaN; }
 function updateFreqUI(){
@@ -1145,6 +1258,8 @@ function updateFreqUI(){
   $('freqHint').textContent = a>0 ? '≈ '+money(yr/WEEKS_PER_YEAR)+'/wk · '+money(yr/12)+'/mo · '+money(yr)+'/yr ('+(Math.round(timesPerYear(fb)*1000)/1000)+'× per year)' : '';
 }
 ['fFreq','fN','fUnit','fAmt','fSpreadUnit','fSpreadN','fDue'].forEach(function(id){ $(id).addEventListener('input',updateFreqUI); $(id).addEventListener('change',updateFreqUI); });
+['fFreq','fN','fUnit','fDue','fEnds','fEndDate','fEndN'].forEach(function(id){ $(id).addEventListener('input',updateEndsUI); $(id).addEventListener('change',updateEndsUI); });
+$('fReenable').addEventListener('click',function(){ $('fEnds').value='never'; updateEndsUI(); });
 $('editForm').addEventListener('submit',function(e){
   e.preventDefault();
   var name=$('fName').value.trim(), amt=parseAmt($('fAmt').value);
@@ -1152,15 +1267,16 @@ $('editForm').addEventListener('submit',function(e){
   if (!isFinite(amt)||amt<0){ toast('Please enter a valid amount'); $('fAmt').focus(); return; }
   var fb=formBill();
   if (fb.freq==='custom' && !(fb.n>=1)){ toast('Custom interval must be 1 or more'); return; }
+  var ends=endFromForm(); if (ends===null){ toast($('fEnds').value==='date'?'Pick an end date':'Enter how many payments are left'); return; }
   var data={name:name, amount:Math.round(amt*100)/100, freq:fb.freq, n:fb.n, unit:fb.unit, category:$('fCat').value.trim(),
-    due:$('fDue').value||'', notes:$('fNotes').value.trim(), active:$('fActive').checked};
+    due:$('fDue').value||'', notes:$('fNotes').value.trim(), active:$('fActive').checked, ends:ends};
   if (fb.freq==='onetime'){
     if (!data.due) data.due=isoOf(todayNum());
     var su=$('fSpreadUnit').value, sn=parseInt($('fSpreadN').value,10)||0;
     data.spreadUnit=su!=='none'&&sn>0?su:'none'; data.spreadN=data.spreadUnit==='none'?0:sn;
   } else { data.spreadUnit='none'; data.spreadN=0; }
   if (editingId){ var b=state.bills.find(function(x){return x.id===editingId;}); if (b.due!==data.due) delete b.dom; Object.assign(b,data); if(b.example && !/\(example\)/i.test(b.name)) delete b.example; toast('Saved'); }
-  else { data.id=uid(); state.bills.push(data); toast('Added '+name); }
+  else { data.id=uid(); data.created=stamp(); state.bills.push(data); toast('Added '+name); }
   save(); closeSheet('editScrim'); render();
 });
 $('delBtn').addEventListener('click',function(){
@@ -1236,11 +1352,19 @@ $('billList').addEventListener('click',function(e){ var b=e.target.closest('.bil
 $('dueList').addEventListener('click',function(e){
   var c=e.target.closest('.chk');
   if (c){ var bill=state.bills.find(function(x){return x.id===c.dataset.pay;}), n=+c.dataset.n; if(!bill) return;
+    if (c.dataset.implied){ unimply({s:+c.dataset.ps,e:+c.dataset.pe,kind:c.dataset.pk}, bill, c.dataset.share?'share':'direct', n);
+      toast('Unchecked '+bill.name+' — it now shows in Behind'); save(); render(); return; }
     if (c.dataset.share){ var was=isSetAside(bill,c.dataset.share); toggleSetAside(bill,c.dataset.share);
       toast(was?'Unchecked — back in Money to set aside':'Set aside ✓ '+bill.name+' (due date unchanged)'); save(); render(); return; }
     if (isPaid(bill,n)){ unmarkPaid(bill,n); toast('Unchecked — back in Unpaid bills'); }
     else { markPaid(bill,n); toast('Paid ✓ '+bill.name+(isOne(bill)?'':' · next due '+fmtShort(dueNum(bill)))); }
     save(); render(); return; }
+  var kind=state.settings.dueSpan==='week'?'week':'month', word=kind;
+  if (e.target.closest('#caughtUp')){ var B=behindModel(kind); B.items.forEach(function(it){ setItem(it.x.b,it.kind,it.P,it.x.n,true); });
+    save(); render(); toast('Caught up ✓ — '+B.items.length+' item'+(B.items.length===1?'':'s')+' checked off'); return; }
+  if (e.target.closest('#markLast')){ markPeriod(periodAt(kind,-1),false); save(); render(); toast('Last '+word+' marked not paid — see Behind'); return; }
+  if (e.target.closest('#markNotPaid')){ markPeriod(windowRange(),false); save(); render(); toast('Marked not paid — shows in Behind'); return; }
+  if (e.target.closest('#markPaidWk')){ markPeriod(windowRange(),true); save(); render(); toast('Marked paid / skipped'); return; }
   var b=e.target.closest('.bill'); if(b) openEdit(b.dataset.id); });
 $('weekMon').addEventListener('change',function(){state.settings.weekMon=this.checked;save();render();});
 $('showInactive').addEventListener('change',function(){state.settings.showInactive=this.checked;save();render();});
@@ -1280,9 +1404,9 @@ $('expJson').addEventListener('click',function(){
 });
 $('expCsv').addEventListener('click',function(){
   function q(v){ v=String(v==null?'':v); return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
-  var head=['Name','Amount','Frequency','Category','Next due','Active','Notes','Per day','Per week','Per month','Per quarter','Per 6 months','Per year'];
+  var head=['Name','Amount','Frequency','Category','Next due','Active','Notes','Per day','Per week','Per month','Per quarter','Per 6 months','Per year','Ends'];
   var rows=state.bills.map(function(b){ return [b.name,(+b.amount).toFixed(2),freqText(b),b.category||'',b.due||'',b.active!==false?'yes':'no',b.notes||'']
-    .concat(PERIODS.map(function(p){return prorate(b,p.k).toFixed(2);})).map(q).join(','); });
+    .concat(PERIODS.map(function(p){return prorate(b,p.k).toFixed(2);})).concat([b.ends||'']).map(q).join(','); });
   download('bills-'+stamp()+'.csv', '\ufeff'+head.join(',')+'\r\n'+rows.join('\r\n')+'\r\n','text/csv');
   toast('CSV exported');
 });
@@ -1298,11 +1422,11 @@ $('fileIn').addEventListener('change',function(){
       bills=bills.filter(function(b){return b&&b.name!=null&&isFinite(parseFloat(b.amount));}).map(function(b){
         return {id:b.id||uid(), name:String(b.name), amount:parseFloat(b.amount), freq:valid[b.freq]?b.freq:'monthly', n:parseInt(b.n,10)||1,
           unit:['days','weeks','months'].indexOf(b.unit)>=0?b.unit:'months', category:b.category?String(b.category):'', due:parseISO(b.due)?b.due:'',
-          notes:b.notes?String(b.notes):'', active:b.active!==false, example:!!b.example, source:b.source||undefined, spreadUnit:['weeks','months'].indexOf(b.spreadUnit)>=0?b.spreadUnit:'none', spreadN:parseInt(b.spreadN,10)||0, paid:Array.isArray(b.paid)?b.paid.filter(function(x){return !!parseISO(x);}):undefined, dom:(parseInt(b.dom,10)>=1&&parseInt(b.dom,10)<=31)?parseInt(b.dom,10):undefined, setAside:Array.isArray(b.setAside)?b.setAside.filter(function(k){return /^(w:\d{4}-\d{2}-\d{2}|m:\d{4}-\d{2})$/.test(k);}):undefined};
+          notes:b.notes?String(b.notes):'', active:b.active!==false, example:!!b.example, source:b.source||undefined, spreadUnit:['weeks','months'].indexOf(b.spreadUnit)>=0?b.spreadUnit:'none', spreadN:parseInt(b.spreadN,10)||0, paid:Array.isArray(b.paid)?b.paid.filter(function(x){return !!parseISO(x);}):undefined, dom:(parseInt(b.dom,10)>=1&&parseInt(b.dom,10)<=31)?parseInt(b.dom,10):undefined, ends:parseISO(b.ends)?b.ends:undefined, created:parseISO(b.created)?b.created:undefined, setAside:Array.isArray(b.setAside)?b.setAside.filter(function(k){return /^(w:\d{4}-\d{2}-\d{2}|m:\d{4}-\d{2})$/.test(k);}):undefined};
       });
       appConfirm('Import '+bills.length+' bills?','This REPLACES your current '+state.bills.length+' bills.','Import',function(){
       state.bills=bills; state.settings.examplesCleared=true;
-      if(p.settings&&typeof p.settings==='object') ['period','sort','weekMon','showInactive','dueSpan','payFreq','checkAmt','incomes','wfPeriod'].forEach(function(k){ if(k in p.settings) state.settings[k]=p.settings[k]; });
+      if(p.settings&&typeof p.settings==='object') ['period','sort','weekMon','showInactive','dueSpan','payFreq','checkAmt','incomes','wfPeriod','behindFrom','behindKeys','behindMigrated'].forEach(function(k){ if(k in p.settings) state.settings[k]=p.settings[k]; });
       save(); closeSheet('menuScrim'); render(); toast('Imported '+bills.length+' bills'); });
     }catch(err){ alert('Import failed: '+err.message); }
   };
@@ -1314,7 +1438,7 @@ $('fileIn').addEventListener('change',function(){
 document.addEventListener('visibilitychange',function(){ if(!document.hidden) render(); });
 
 // test hook
-window.BillsApp={dueModel:dueModel, windowRange:windowRange, periodKey:periodKey, markPaid:markPaid, unmarkPaid:unmarkPaid, isPaid:isPaid, oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
+window.BillsApp={lastDay:lastDay, isEnded:isEnded, behindModel:behindModel, periodAt:periodAt, endFromForm:endFromForm, dueModel:dueModel, windowRange:windowRange, periodKey:periodKey, markPaid:markPaid, unmarkPaid:unmarkPaid, isPaid:isPaid, oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
 render();
 })();
 </script>

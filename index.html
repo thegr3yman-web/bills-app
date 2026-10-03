@@ -234,6 +234,14 @@ textarea{min-height:70px;resize:vertical}
 #cfScrim{z-index:30}
 #shScrim{z-index:31}
 #ckScrim{z-index:25}
+.planCard{margin-top:14px;padding:12px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.planCard .dsec2{margin-top:0}
+.planCard .pst{font-size:15px;margin-top:6px}.planCard .psafe{font-size:15px;margin-top:4px}
+.planCard details{border-top:1px solid var(--line);padding:8px 0}.planCard summary{cursor:pointer;list-style:none;font-size:14px;line-height:1.35}.planCard summary::-webkit-details-marker{display:none}
+.planCard summary .pd{font-weight:700}.planCard .pi{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:2px 0 2px 10px}
+.planCard .pi.roll{color:#d11f26;font-weight:700}.planCard .pm{font-size:12px;color:var(--muted);margin:6px 0 0 10px}
+.planSum{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--chip);font-size:14px}.planSum button{margin-top:8px;min-height:38px;padding:0 12px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700}
+
 .covLine{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 2px 52px;font-size:12px;color:var(--muted);font-weight:600}
 .covLine button{min-height:32px;padding:0 10px;border-radius:9px;background:var(--chip);font-weight:700;font-size:12px;color:var(--text)}
 .covLine button[aria-pressed=true]{background:#d11f26;color:#fff}
@@ -352,6 +360,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
       <div class="checkrow"><label for="checkAmt">Take-home pay per check</label><input id="checkAmt" inputmode="decimal" placeholder="optional, e.g. 1,250.00"></div>
       <div id="payBreak"></div>
       <div id="payShort"></div>
+      <div id="payPlan"></div>
       <div class="sechead" style="margin-top:14px"><h2 style="font-size:15px">Other income <small style="color:var(--muted);font-weight:500">(optional)</small></h2><span id="incOtherTot" style="font-size:14px"></span></div>
       <div id="incList"></div>
       <button class="btn" id="addInc" style="margin-top:8px;min-height:44px">+ Add income source</button>
@@ -1155,6 +1164,10 @@ function renderPay(){
   var sl=allShorts().filter(function(x){return !x.done;});
   $('payShort').innerHTML = sl.length ? '<div class="payShort">'+sl.map(function(x){ return '<div>⚠ <b>'+esc(x.b.name)+'</b> <span class="tag short" style="margin-left:2px">Short '+money(x.amt)+' — '+dueInText(x.n)+'</span></div>'; }).join('')+
     '<div style="color:var(--muted);font-size:13px">Counted in Behind on the Bills due tab — ✓ it there once covered.</div></div>' : '';
+  var PL=catchupPlan();
+  $('payPlan').innerHTML = PL ? '<div class="planSum" id="planSum"><b>Catch-up plan:</b> '+(PL.status==='none'?'nothing behind ✓':PL.status==='caught'?'caught up by '+fmtShort(PL.caughtDate):'<b class="billtot">not caught up within 8 weeks — short '+money(PL.shortEnd)+'</b>')+
+    '<br>Safe to take now: <b class="gold" id="paySafeNow">'+money(PL.safeNow)+'</b>'+(PL.safeNow<0.005&&PL.firstSafe?' <small style="color:var(--muted)">· after '+fmtShort(PL.firstSafe.date)+'</small>':'')+
+    '<br><button type="button" id="goPlan">See the plan</button></div>' : '';
   $('savTot').textContent=money(savTot); $('dirTot').textContent=money(dirTot);
   function row(x, showFund){ var b=x.b, c=(b.category||'').trim()||'Uncategorized', f=showFund&&x.f;
     var calc = x.one ? money(+b.amount||0)+' one-time, saved over the weeks before it’s due = '+money(x.v)+' per paycheck'
@@ -1339,6 +1352,89 @@ function setShort(b, iso, have){ var l=shortList(b).filter(function(e){return e.
   l.sort(function(x,y){return x.due<y.due?-1:1;}); if (l.length>60) l=l.slice(-60); if (l.length) b.short=l; else delete b.short; }
 function pruneShorts(){ var t=todayNum(); state.bills.forEach(function(b){ if(!Array.isArray(b.short)) return;
   b.short=b.short.filter(function(e){ var n=dueNum({due:e.due}); var cn=e.how==='leftover'?dueNum({due:e.covOn}):null; return n!=null && !(n<t-90 && (e.done||isPaid(b,n)||shortResolved(b,e)) && !(cn!=null&&cn>=t-400)); }); if(!b.short.length) delete b.short; }); }
+/* ---- Catch-up plan (v13): simulate the next ~8 weeks of paychecks.
+   Each check pays, in order: (1) late items + open shortfalls (oldest first; anything rolled from an earlier check is late too),
+   (2) bills due before the next check (in full), (3) this check's set-aside shares for bigger bills, (4) paying back borrowed set-asides.
+   N = running total (all income − all obligations so far). Safe to take by check i = max(0, min over j≥i of N_j) — taking that never
+   leaves a later obligation unfunded at its check. ---- */
+var PLAN_N={weekly:8,biweekly:4,semimonthly:4,monthly:2};
+function planChecks(){
+  var pf=state.settings.payFreq||'weekly', t=todayNum(), P0=payPeriodAt(t), ml=mainLogs(), n=(PLAN_N[pf]||8)+1;
+  function logged(P){ var l=ml.filter(function(c){var x=ckNum(c);return x>=P.s&&x<=P.e;}); return l.length?ckNum(l[l.length-1]):null; }
+  var c0=logged(P0); if (c0==null){ if (ml.length){ var L=ckNum(ml[ml.length-1]), LP=payPeriodAt(L); c0=Math.min(P0.e, P0.s+(L-LP.s)); } else c0=t; }
+  var out=[c0];
+  for (var i=1;i<n;i++){ var prev=out[i-1], Pp=payPeriodAt(prev), nx;
+    if (pf==='weekly') nx=prev+7; else if (pf==='biweekly') nx=prev+14; else { var Pn=payPeriodAt(Pp.e+1); nx=Math.min(Pn.e, Pn.s+(prev-Pp.s)); }
+    var lg=logged(payPeriodAt(nx)); out.push(lg!=null&&lg>prev?lg:nx); }
+  return out;
+}
+function planDemands(ws, we, first){
+  var pf=state.settings.payFreq||'weekly', per=(PAY[pf]||PAY.weekly).per, out=[], wk=periodKey(periodAt('week',0));
+  enabledBills().forEach(function(b){
+    var L=lastDay(b); if (L!=null && ws>L) return;
+    var dated=!!parseISO(b.due), direct=isOne(b) ? spreadStart(b)==null : timesPerYear(b)>=per-1e-6;
+    if (direct && dated){ occurrences(b,ws,we).forEach(function(n){ if(!isPaid(b,n)) out.push({b:b,amt:+b.amount||0,prio:2,date:n,kind:'bill'}); }); return; }
+    if (direct) { if (isOne(b)) return; }
+    var share = isOne(b) ? billRangeShare(b,ws,we) : annualCost(b)/per*liveDays(b,ws,we)/(we-ws+1);
+    if (first && pf==='weekly' && isSetAside(b,wk)) return;
+    if (share>0.0049) out.push({b:b,amt:share,prio:direct?2:3,date:we,kind:direct?'bill':'aside'});
+  });
+  return out;
+}
+function catchupPlan(withdraw){
+  if (!hasIncome()) return null;
+  var t=todayNum(), cs=planChecks(), kind=state.settings.dueSpan==='week'?'week':'month', init=[];
+  behindModel(kind).items.forEach(function(it){ init.push({b:it.x.b, amt:it.x.amt, prio:1, date:it.kind==='direct'?it.x.n:it.P.e, kind:'late'}); });
+  allShorts().forEach(function(x){ if(x.done) return; var lender=Array.isArray(x.e.lentTo)&&x.e.lentTo.length;
+    init.push({b:x.b, amt:x.amt, prio:lender?4:1, date:x.n, kind:lender?'repay':'short', late:x.n<t&&!x.e.nodue}); });
+  var rows=[], queue=[], cash=0, cumInc=0, cumOb=0, cumW=0;
+  for (var i=0;i<cs.length-1;i++){
+    var c=cs[i], ws=i?c:Math.min(c,t), we=cs[i+1]-1, P=payPeriodAt(c), MI=periodMainIncome(P), cfg=parseAmt(state.settings.checkAmt), len=P.e-P.s+1,
+      other=incomeRange(P.s,P.e)-(logMode()?MI.amt:(isFinite(cfg)&&cfg>0?cfg*((PAY[state.settings.payFreq]||PAY.weekly).per)/DAYS_PER_YEAR*len:0)),
+      inc=Math.max(0,MI.amt+Math.max(0,other)-coverSum(P.s,P.e));
+    var items=(i?[]:init).concat(planDemands(ws,we,i===0)), all=queue.concat(items).sort(function(a,b){ return a.prio-b.prio || a.date-b.date || b.amt-a.amt; });
+    cumInc+=inc; items.forEach(function(x){ cumOb+=x.amt; }); cash+=inc;
+    var pays=[], rolled=[];
+    all.forEach(function(it){
+      if (cash>=it.amt-0.004){ cash-=it.amt; pays.push(it); }
+      else if (cash>0.004){ pays.push(Object.assign({},it,{amt:cash, of:it.amt})); rolled.push(Object.assign({},it,{amt:it.amt-cash, prio:it.kind==='repay'?4:1, kind:it.kind==='bill'?'late':it.kind, rolled:true})); cash=0; }
+      else rolled.push(Object.assign({},it,{prio:it.kind==='repay'?4:1, kind:it.kind==='bill'?'late':it.kind, rolled:true}));
+    });
+    if (cash<0.004 && cash>-0.004) cash=0;
+    var w=withdraw&&withdraw[i]||0; cash-=w; cumW+=w;
+    var pm=MI.kind;
+    rows.push({date:c, ws:ws, we:we, inc:inc, kind:pm, pays:pays, rolled:rolled, rolledAmt:rolled.reduce(function(a,x){return a+x.amt;},0), left:cash, N:cumInc-cumOb, taken:w});
+    queue=rolled;
+  }
+  var mn=Infinity; for (var j=rows.length-1;j>=0;j--){ mn=Math.min(mn,rows[j].N); rows[j].minAhead=mn; rows[j].safeCum=Math.max(0,mn); }
+  var prev=0; rows.forEach(function(r){ r.safeInc=Math.max(0,r.safeCum-prev); prev=r.safeCum; });
+  var had=init.length>0 || rows.some(function(r){return r.rolledAmt>0.004;}), ci=-1;
+  for (var k=0;k<rows.length;k++) if (rows[k].minAhead>=-0.005){ ci=k; break; }
+  var fs=rows.filter(function(r){return r.safeInc>0.005;})[0]||null;
+  return {rows:rows, behind:had, status:!had?'none':(ci>=0?'caught':'short'), caughtDate:ci>=0?rows[ci].date:null, caughtIdx:ci,
+    shortEnd:rows.length?Math.max(0,-rows[rows.length-1].N):0, safeNow:rows.length?rows[0].safeCum:0, firstSafe:fs?{date:fs.date, amt:fs.safeInc}:null};
+}
+function planLabel(it){ var n=esc(it.b.name);
+  var base = it.kind==='aside' ? 'set aside '+n+(it.rolled?' (carried over)':'') : it.kind==='repay' ? 'repay '+n+' (borrowed set-aside)' : it.kind==='short' ? n+' (short'+(it.late?', late':'')+')' : it.kind==='late' ? n+' (late)' : n+(parseISO(it.b.due)&&!it.rolled?' · due '+fmtShort(it.date):'');
+  return base+(it.of?' — '+money(it.amt)+' of '+money(it.of):''); }
+function planHTML(P, id){
+  var h='<div class="planCard" id="'+(id||'planCard')+'"><div class="dsec2"><h2>Catch-up plan</h2><span>next '+(P?P.rows.length:0)+' checks</span></div>';
+  if (!P) return h+'<div class="hint" style="margin:6px 0 0">Set up your pay (or log a check) to see what order to pay things in and when profit is safe to take.</div></div>';
+  var st = P.status==='none' ? '<b style="color:var(--ok)">Nothing behind ✓</b>' : P.status==='caught' ? 'Caught up by <b id="planCaught">'+fmtShort(P.caughtDate)+'</b>'+(P.caughtIdx===0?' (this check)':'') : '<b class="billtot" id="planShort">Not caught up within 8 weeks — short '+money(P.shortEnd)+'</b>';
+  var sf = 'Safe to take now: <b class="gold" id="planSafeNow">'+money(P.safeNow)+'</b>'+(P.safeNow<0.005?(P.firstSafe?' <small style="color:var(--muted)">· after '+fmtShort(P.firstSafe.date)+' (+'+money(P.firstSafe.amt)+')</small>':' <small style="color:var(--muted)">· not within the plan</small>'):'');
+  h+='<div class="pst">'+st+'</div><div class="psafe">'+sf+'</div>'+
+    '<div class="hint" style="margin:6px 2px 8px">Each check pays ① late items & shortfalls (oldest first) ② bills due before the next check ③ set-asides for bigger bills ④ paying back borrowed set-asides. “Safe” = money no upcoming bill in the plan needs. Tap a check for the math.</div>';
+  P.rows.forEach(function(r,i){ var paid=r.pays.reduce(function(a,x){return a+x.amt;},0);
+    var brief=r.pays.slice(0,3).map(function(x){return planLabel(x).replace(/ · due [^—]*/,'')+' '+money(x.amt);}).join(', ')+(r.pays.length>3?' …':'');
+    h+='<details class="prw" data-i="'+i+'"><summary><span class="pd">'+fmtShort(r.date)+' check <b class="pos-t">'+money(r.inc)+'</b>'+(r.kind==='est'?' <small style="color:var(--muted)">est.</small>':'')+'</span>'+
+      (brief?' → pay '+brief:'')+' · left <b>'+money(r.left)+'</b>'+(r.rolledAmt>0.004?' · <b class="billtot">'+money(r.rolledAmt)+' rolls to next check</b>':'')+
+      ' · safe <b class="gold">+'+money(r.safeInc)+'</b></summary>'+
+      r.pays.map(function(x){ return '<div class="pi"><span>'+planLabel(x)+'</span><b class="billtot">'+money(x.amt)+'</b></div>'; }).join('')+
+      r.rolled.map(function(x){ return '<div class="pi roll"><span>↪ rolls: '+planLabel(x)+'</span><b>'+money(x.amt)+'</b></div>'; }).join('')+
+      '<div class="pm">Check '+money(r.inc)+(i?' + carried '+money(Math.max(0,r.left+paid-r.inc))+'':'')+' − paid '+money(paid)+' = left '+money(r.left)+'. Running total (all income − all bills so far): '+(r.N<0?'−':'')+money(Math.abs(r.N))+
+      '. Lowest running total from here on: '+(r.minAhead<0?'−':'')+money(Math.abs(r.minAhead))+' → safe to have taken by this check: <b class="gold">'+money(r.safeCum)+'</b>.</div></details>'; });
+  return h+'</div>';
+}
 function periodName(P){ return P.kind==='month' ? MONTHS_FULL[fromDayNum(P.s).m] : 'week of '+fmtShort(P.s); }
 function renderDue(){
   var s=state.settings, w=windowRange(), t=todayNum();
@@ -1403,6 +1499,7 @@ function renderDue(){
       '<div class="bbtns">'+(B.items.length||B.shorts.some(function(x){return !x.done;})?'<button type="button" class="ok" id="caughtUp">✓ I’m caught up</button>':'')+
       (lastItems.length&&!lastOpen?'<button type="button" id="markLast">Mark last '+per+' as not paid</button>':'')+'<button type="button" id="missedBtn">+ I missed setting aside for a bill</button></div>'+
       '<div class="hint" style="margin:8px 2px 0">Behind a '+per+'? Tap “Mark last '+per+' as not paid” (or go back with ‹ and uncheck items) — they stay here until you ✓ them.</div></div>';
+    h+=planHTML(catchupPlan());
   } else if (winOffset<0){
     var allIt=M.direct.concat(M.shares);
     h+='<div class="pastBar">'+(-winOffset>BEHIND_CAP[w.kind] ? 'Older than '+BEHIND_CAP[w.kind]+' '+per+'s — not counted in Behind.' :
@@ -1531,6 +1628,7 @@ $('ckDel').addEventListener('click',function(){ var id=editingCk, c=checksAll().
 $('ckClose').addEventListener('click',function(){closeSheet('ckScrim');});
 $('ckScrim').addEventListener('click',function(e){ if(e.target===this) closeSheet('ckScrim'); });
 $('logCheckBtn').addEventListener('click',function(){ openCheck(null); });
+$('payPlan').addEventListener('click',function(e){ if(e.target.closest('#goPlan')){ state.settings.mode='due'; winOffset=0; save(); render(); setTimeout(function(){ var c=$('planCard'); if(c) c.scrollIntoView({block:'start'}); },30); } });
 $('payView').addEventListener('click',function(e){ if(e.target.closest('.logCk')){ openCheck(null); return; } var r=e.target.closest('[data-ck]'); if(r) openCheck(r.dataset.ck); });
 $('expChecks').addEventListener('click',function(){
   function q(v){ v=String(v==null?'':v); return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
@@ -1770,7 +1868,7 @@ $('fileIn').addEventListener('change',function(){
 document.addEventListener('visibilitychange',function(){ if(!document.hidden) render(); });
 
 // test hook
-window.BillsApp={coversIn:coversIn, applyChoice:applyChoice, shortOpenAmt:shortOpenAmt, incomeDay:incomeDay, incomeRange:incomeRange, periodMainIncome:periodMainIncome, payPeriodAt:payPeriodAt, checkTotals:checkTotals, logMode:logMode, allShorts:allShorts, setShort:setShort, lastDay:lastDay, isEnded:isEnded, behindModel:behindModel, periodAt:periodAt, endFromForm:endFromForm, dueModel:dueModel, windowRange:windowRange, periodKey:periodKey, markPaid:markPaid, unmarkPaid:unmarkPaid, isPaid:isPaid, oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
+window.BillsApp={catchupPlan:catchupPlan, planChecks:planChecks, save:save, render:render, coversIn:coversIn, applyChoice:applyChoice, shortOpenAmt:shortOpenAmt, incomeDay:incomeDay, incomeRange:incomeRange, periodMainIncome:periodMainIncome, payPeriodAt:payPeriodAt, checkTotals:checkTotals, logMode:logMode, allShorts:allShorts, setShort:setShort, lastDay:lastDay, isEnded:isEnded, behindModel:behindModel, periodAt:periodAt, endFromForm:endFromForm, dueModel:dueModel, windowRange:windowRange, periodKey:periodKey, markPaid:markPaid, unmarkPaid:unmarkPaid, isPaid:isPaid, oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
 render();
 })();
 </script>

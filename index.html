@@ -220,6 +220,43 @@ textarea{min-height:70px;resize:vertical}
 .dsec2 span{font-size:13px;color:var(--muted);font-weight:600}
 .duerow.info .bill{background:transparent;box-shadow:none;border:1px dashed var(--line)}
 .duerow.info .amt b{color:var(--muted)}
+.seg button{font-size:13px;line-height:1.15}
+.confirm .btns{margin-top:14px}
+#cfScrim{z-index:30}
+details.more{margin-top:12px}
+details.more>summary{list-style:none;cursor:pointer;background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:14px 16px;font-weight:700;display:flex;justify-content:space-between;align-items:center;min-height:50px}
+details.more>summary::-webkit-details-marker{display:none}
+details.more>summary::after{content:"▾";color:var(--muted);transition:transform .2s}
+details.more[open]>summary::after{transform:rotate(180deg)}
+.setupbar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:10px 12px;margin-top:12px;font-size:14px}
+.setupbar button{background:var(--accent);color:#fff;font-weight:700;border-radius:10px;min-height:42px;padding:0 14px;white-space:nowrap}
+.guide{position:relative;background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:14px 16px;margin-top:12px;border:1px solid var(--line)}
+.guide h3{margin:0 0 8px;font-size:16px}
+.guide ol{margin:0;padding-left:0;list-style:none;display:grid;gap:8px}
+.guide li{display:flex;align-items:center;gap:10px;font-size:15px}
+.guide li i{flex:0 0 26px;height:26px;border-radius:13px;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:13px;background:var(--chip);color:var(--muted)}
+.guide li.done i{background:var(--ok);color:#fff}
+.guide li.done span{color:var(--muted);text-decoration:line-through}
+.guide li button{margin-left:auto;background:var(--chip);border-radius:10px;min-height:36px;padding:0 10px;font-weight:700;font-size:13px}
+.guide .x{position:absolute;top:8px;right:8px;width:36px;height:36px;border-radius:10px;color:var(--muted);font-size:18px}
+.calbudget{margin-top:10px;font-size:15px}
+.calbudget small{display:block;color:var(--muted);font-size:12px}
+.expl{display:block;color:var(--muted);font-size:12px;font-weight:500}
+.prow{background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-top:8px;overflow:hidden}
+.prow .phead{display:flex;align-items:center;gap:12px;padding:12px 14px;width:100%;text-align:left;min-height:56px}
+.prow .phead .dot{flex:0 0 10px;height:34px;border-radius:5px}
+.prow .phead .mid{flex:1;min-width:0}
+.prow .phead .nm{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow .phead .meta{font-size:14px}
+.prow .phead .chev{color:var(--muted);transition:transform .2s}
+.prow.open .phead .chev{transform:rotate(180deg)}
+.prow .pdet{display:none;padding:0 14px 12px 36px;font-size:13px;color:var(--muted)}
+.prow.open .pdet{display:block}
+.prow .pdet .bar{margin-top:6px;height:6px}
+.prow .pdet button{margin-top:8px;background:var(--chip);border-radius:10px;min-height:38px;padding:0 12px;font-weight:700;color:var(--text)}
+.datewrap{display:flex;gap:8px}
+.datewrap input{flex:1}
+.datewrap button{flex:0 0 auto;width:auto;min-height:44px;padding:0 14px;border-radius:12px;background:var(--chip);font-weight:700}
 .foot{color:var(--muted);font-size:12px;text-align:center;margin-top:22px}
 </style>
 </head>
@@ -227,7 +264,7 @@ textarea{min-height:70px;resize:vertical}
 <div class="wrap">
   <header class="top">
     <h1>Bills</h1>
-    <div class="hdrbtns"><button class="addtxt addBillBtn" id="addBillTop" aria-label="Add bill">＋ Add bill</button>
+    <div class="hdrbtns">
     <button class="iconbtn" id="menuBtn" aria-label="Menu">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>
     </button></div>
@@ -236,14 +273,16 @@ textarea{min-height:70px;resize:vertical}
   <div class="seg" role="tablist">
     <button id="modeCal" aria-pressed="true">Calendar</button>
     <button id="modePay" aria-pressed="false">Payday</button>
-    <button id="modeAvg" aria-pressed="false">Prorated</button>
-    <button id="modeDue" aria-pressed="false">Actual due</button>
+    <button id="modeAvg" aria-pressed="false">Average costs</button>
+    <button id="modeDue" aria-pressed="false">Bills due</button>
   </div>
 
   <div id="exBanner" class="banner hidden">
-    <span><b>Example bills</b> — tap Clear all to start fresh.</span>
-    <button id="clearEx">Clear all</button>
+    <span><b>Example bills</b> — replace them with yours.</span>
+    <button id="clearEx">Start with my own bills</button>
   </div>
+
+  <div class="setupbar hidden" id="paySetup"><span>Add your take-home pay to see the income left after bills.</span><button type="button" class="goIncome" id="paySetupBtn">Set up my pay</button></div>
 
   <!-- CALENDAR MODE -->
   <section id="calView">
@@ -252,16 +291,19 @@ textarea{min-height:70px;resize:vertical}
       <div class="ttl" id="calTitle"></div>
       <button class="iconbtn" id="calNext" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
     </div>
+    <div class="calbudget" id="calBudget"></div>
     <div class="flegend" id="calLegend"></div>
     <div class="calhint hidden" id="calHint">📅 Add due dates to your bills to see when they hit — tap a bill’s day marker for details.</div>
     <div class="cal" id="calGrid"></div>
     <div class="card mtot" id="calTotal"></div>
+    <details class="more" id="moreCal"><summary>More details: income step-by-step &amp; 3-month outlook</summary>
     <div class="card wf" id="wfCal"></div>
-    <div class="card" id="outlook"></div>
+    <div class="card" id="outlook"></div></details>
   </section>
 
   <!-- PAYDAY MODE -->
   <section id="payView" class="hidden">
+    <div class="guide hidden" id="guide"><button class="x" id="guideX" aria-label="Dismiss guide">✕</button><h3>Get started</h3><ol id="guideSteps"></ol></div>
     <div class="chips" id="payChips"></div>
     <div class="card total">
       <div class="lbl" id="payLbl">Set aside each payday</div>
@@ -273,8 +315,7 @@ textarea{min-height:70px;resize:vertical}
       <div id="incList"></div>
       <button class="btn" id="addInc" style="margin-top:8px;min-height:44px">+ Add income source</button>
     </div>
-    <div class="card wf" id="wfPay"></div>
-    <button class="btn addBillBtn" style="margin-top:14px;min-height:46px">＋ Add bill (recurring or one-time)</button>
+    <details class="more" id="morePay"><summary>More details: income left after bills, step by step</summary><div class="card wf" id="wfPay"></div></details>
     <div class="sechead"><h2>Set aside for future bills</h2><span id="savTot" class="billtot"></span></div>
     <div class="hint" style="margin:4px 2px 0">Bills due less often than you're paid. Put each one's per-check share aside so the money is there when it comes due.</div>
     <div id="savList"></div>
@@ -282,7 +323,7 @@ textarea{min-height:70px;resize:vertical}
     <div class="hint" style="margin:4px 2px 0">Bills due every paycheck or more often (per-check average shown).</div>
     <div id="dirList"></div>
     <div id="oneSec"><div class="sechead"><h2>Upcoming one-time</h2><span id="oneTot"></span></div>
-    <div class="hint" style="margin:4px 2px 0">One-time bills with no set-aside spread hit in full on their date.</div>
+    <div class="hint" style="margin:4px 2px 0">One-time bills without a set-aside spread are paid all at once on their due date.</div>
     <div id="oneList"></div></div>
   </section>
 
@@ -303,7 +344,7 @@ textarea{min-height:70px;resize:vertical}
     </div>
     <div class="listhead">
       <h2 id="listTitle">Bills</h2>
-      <div class="hdrbtns"><button class="addtxt sm addBillBtn">＋ Add</button>
+      <div class="hdrbtns">
       <select id="sortSel" aria-label="Sort">
         <option value="amount">Sort: Amount</option>
         <option value="name">Sort: Name</option>
@@ -324,8 +365,10 @@ textarea{min-height:70px;resize:vertical}
     </div>
     <div class="card">
       <div class="total dueHead">
-        <div class="lbl" id="dueLbl">Still to pay this week</div>
-        <div class="big billtot" id="dueTot">$0.00</div>
+        <div class="cmp">
+          <div><div class="lbl" id="dueLbl">Unpaid bills this week</div><div class="v billtot" id="dueTot">$0.00</div></div>
+          <div><div class="lbl" id="dueShareLbl">Money to set aside this week</div><div class="v" id="dueShareTot">$0.00</div></div>
+        </div>
         <div class="sub"><span id="asideLbl">set aside per week</span> <b id="asideTot">$0.00</b> <span style="color:var(--muted)">(smooth average — doesn’t change as you check bills off)</span></div>
         <div class="sub" id="cashLine" style="font-size:13px;color:var(--muted)"></div>
       </div>
@@ -368,12 +411,14 @@ textarea{min-height:70px;resize:vertical}
     </div>
     <div class="row2 hidden" id="spreadRow">
       <div class="field"><label for="fSpreadUnit">Set aside ahead for it?</label>
-        <select id="fSpreadUnit"><option value="none">No — hits on its date</option><option value="weeks">Spread over N weeks</option><option value="months">Spread over N months</option></select></div>
+        <select id="fSpreadUnit"><option value="none">No — pay it all on its due date</option><option value="weeks">Spread over N weeks</option><option value="months">Spread over N months</option></select></div>
       <div class="field"><label for="fSpreadN">N</label><input id="fSpreadN" inputmode="numeric" value="4"></div>
     </div>
+    <div class="hint hidden" id="spreadHint">Without a spread, this bill isn’t in your set-aside — you pay it all on its due date.</div>
     <div class="hint" id="freqHint"></div>
     <div class="field"><label for="fCat">Category (optional)</label><input id="fCat" list="catList" placeholder="e.g. Housing" maxlength="40"><datalist id="catList"></datalist></div>
-    <div class="field"><label for="fDue" id="fDueLbl">Next due date (optional)</label><input id="fDue" type="date"></div>
+    <div class="field"><label for="fDue" id="fDueLbl">Next due date (optional)</label><div class="datewrap"><input id="fDue" type="date"><button type="button" id="fDueClear" aria-label="Clear due date">Clear</button></div>
+      <div class="hint" style="margin:6px 2px 0">Add a due date so it shows on the calendar and in Bills due.</div></div>
     <div class="field"><label for="fNotes">Notes (optional)</label><textarea id="fNotes" maxlength="500"></textarea></div>
     <div class="toggle"><span>Active</span><label class="switch"><input type="checkbox" id="fActive" checked aria-label="Active"><span></span></label></div>
     <div class="btns">
@@ -406,6 +451,16 @@ textarea{min-height:70px;resize:vertical}
     </div>
     <div class="btns"><button type="submit" class="btn primary">Save</button><button type="button" class="btn danger hidden" id="iDel">Delete income source</button></div>
   </form>
+</div>
+
+<!-- Confirm sheet -->
+<div class="scrim" id="cfScrim">
+  <div class="sheet confirm" role="alertdialog" aria-labelledby="cfTitle">
+    <div class="grab"></div>
+    <h3 id="cfTitle">Are you sure?</h3>
+    <div class="hint" id="cfMsg" style="margin:0"></div>
+    <div class="btns"><button type="button" class="btn primary" id="cfOk">OK</button><button type="button" class="btn" id="cfCancel">Cancel</button></div>
+  </div>
 </div>
 
 <!-- Menu sheet -->
@@ -611,7 +666,7 @@ function seedExamples(){
   save();
 }
 if (FIRST_VISIT) seedExamples();
-state.settings.mode='cal'; // Calendar is always the home screen on launch
+state.settings.mode='pay'; // Payday is the start screen on launch
 
 
 /* ---------- DOM helpers ---------- */
@@ -637,6 +692,11 @@ function render(){
   $('exBanner').classList.toggle('hidden', !state.bills.some(function(b){return b.example;}));
   $('clearEx2').classList.toggle('hidden', !state.bills.some(function(b){return b.example;}));
   $('sortSel').value=s.sort; $('weekMon').checked=!!s.weekMon; $('showInactive').checked=s.showInactive!==false;
+  $('paySetup').classList.toggle('hidden', hasIncome() || s.mode==='pay');
+  var own=state.bills.some(function(b){return !b.example;}), inc=hasIncome();
+  $('guide').classList.toggle('hidden', !!s.guideDismissed || s.mode!=='pay');
+  $('guideSteps').innerHTML=[[own,'Add your bills','<button type="button" class="addBillBtn">Add</button>'],[inc,'Enter your pay','<button type="button" class="goIncome">Enter</button>'],[own&&inc,'See your payday plan','']]
+    .map(function(x,i){ return '<li class="'+(x[0]?'done':'')+'"><i>'+(x[0]?'✓':(i+1))+'</i><span>'+x[1]+'</span>'+(x[0]?'':x[2])+'</li>'; }).join('');
   if (s.mode==='cal') renderCal(); else if (s.mode==='pay') renderPay(); else if (s.mode==='avg') renderAvg(); else renderDue();
 }
 
@@ -658,8 +718,8 @@ function renderAvg(){
     (incP>0?'<div class="row"><span>Take-home income</span><b class="pos-t" id="avgInc">'+money(incP)+'</b></div>':'')+
     FG.filter(function(g){return gs[g.k]>0;}).map(function(g){ return '<div class="row" style="color:'+fcol(g.k)+'"><span>− '+g.label+' bills</span><b>'+money(gs[g.k])+'</b></div>'; }).join('')+
     '<div class="row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span><b>Total bills</b></span><b class="billtot" id="avgBills">'+money(gs.total)+'</b></div>';
-  if (incP>0){ var pv=incP-gs.total; ph+='<div class="row" style="font-size:20px;padding-top:8px"><span><b>'+(pv>=0?'Profit':'Loss')+' '+P.per+'</b></span><b id="avgProfit" class="'+plCls(pv)+'" style="font-size:24px">'+plMoney(pv)+'</b></div>'; }
-  else ph+='<div class="prompt" style="margin-top:8px"><span>Enter your take-home pay to see profit/loss.</span><button type="button" class="goIncome">Enter pay</button></div>';
+  if (incP>0){ var pv=incP-gs.total; ph+='<div class="row" style="font-size:20px;padding-top:8px"><span><b>'+(pv>=0?'Income left after bills':'Bills exceed income')+'</b><span class="expl">'+P.per+'</span></span><b id="avgProfit" class="'+plCls(pv)+'" style="font-size:24px">'+plMoney(pv)+'</b></div>'; }
+
   $('avgPL').innerHTML=ph;
 
   // categories
@@ -727,15 +787,15 @@ function waterfall(perKey){
 }
 function waterfallHTML(){
   var pk=state.settings.wfPeriod||'week', W=waterfall(pk);
-  var h='<div class="cardtitle">Profit / loss waterfall</div><div class="seg wfseg">'+Object.keys(WF_PERIODS).map(function(k){ return '<button data-wf="'+k+'" aria-pressed="'+(k===pk)+'">'+WF_PERIODS[k].label+'</button>'; }).join('')+'</div>';
-  if (!hasIncome()) return h+'<div class="prompt"><span>Enter your take-home pay to see profit/loss.</span><button type="button" class="goIncome">Enter pay</button></div>';
+  var h='<div class="cardtitle">Income left after bills — step by step</div><div class="seg wfseg">'+Object.keys(WF_PERIODS).map(function(k){ return '<button data-wf="'+k+'" aria-pressed="'+(k===pk)+'">'+WF_PERIODS[k].label+'</button>'; }).join('')+'</div>';
+  if (!hasIncome()) return h+'<div class="hint" style="margin:6px 0 0">Shows once your take-home pay is set up.</div>';
   h+='<div class="row"><span>Take-home income</span><b class="pos-t">'+money(W.income)+'</b></div>';
   W.steps.forEach(function(x){
     h+='<div class="row" style="color:'+fcol(x.t.col)+'"><span>− '+x.t.label+'</span><b>−'+money(x.cost)+'</b></div>'+
        '<div class="row subt"><span>= left after '+x.t.label.replace(' bills','').toLowerCase()+'</span><b class="'+(x.after<0?'neg-t':'')+'">'+(x.after<0?'−':'')+money(Math.abs(x.after))+'</b></div>';
   });
   h+='<div class="row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span>Total bills</span><b class="billtot wfCost">−'+money(W.income-W.pl)+'</b></div>';
-  h+='<div class="row final"><span>'+(W.pl>=0?'Profit':'Loss')+' per '+W.P.word+'</span><b class="wfFinal '+plCls(W.pl)+'">'+plMoney(W.pl)+'</b></div>';
+  h+='<div class="row final"><span>'+(W.pl>=0?'Income left after bills':'Bills exceed income')+'<span class="expl">per '+W.P.word+'</span></span><b class="wfFinal '+plCls(W.pl)+'">'+plMoney(W.pl)+'</b></div>';
   return h;
 }
 function renderWF(id){ $(id).innerHTML=waterfallHTML(); }
@@ -770,8 +830,12 @@ function renderCal(){
   $('calTitle').innerHTML=MONTHS_FULL[M.m]+' '+M.y+'<small>'+(calOffset===0?'This month':'<a href="#" id="calToday" style="color:var(--accent)">Back to today</a>')+'</small>';
   var act=activeBills();
   var present=FG.filter(function(g){ return act.some(function(b){return groupOf(b)===g.k;}); });
-  $('calLegend').innerHTML=present.map(function(g){ return '<span style="color:'+fcol(g.k)+'"><i style="background:'+fcol(g.k)+'"></i>'+g.sh+' = '+g.label+'</span>'; }).join('')+
-    '<span style="color:var(--muted)">▲ = bill due</span>';
+  var yrRec=act.reduce(function(a,b){return a+annualCost(b);},0), incDay=incomeYearly()/DAYS_PER_YEAR;
+  $('calBudget').innerHTML='Daily budget: <b class="billtot" id="dailyBudget">'+money(yrRec/DAYS_PER_YEAR)+'</b>'+
+    (incDay>0?' · income left per day <b class="'+plCls(incDay-yrRec/DAYS_PER_YEAR)+'">'+plMoney(incDay-yrRec/DAYS_PER_YEAR)+'</b>':'')+
+    '<small>Your recurring bills spread evenly across the year (yearly total ÷ 365.25).</small>';
+  $('calLegend').innerHTML='<span><i style="background:#d11f26"></i><b class="billtot">red</b>&nbsp;= bills</span>'+(incDay>0?'<span><i style="background:#d4a017"></i><b class="gold">gold</b>&nbsp;= income left</span>':'')+
+    '<span style="color:var(--muted)">▲ = bill due · 1x = One-time bill (tap a day for details)</span>';
   $('calHint').classList.toggle('hidden', !act.length || act.some(function(b){return parseISO(b.due);}));
   var dues=dueInRange(M.s,M.e), dueBy={};
   dues.forEach(function(x){ (dueBy[x.n]=dueBy[x.n]||[]).push(x); });
@@ -793,7 +857,6 @@ function renderCal(){
         names='<div class="dnames">'+du.map(function(x){return '<div style="color:'+fcol(groupOf(x.b))+'" title="'+esc(x.b.name)+'">'+(isOne(x.b)?'1x ':'▲')+abbr(+x.b.amount)+' '+esc(x.b.name)+'</div>';}).join('')+'</div>';
       }
       row+='<button class="cell'+(d===t?' today':'')+'" data-day="'+d+'" aria-label="'+fmtDay(d,true)+'"><div class="dn">'+o.d+'</div>'+mk+names+
-        (sh.total>0?'<div class="tt billtot">'+abbr(sh.total)+'</div>':'')+
         (incD>0?(function(v){ return '<div class="dp '+(v>=0?'gold':'neg-t')+'">'+(v>=0?'+':'−')+abbr(Math.abs(v))+'</div>'; })(incD-sh.total):'')+'</button>';
     }
     row+='</div>';
@@ -806,9 +869,9 @@ function renderCal(){
     else if (!firstFull){ firstFull=true; mode='week'; lbl='Wk'; fig=wk; figInc=incD*inDays; }
     else { mode='mtd'; rs=M.s; lbl=(we2===M.e?'Month':'MTD <small style="color:var(--muted);font-weight:600">thru '+fromDayNum(we2).d+'</small>'); fig=mtdCopy; figInc=mtdInc; }
     row+='<button class="wksum" data-mode="'+mode+'" data-ws="'+rs+'" data-we="'+we2+'">'+
-      '<div class="ln"><span class="k">'+lbl+'</span>'+famHTML(fig)+
+      '<div class="ln"><span class="k">'+lbl+'</span>'+
       '<span class="t billtot wkTot">= '+money(fig.total)+'</span>'+
-      (incD>0 ? '<span class="fam '+plCls(figInc-fig.total)+' wkPL"><small>'+(figInc-fig.total>=0?'Profit ':'')+'</small>'+plMoney(figInc-fig.total)+'</span>' : '')+'</div></button>';
+      (incD>0 ? '<span class="fam '+plCls(figInc-fig.total)+' wkPL"><small>'+(figInc-fig.total>=0?'Left ':'')+'</small>'+plMoney(figInc-fig.total)+'</span>' : '')+'</div></button>';
     weeks[weeks.length-1].mode=mode; weeks[weeks.length-1].inc=incD*inDays; weeks[weeks.length-1].pl=incD*inDays-wk.total; weeks[weeks.length-1].cumPl=mtdInc-mtdCopy.total;
     h+=row;
   }
@@ -816,14 +879,14 @@ function renderCal(){
   // month total
   var nDays=M.e-M.s+1, dueTot=dues.reduce(function(a,x){return a+(+x.b.amount||0);},0);
   var yr=act.reduce(function(a,b){return a+annualCost(b);},0);
-  $('calTotal').innerHTML='<div class="total"><div class="lbl">'+MONTHS_FULL[M.m]+' total · prorated · '+nDays+' days</div><div class="big billtot" id="calMonthTotal">'+money(mtd.total)+'</div></div>'+
+  $('calTotal').innerHTML='<div class="total"><div class="lbl">'+MONTHS_FULL[M.m]+' bills total</div><div class="big billtot" id="calMonthTotal">'+money(mtd.total)+'</div>'+
+      '<div class="sub">this month — '+nDays+' days'+(nDays>DAYS_PER_YEAR/12?', so more weekly bills fall in it than in an average month':', so fewer weekly bills fall in it than in an average month')+'</div></div>'+
     FG.filter(function(g){return mtd[g.k]>0;}).map(function(g){ return '<div class="row" style="color:'+fcol(g.k)+'"><span>'+g.label+' bills</span><b>'+money(mtd[g.k])+'</b></div>'; }).join('')+
     (incD>0 ? '<div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span>Income (prorated, '+nDays+' days)</span><b class="pos-t">'+money(mtdInc)+'</b></div>'+
-      '<div class="row" style="font-size:18px"><span><b>'+(mtdInc-mtd.total>=0?'Profit':'Loss')+' this month</b></span><b id="calMonthPL" class="'+plCls(mtdInc-mtd.total)+'">'+plMoney(mtdInc-mtd.total)+'</b></div>'
-      : '<div class="prompt" style="margin-top:8px"><span>Enter your take-home pay to see profit/loss.</span><button type="button" class="goIncome">Enter pay</button></div>')+
-    '<div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span>Actually due this month'+(dues.length?' ('+dues.length+')':'')+'</span><b id="calDueTotal">'+money(dueTot)+'</b></div>'+
-    '<div class="row" style="color:var(--muted);font-size:13px"><span>Daily rate (yearly ÷ 365.25)</span><span>'+money(yr/DAYS_PER_YEAR)+'/day</span></div>'+
-    '<div class="row" style="color:var(--muted);font-size:13px"><span>Average month (yearly ÷ 12)</span><span>'+money(yr/12)+'</span></div>'+
+      '<div class="row" style="font-size:18px"><span><b>'+(mtdInc-mtd.total>=0?'Income left after bills':'Bills exceed income')+'</b><span class="expl">this month</span></span><b id="calMonthPL" class="'+plCls(mtdInc-mtd.total)+'">'+plMoney(mtdInc-mtd.total)+'</b></div>'
+      : '')+
+    '<div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span>Bills with a due date'+(dues.length?' ('+dues.length+')':'')+'<span class="expl">only bills with a due date this month</span></span><b id="calDueTotal" class="billtot">'+money(dueTot)+'</b></div>'+
+    '<div class="row"><span>Average month<span class="expl">average month (yearly total ÷ 12)</span></span><b class="billtot">'+money(yr/12)+'</b></div>'+
     (dues.length?'':'<div class="hint" style="margin:6px 0 0">No due dates in this month'+(act.some(function(b){return parseISO(b.due);})?'.':' — add due dates to see when bills hit.')+'</div>');
   renderWF('wfCal'); renderOutlook();
   calCache={weeks:weeks, M:M, monthInc:mtdInc, monthPL:mtdInc-mtd.total};
@@ -839,13 +902,13 @@ function renderOutlook(){
     rows.push({m:MONTHS_FULL[m]+' '+y, cost:sh.total, inc:inc, pl:pl, cum:cum});
     h+=(k?'<div class="olarrow">↓</div>':'')+'<div class="olbox"><div class="h"><span>'+MON[m]+' '+y+' <small style="color:var(--muted);font-weight:500">'+n+' days</small></span><span class="billtot">'+money(sh.total)+'</span></div>'+
       '<div class="fl">'+famHTML(sh)+'</div>'+
-      (incD>0?'<div class="kv"><span>Income</span><b class="pos-t">'+money(inc)+'</b></div><div class="kv"><span>Profit / loss</span><b class="'+plCls(pl)+'">'+plMoney(pl)+'</b></div>'+
+      (incD>0?'<div class="kv"><span>Income</span><b class="pos-t">'+money(inc)+'</b></div><div class="kv"><span>Income left after bills</span><b class="'+plCls(pl)+'">'+plMoney(pl)+'</b></div>'+
         (k?'<div class="kv" style="color:var(--muted)"><span>Running total</span><b class="'+plCls(cum)+'">'+plMoney(cum)+'</b></div>':''):'')+'</div>';
   }
   h+='<div class="olarrow">↓</div><div class="olbox tot"><div class="h"><span>3-month total</span><span id="ol3Cost" class="billtot">'+money(cumCost.total)+'</span></div>'+
     '<div class="fl">'+famHTML(cumCost,true)+'</div>'+
-    (incD>0?'<div class="kv"><span>Income</span><b class="pos-t">'+money(cumInc)+'</b></div><div class="kv" style="font-size:16px"><span><b>Profit / loss</b></span><b id="ol3PL" class="'+plCls(cum)+'">'+plMoney(cum)+'</b></div>'
-      :'<div class="prompt" style="margin-top:8px"><span>Enter your take-home pay to see profit/loss.</span><button type="button" class="goIncome">Enter pay</button></div>')+'</div>';
+    (incD>0?'<div class="kv"><span>Income</span><b class="pos-t">'+money(cumInc)+'</b></div><div class="kv" style="font-size:16px"><span><b>Income left after bills</b></span><b id="ol3PL" class="'+plCls(cum)+'">'+plMoney(cum)+'</b></div>'
+      :'')+'</div>';
   $('outlook').innerHTML=h; outlookCache={rows:rows, cost:cumCost.total, inc:cumInc, pl:cum};
 }
 function openRange(s,e){
@@ -856,7 +919,7 @@ function openRange(s,e){
   $('dayTitle').textContent = nd===1 ? fmtDay(s,true) : fmtShort(s)+' – '+fmtShort(e)+' ('+nd+' days)';
   var act=activeBills(), h='<div class="card total" style="margin-top:0"><div class="lbl">Bills · prorated '+(nd===1?'today':(nd<=7?'this week':'these '+nd+' days'))+'</div><div class="big billtot">'+money(sh.total)+'</div>'+
     '<div class="sub">Month-to-date through '+fmtShort(e)+': <b>'+money(mtd.total)+'</b></div>'+
-    (hasIncome()?(function(){ var inc=incomeYearly()/DAYS_PER_YEAR*nd; return '<div class="sub">Income '+money(inc)+' · profit/loss <b class="'+plCls(inc-sh.total)+'">'+plMoney(inc-sh.total)+'</b></div>'; })():'')+'</div>';
+    (hasIncome()?(function(){ var inc=incomeYearly()/DAYS_PER_YEAR*nd; return '<div class="sub">Income '+money(inc)+' · income left after bills <b class="'+plCls(inc-sh.total)+'">'+plMoney(inc-sh.total)+'</b></div>'; })():'')+'</div>';
   FG.forEach(function(g){
     var bs=act.filter(function(b){return groupOf(b)===g.k && billRangeShare(b,s,e)>0;}); if(!bs.length) return;
     h+='<div class="dsec"><h4 style="color:'+fcol(g.k)+'"><span>'+g.label+'</span><span>'+money(sh[g.k]||0)+'</span></h4>'+
@@ -920,14 +983,16 @@ function renderPay(){
   } else $('payBreak').innerHTML='';
   $('savTot').textContent=money(savTot); $('dirTot').textContent=money(dirTot);
   function row(x, showFund){ var b=x.b, c=(b.category||'').trim()||'Uncategorized', f=showFund&&x.f;
+    var calc = x.one ? money(+b.amount||0)+' one-time, saved over the weeks before it’s due = '+money(x.v)+' per paycheck'
+      : money(+b.amount||0)+' '+freqText(b).toLowerCase()+' = '+money(annualCost(b))+' a year ÷ '+(Math.round(PF.per*100)/100)+' paychecks a year = '+money(x.v)+' per paycheck';
     var fund='';
-    if (f) fund='<div class="fund"><small>'+(x.one?'Set-aside goal':'Sinking fund')+' ≈ <b>'+money(f.bal)+'</b> of '+money(f.amt)+' · due '+fmtShort(f.next)+' · '+(f.checksLeft?f.checksLeft+' paycheck'+(f.checksLeft===1?'':'s')+' left':'<b>due before next payday</b>')+'</small>'+
+    if (f) fund='<div class="fund"><small>'+(x.one?'Set-aside goal':'Estimated set-aside target')+' ≈ <b>'+money(f.bal)+'</b> of '+money(f.amt)+' · due '+fmtShort(f.next)+' · '+(f.checksLeft?f.checksLeft+' paycheck'+(f.checksLeft===1?'':'s')+' left':'<b>due before next payday</b>')+'</small>'+
       '<div class="bar"><div style="width:'+(f.frac*100).toFixed(1)+'%;background:'+colorFor(c,cats)+'"></div></div></div>';
-    else if (showFund) fund='<div class="fund"><small>Add a next due date to track the sinking-fund balance.</small></div>';
-    return '<button class="bill col" data-id="'+b.id+'"><span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
+    else if (showFund) fund='<div class="fund"><small>Add a due date to estimate how much should be set aside by now.</small></div>';
+    return '<div class="prow" data-id="'+b.id+'"><button class="phead" type="button" aria-expanded="false"><span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
       '<span class="mid"><div class="nm">'+esc(b.name)+(b.example?'<span class="tag">Example</span>':'')+'</div>'+
-      '<div class="meta">'+money(+b.amount||0)+' '+freqText(b).toLowerCase()+(b.category?' · '+esc(b.category):'')+'</div></span>'+
-      '<span class="amt"><b>'+money(x.v)+'</b><small>per check</small></span>'+fund+'</button>'; }
+      '<div class="meta">'+(showFund?'Reserve':'Pay')+' <b class="billtot">'+money(x.v)+'</b> per paycheck</div></span><span class="chev">▾</span></button>'+
+      '<div class="pdet"><div>'+calc+'</div>'+fund+'<button type="button" class="pedit">Edit bill</button></div></div>'; }
   ones.sort(function(a,b){ return ((a.past?1:0)-(b.past?1:0)) || (a.past? b.n-a.n : a.n-b.n); });
   var upTot=ones.filter(function(o){return !o.past;}).reduce(function(a,o){return a+(+o.b.amount||0);},0);
   $('oneSec').classList.toggle('hidden', !ones.length); $('oneTot').textContent=upTot?money(upTot):'';
@@ -1013,8 +1078,9 @@ function renderDue(){
   else { title=fmtShort(w.s)+' – '+fmtShort(w.e); sub=winOffset===0?'This week':(winOffset===1?'Next week':(winOffset===-1?'Last week':'')); }
   $('winTitle').innerHTML=esc(title)+(sub?'<small>'+sub+'</small>':'');
   var M=dueModel(w), per=w.kind, cats=categories();
-  $('dueLbl').textContent='Still to pay this '+per;
-  $('dueTot').textContent=money(M.still); $('asideTot').textContent=money(M.aside); $('asideLbl').textContent='set aside per '+per;
+  var unpaid=M.direct.reduce(function(a,x){return a+(x.done?0:x.amt);},0), shareOpen=M.shares.reduce(function(a,x){return a+(x.done?0:x.amt);},0);
+  $('dueLbl').textContent='Unpaid bills this '+per; $('dueShareLbl').textContent='Money to set aside this '+per;
+  $('dueTot').textContent=money(unpaid); $('dueShareTot').textContent=money(shareOpen); $('asideTot').textContent=money(M.aside); $('asideLbl').textContent='set aside per '+per;
   $('cashLine').innerHTML = M.cash>0 ? 'Cash actually leaving this '+per+' (full bills dated in it): '+money(M.cash) : '';
   var all=M.direct.concat(M.shares), nd=all.filter(function(x){return x.done;}).length;
   $('dueDiff').innerHTML = all.length ? nd+' of '+all.length+' checked off. Tap ✓ when it’s paid or set aside; tap again to undo. Set-aside checks reset each '+per+'.' : '';
@@ -1067,12 +1133,12 @@ function formBill(){
 function parseAmt(v){ v=String(v||'').replace(/[$,\s]/g,''); var n=parseFloat(v); return isFinite(n)?n:NaN; }
 function updateFreqUI(){
   var fb=formBill(); $('customRow').classList.toggle('hidden', fb.freq!=='custom');
-  var one=fb.freq==='onetime'; $('spreadRow').classList.toggle('hidden',!one);
+  var one=fb.freq==='onetime'; $('spreadRow').classList.toggle('hidden',!one); $('spreadHint').classList.toggle('hidden',!one||$('fSpreadUnit').value!=='none');
   $('fDueLbl').textContent=one?'Date (required)':'Next due date (optional)';
   if (one && !$('fDue').value) $('fDue').value=isoOf(todayNum());
   $('fSpreadN').disabled=$('fSpreadUnit').value==='none';
   if (one){ var a1=isFinite(fb.amount)?fb.amount:0, su=$('fSpreadUnit').value, sn=parseInt($('fSpreadN').value,10)||0;
-    $('freqHint').textContent = 'One-time: not counted in recurring rates; shows on its date in Calendar & Actual due.'+
+    $('freqHint').textContent = 'One-time: not counted in recurring rates; shows on its due date in Calendar & Bills due.'+
       (su!=='none'&&sn>0&&a1>0 ? ' Set aside ≈ '+money(su==='weeks'?a1/sn:a1/(sn*WEEKS_PER_YEAR/12))+'/wk over '+sn+' '+su+'.' : '');
     return; }
   var a=isFinite(fb.amount)?fb.amount:0, yr=a*timesPerYear(fb);
@@ -1098,16 +1164,25 @@ $('editForm').addEventListener('submit',function(e){
   save(); closeSheet('editScrim'); render();
 });
 $('delBtn').addEventListener('click',function(){
-  var b=state.bills.find(function(x){return x.id===editingId;}); if(!b) return;
-  if (!confirm('Delete “'+b.name+'”?')) return;
-  state.bills=state.bills.filter(function(x){return x.id!==editingId;});
-  if (!state.bills.length) state.settings.examplesCleared=true;
-  save(); closeSheet('editScrim'); render(); toast('Deleted');
+  var b=state.bills.find(function(x){return x.id===editingId;}); if(!b) return; var id=editingId;
+  appConfirm('Delete “'+b.name+'”?','This removes the bill and its paid/set-aside checks.','Delete',function(){
+    state.bills=state.bills.filter(function(x){return x.id!==id;});
+    if (!state.bills.length) state.settings.examplesCleared=true;
+    save(); closeSheet('editScrim'); render(); toast('Deleted'); }, true);
 });
 $('editClose').addEventListener('click',function(){closeSheet('editScrim');});
+var cfCb=null;
+function appConfirm(title, msg, okLabel, onOk, danger){
+  $('cfTitle').textContent=title; $('cfMsg').textContent=msg||''; $('cfOk').textContent=okLabel||'OK';
+  $('cfOk').style.background=danger?'var(--danger)':''; cfCb=onOk; $('cfScrim').classList.add('open');
+}
+$('cfOk').addEventListener('click',function(){ var cb=cfCb; cfCb=null; $('cfScrim').classList.remove('open'); if(cb) cb(); });
+$('cfCancel').addEventListener('click',function(){ cfCb=null; $('cfScrim').classList.remove('open'); });
+$('fDueClear').addEventListener('click',function(){ $('fDue').value=''; updateFreqUI(); });
+$('guideX').addEventListener('click',function(){ state.settings.guideDismissed=true; save(); render(); });
 $('menuClose').addEventListener('click',function(){closeSheet('menuScrim');});
-['editScrim','menuScrim','dayScrim','incScrim'].forEach(function(id){ $(id).addEventListener('click',function(e){ if(e.target===this) closeSheet(id); }); });
-document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ closeSheet('editScrim'); closeSheet('menuScrim'); closeSheet('dayScrim'); closeSheet('incScrim'); } });
+['editScrim','menuScrim','dayScrim','incScrim','cfScrim'].forEach(function(id){ $(id).addEventListener('click',function(e){ if(e.target===this) closeSheet(id); }); });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ closeSheet('editScrim'); closeSheet('menuScrim'); closeSheet('dayScrim'); closeSheet('incScrim'); closeSheet('cfScrim'); } });
 
 /* ---------- events ---------- */
 $('addBtn').addEventListener('click',function(){openEdit(null);});
@@ -1144,9 +1219,12 @@ $('modePay').addEventListener('click',function(){state.settings.mode='pay';save(
 $('payChips').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; state.settings.payFreq=b.dataset.pf; save(); render(); });
 $('checkAmt').addEventListener('input',function(){ var v=parseAmt(this.value); state.settings.checkAmt=isFinite(v)&&v>0?String(Math.round(v*100)/100):''; save(); renderPay(); });
 $('checkAmt').addEventListener('blur',function(){ var v=state.settings.checkAmt; this.value=v?money(+v).replace('$',''):''; });
-$('savList').addEventListener('click',function(e){ var b=e.target.closest('.bill'); if(b) openEdit(b.dataset.id); });
+function prowClick(e){ var r=e.target.closest('.prow'); if(!r) return;
+  if (e.target.closest('.pedit')){ openEdit(r.dataset.id); return; }
+  if (e.target.closest('.phead')){ r.classList.toggle('open'); r.querySelector('.phead').setAttribute('aria-expanded', r.classList.contains('open')); } }
+$('savList').addEventListener('click',prowClick);
 $('oneList').addEventListener('click',function(e){ var b=e.target.closest('.bill'); if(b) openEdit(b.dataset.id); });
-$('dirList').addEventListener('click',function(e){ var b=e.target.closest('.bill'); if(b) openEdit(b.dataset.id); });
+$('dirList').addEventListener('click',prowClick);
 $('modeAvg').addEventListener('click',function(){state.settings.mode='avg';save();render();});
 $('modeDue').addEventListener('click',function(){state.settings.mode='due';save();render();});
 $('periodChips').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; state.settings.period=b.dataset.p; save(); render(); });
@@ -1159,8 +1237,8 @@ $('dueList').addEventListener('click',function(e){
   var c=e.target.closest('.chk');
   if (c){ var bill=state.bills.find(function(x){return x.id===c.dataset.pay;}), n=+c.dataset.n; if(!bill) return;
     if (c.dataset.share){ var was=isSetAside(bill,c.dataset.share); toggleSetAside(bill,c.dataset.share);
-      toast(was?'Unchecked — share back in Still to pay':'Set aside ✓ '+bill.name+' (due date unchanged)'); save(); render(); return; }
-    if (isPaid(bill,n)){ unmarkPaid(bill,n); toast('Unchecked — back in Still to pay'); }
+      toast(was?'Unchecked — back in Money to set aside':'Set aside ✓ '+bill.name+' (due date unchanged)'); save(); render(); return; }
+    if (isPaid(bill,n)){ unmarkPaid(bill,n); toast('Unchecked — back in Unpaid bills'); }
     else { markPaid(bill,n); toast('Paid ✓ '+bill.name+(isOne(bill)?'':' · next due '+fmtShort(dueNum(bill)))); }
     save(); render(); return; }
   var b=e.target.closest('.bill'); if(b) openEdit(b.dataset.id); });
@@ -1171,13 +1249,22 @@ function clearExamples(){
   state.bills=state.bills.filter(function(b){return !b.example;}); state.settings.examplesCleared=true;
   save(); render(); toast(n?'Removed '+n+' example bill'+(n===1?'':'s'):'No example bills');
 }
-function clearAll(){
-  if(!confirm('Clear ALL bills and income? (Export a backup first if you want to keep them.)')) return false;
-  state.bills=[]; state.settings.checkAmt=''; state.settings.incomes=[]; state.settings.examplesCleared=true;
-  save(); closeSheet('menuScrim'); render(); toast('Cleared — start fresh with ＋ Add bill'); return true;
+function startOwn(){
+  var n=state.bills.filter(function(b){return b.example;}).length;
+  if (!n){ toast('No example bills'); return; }
+  appConfirm('Start with your own bills?','This removes the '+n+' example bill'+(n===1?'':'s')+(state.bills.length===n?' and any example pay':'')+'. Bills you added stay.','Remove examples',function(){
+    state.bills=state.bills.filter(function(b){return !b.example;});
+    if (!state.bills.length){ state.settings.checkAmt=''; state.settings.incomes=[]; }
+    state.settings.examplesCleared=true; save(); closeSheet('menuScrim'); render(); toast('Examples removed — tap ＋ to add your first bill'); });
 }
-$('clearEx').addEventListener('click',clearAll);
-$('clearEx2').addEventListener('click',function(){clearExamples();closeSheet('menuScrim');});
+function clearAll(){
+  if(!state.bills.length && !hasIncome()){ toast('Nothing to clear'); return; }
+  appConfirm('Clear ALL bills and income?','Export a backup first (Menu → Export) if you want to keep them.','Clear all',function(){
+    state.bills=[]; state.settings.checkAmt=''; state.settings.incomes=[]; state.settings.examplesCleared=true;
+    save(); closeSheet('menuScrim'); render(); toast('Cleared — start fresh with ＋'); }, true);
+}
+$('clearEx').addEventListener('click',startOwn);
+$('clearEx2').addEventListener('click',startOwn);
 $('wipeAll').addEventListener('click',clearAll);
 
 /* ---------- import / export ---------- */
@@ -1213,10 +1300,10 @@ $('fileIn').addEventListener('change',function(){
           unit:['days','weeks','months'].indexOf(b.unit)>=0?b.unit:'months', category:b.category?String(b.category):'', due:parseISO(b.due)?b.due:'',
           notes:b.notes?String(b.notes):'', active:b.active!==false, example:!!b.example, source:b.source||undefined, spreadUnit:['weeks','months'].indexOf(b.spreadUnit)>=0?b.spreadUnit:'none', spreadN:parseInt(b.spreadN,10)||0, paid:Array.isArray(b.paid)?b.paid.filter(function(x){return !!parseISO(x);}):undefined, dom:(parseInt(b.dom,10)>=1&&parseInt(b.dom,10)<=31)?parseInt(b.dom,10):undefined, setAside:Array.isArray(b.setAside)?b.setAside.filter(function(k){return /^(w:\d{4}-\d{2}-\d{2}|m:\d{4}-\d{2})$/.test(k);}):undefined};
       });
-      if(!confirm('Import '+bills.length+' bills? This REPLACES your current '+state.bills.length+' bills.')) return;
+      appConfirm('Import '+bills.length+' bills?','This REPLACES your current '+state.bills.length+' bills.','Import',function(){
       state.bills=bills; state.settings.examplesCleared=true;
       if(p.settings&&typeof p.settings==='object') ['period','sort','weekMon','showInactive','dueSpan','payFreq','checkAmt','incomes','wfPeriod'].forEach(function(k){ if(k in p.settings) state.settings[k]=p.settings[k]; });
-      save(); closeSheet('menuScrim'); render(); toast('Imported '+bills.length+' bills');
+      save(); closeSheet('menuScrim'); render(); toast('Imported '+bills.length+' bills'); });
     }catch(err){ alert('Import failed: '+err.message); }
   };
   r.readAsText(f);

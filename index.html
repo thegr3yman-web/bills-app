@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bills</title>
+<meta name="description" content="Recurring bills, prorated to any period.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f4f5f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Bills">
+<meta name="format-detection" content="telephone=no">
+<link id="favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233b6ef5'/%3E%3Ctext x='32' y='45' font-size='38' text-anchor='middle' fill='white' font-family='Arial,Helvetica,sans-serif' font-weight='700'%3E%24%3C/text%3E%3C/svg%3E">
+<link id="appleIcon" rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link id="manifestLink" rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<style>
+:root{
+  --bg:#f4f5f8; --card:#ffffff; --text:#14161b; --muted:#6b7280; --line:#e5e7eb;
+  --accent:#3b6ef5; --accent-ink:#ffffff; --danger:#e5484d; --ok:#16a34a; --chip:#eceef3;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.05);
+  --radius:16px;
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0f1115; --card:#181b22; --text:#eef0f4; --muted:#9aa1ad; --line:#2a2f3a;
+    --accent:#5b86ff; --chip:#232733; --shadow:0 1px 2px rgba(0,0,0,.4);}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding:calc(var(--safe-t) + 8px) 0 calc(var(--safe-b) + 96px);-webkit-text-size-adjust:100%}
+.wrap{max-width:680px;margin:0 auto;padding:0 14px}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 10px}
+header.top h1{font-size:28px;margin:0;letter-spacing:-.02em}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.iconbtn{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--card);box-shadow:var(--shadow)}
+.iconbtn svg{width:22px;height:22px}
+.seg{display:flex;background:var(--chip);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;min-height:40px;border-radius:9px;font-weight:600;font-size:14px;padding:0 2px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:0 0 auto;min-height:40px;padding:0 15px;border-radius:999px;background:var(--card);font-weight:600;font-size:15px;box-shadow:var(--shadow)}
+.chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-top:12px}
+.total .lbl{color:var(--muted);font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.total .big{font-size:40px;font-weight:750;letter-spacing:-.02em;margin:2px 0 4px;font-variant-numeric:tabular-nums}
+.total .sub{color:var(--muted);font-size:14px}
+.sub b{color:var(--text);font-weight:600}
+.chartrow{display:flex;gap:16px;align-items:center}
+.chartrow svg.donut{flex:0 0 120px;width:120px;height:120px}
+.legend{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.lg{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;font-size:14px}
+.lg i{width:12px;height:12px;border-radius:4px}
+.lg span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lg .v{font-variant-numeric:tabular-nums;font-weight:600}
+.bar{height:6px;border-radius:3px;background:var(--chip);grid-column:2/4;overflow:hidden;margin-top:-4px}
+.bar>div{height:100%;border-radius:3px}
+.listhead{display:flex;align-items:center;justify-content:space-between;margin:18px 2px 4px}
+.listhead h2{font-size:18px;margin:0}
+select,input,textarea{font:inherit;font-size:16px;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:12px;min-height:44px;padding:8px 12px;width:100%}
+textarea{min-height:70px;resize:vertical}
+.listhead select{width:auto;min-height:40px;padding:6px 10px;background:var(--card)}
+.bill{display:flex;align-items:center;gap:12px;padding:14px 14px;background:var(--card);border-radius:14px;margin-top:8px;box-shadow:var(--shadow);width:100%;text-align:left;min-height:64px}
+.bill .dot{flex:0 0 10px;height:40px;border-radius:5px}
+.bill .mid{flex:1;min-width:0}
+.bill .nm{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bill .meta{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bill .amt{text-align:right;font-variant-numeric:tabular-nums}
+.bill .amt b{display:block;font-size:17px}
+.bill .amt small{color:var(--muted);font-size:12px}
+.bill.inactive{opacity:.5}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;background:#f59e0b22;color:#d97706;margin-left:6px;vertical-align:1px;text-transform:uppercase;letter-spacing:.03em}
+.tag.past{background:var(--chip);color:var(--muted)}
+.empty{text-align:center;color:var(--muted);padding:28px 10px}
+.banner{display:flex;align-items:center;gap:10px;justify-content:space-between;background:#f59e0b18;border:1px solid #f59e0b55;border-radius:14px;padding:10px 12px;margin-top:12px;font-size:14px}
+.banner button{background:#f59e0b;color:#1a1200;font-weight:700;border-radius:10px;min-height:40px;padding:0 12px;white-space:nowrap}
+.fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:calc(var(--safe-b) + 18px);width:62px;height:62px;border-radius:50%;background:var(--accent);color:#fff;box-shadow:0 6px 20px rgba(59,110,245,.45);display:grid;place-items:center;z-index:5}
+.fab svg{width:28px;height:28px}
+.nav{display:flex;align-items:center;gap:8px;margin-top:12px}
+.nav .iconbtn{flex:0 0 44px}
+.nav .ttl{flex:1;text-align:center;font-weight:700;font-size:17px}
+.nav .ttl small{display:block;font-weight:500;color:var(--muted);font-size:13px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cmp>div{background:var(--chip);border-radius:12px;padding:10px 12px}
+.cmp .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
+.cmp .v{font-size:24px;font-weight:750;font-variant-numeric:tabular-nums}
+.diff{margin-top:10px;font-size:14px;color:var(--muted)}
+.diff b.pos{color:var(--danger)} .diff b.neg{color:var(--ok)}
+.daygroup{margin:14px 4px 0;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;display:none;align-items:flex-end;justify-content:center}
+.scrim.open{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92vh;max-height:92dvh;overflow:auto;border-radius:20px 20px 0 0;padding:8px 16px calc(var(--safe-b) + 16px);-webkit-overflow-scrolling:touch;animation:up .22s ease-out}
+@media (min-width:700px){.scrim{align-items:center}.sheet{border-radius:20px}}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 8px}
+.sheet h3{margin:4px 0 12px;font-size:20px;display:flex;justify-content:space-between;align-items:center}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;font-weight:650;color:var(--muted);margin:0 0 5px 2px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.toggle{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:12px;min-height:50px;padding:0 12px;margin-bottom:12px}
+.switch{position:relative;width:52px;height:32px;flex:0 0 52px}
+.switch input{opacity:0;width:100%;height:100%;margin:0;position:absolute;z-index:1;min-height:0;cursor:pointer}
+.switch span{position:absolute;inset:0;background:var(--line);border-radius:16px;transition:.2s}
+.switch span::after{content:"";position:absolute;width:28px;height:28px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.switch input:checked+span{background:var(--ok)}
+.switch input:checked+span::after{transform:translateX(20px)}
+.btn{min-height:50px;border-radius:12px;font-weight:700;padding:0 16px;width:100%;background:var(--card);border:1px solid var(--line)}
+.btn.primary{background:var(--accent);color:#fff;border:0}
+.btn.danger{color:var(--danger)}
+.btns{display:grid;gap:10px;margin-top:6px}
+.hint{font-size:13px;color:var(--muted);margin:-4px 2px 12px}
+.menu .btn{text-align:left;display:flex;align-items:center;gap:10px}
+.toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 96px);transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+.toast.show{opacity:1}
+.hidden{display:none!important}
+.paygrid{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:15px;font-variant-numeric:tabular-nums;margin-top:12px}
+.paygrid .r{text-align:right;font-weight:600}
+.paygrid .tot{border-top:1px solid var(--line);padding-top:8px;font-weight:750;font-size:17px}
+.stack{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--chip);margin-top:12px}
+.stack>div{height:100%}
+.neg-text{color:var(--danger)!important}
+.checkrow{display:flex;align-items:center;gap:10px;margin-top:12px}
+.checkrow label{font-size:14px;font-weight:650;color:var(--muted);white-space:nowrap}
+.checkrow input{flex:1}
+.fund{margin-top:6px}
+.fund .bar{margin-top:4px;height:6px}
+.fund small{color:var(--muted);font-size:12px}
+.bill.col{flex-wrap:wrap}
+.bill.col .fund{flex:0 0 100%;padding-left:22px}
+.sechead{display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 0}
+.sechead h2{font-size:18px;margin:0}
+.sechead span{font-weight:700;font-variant-numeric:tabular-nums}
+/* frequency colors: tuned for text contrast in each scheme */
+:root{--f-weekly:#2557d6;--f-biweekly:#0e7490;--f-semimonthly:#7c3aed;--f-monthly:#15803d;--f-bimonthly:#4d7c0f;--f-quarterly:#b45309;--f-semiannual:#c2410c;--f-annual:#dc2626;--f-custom:#be185d;--f-onetime:#6b4fa0}
+@media (prefers-color-scheme: dark){:root{--f-weekly:#7aa2ff;--f-biweekly:#22d3ee;--f-semimonthly:#c4b5fd;--f-monthly:#4ade80;--f-bimonthly:#a3e635;--f-quarterly:#fbbf24;--f-semiannual:#fb923c;--f-annual:#f87171;--f-custom:#f472b6;--f-onetime:#c4b1ee}}
+.cal{margin-top:10px}
+.calrow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin-top:3px}
+.dow{font-size:11px;font-weight:700;color:var(--muted);text-align:center;text-transform:uppercase;padding:2px 0}
+.cell{position:relative;background:var(--card);border-radius:8px;padding:3px 3px 4px;min-height:58px;display:flex;flex-direction:column;text-align:right;box-shadow:var(--shadow);font-variant-numeric:tabular-nums;overflow:hidden;min-width:0}
+.cell .dn{font-size:12px;font-weight:700;text-align:left;line-height:14px}
+.cell .fa{font-size:10px;line-height:12px;font-weight:700;white-space:nowrap}
+.cell .tt{font-size:11px;line-height:14px;font-weight:800;border-top:1px solid var(--line);margin-top:2px;padding-top:1px;white-space:nowrap}
+.cell.out{background:transparent;box-shadow:none;opacity:.35}
+.cell.today{box-shadow:inset 0 0 0 2px var(--accent)}
+.cell .mk{position:absolute;top:3px;right:3px;display:flex;gap:2px}
+.cell .mk i{display:block;min-width:14px;height:14px;border-radius:7px;font-style:normal;font-size:9px;line-height:14px;font-weight:800;color:#fff;text-align:center;padding:0 3px}
+.cell{min-height:50px}.cell .dnames{display:block;text-align:left;font-size:9.5px;line-height:11px;margin:1px 0;overflow:hidden}.cell .dnames div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800}
+.cell .tt{margin-top:auto;border-top:0;font-size:12px}
+.wksum .ln .t{margin-left:0}.wksum .sep{color:var(--muted)}
+@media (min-width:700px){.cell{min-height:96px;padding:5px 6px}.cell .fa{font-size:12px;line-height:15px}.cell .tt{font-size:13px}.cell .dn{font-size:14px}
+  .cell .dnames{display:block;text-align:left;font-size:11px;line-height:13px;margin:2px 0;overflow:hidden}.cell .dnames div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}}
+.wksum{display:block;width:100%;text-align:left;background:var(--chip);border-radius:8px;padding:6px 8px;margin-top:3px;font-size:12px;font-variant-numeric:tabular-nums}
+.wksum .ln{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 9px}
+.wksum .ln+.ln{margin-top:3px}
+.wksum .k{font-weight:800;min-width:30px}
+.wksum .t{margin-left:auto;font-weight:800;font-size:13px}
+.fam{font-weight:700;white-space:nowrap}
+.fam small{font-size:9px;opacity:.85;margin-right:1px;font-weight:800}
+.flegend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;margin-top:10px}
+.flegend span{display:inline-flex;align-items:center;gap:5px;font-weight:650}
+.flegend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.calhint{font-size:13px;color:var(--muted);background:var(--chip);border-radius:10px;padding:8px 10px;margin-top:10px}
+.mtot .row{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums;padding:3px 0;font-size:15px}
+.mtot .row b{font-weight:750}
+.dsec{margin-top:14px}
+.dsec h4{margin:0 0 4px;font-size:15px;display:flex;justify-content:space-between}
+.dline{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;font-size:15px}
+.dline span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pos-t{color:var(--ok)!important} .neg-t{color:var(--danger)!important}
+@media (prefers-color-scheme: dark){.pos-t{color:#4ade80!important}.neg-t{color:#f87171!important}}
+.wf .row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;font-variant-numeric:tabular-nums;font-size:15px}
+.wf .row b{font-weight:750}
+.wf .subt{border-top:1px dashed var(--line);color:var(--muted);font-size:14px;padding-top:4px}
+.wf .subt b{color:var(--text)}
+.wf .final{border-top:2px solid var(--line);margin-top:4px;padding-top:10px;font-size:18px}
+.wf .final b{font-size:24px}
+.wf .seg{margin:10px 0 6px}
+.cardtitle{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 4px}
+.prompt{display:flex;gap:10px;align-items:center;justify-content:space-between;background:var(--chip);border-radius:12px;padding:10px 12px;font-size:14px}
+.prompt button{background:var(--accent);color:#fff;font-weight:700;border-radius:10px;min-height:40px;padding:0 12px;white-space:nowrap}
+.wksum .pl{border-top:1px solid var(--line);padding-top:3px;margin-top:3px}
+.olbox{background:var(--chip);border-radius:12px;padding:10px 12px;margin-top:8px;font-variant-numeric:tabular-nums}
+.olbox .h{display:flex;justify-content:space-between;font-weight:750;font-size:15px}
+.olbox .fl{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12px;margin:4px 0}
+.olbox .kv{display:flex;justify-content:space-between;font-size:14px;padding:1px 0}
+.olbox.tot{background:transparent;border:2px solid var(--line)}
+.olarrow{text-align:center;color:var(--muted);font-size:14px;line-height:12px;margin-top:6px}
+.incrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border-radius:12px;margin-top:6px;box-shadow:var(--shadow);width:100%;text-align:left;min-height:48px;font-variant-numeric:tabular-nums}
+.addtxt{min-height:44px;padding:0 14px;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;font-size:15px;display:inline-flex;align-items:center;gap:6px;box-shadow:var(--shadow)}
+.addtxt.sm{min-height:40px;padding:0 12px;font-size:14px}
+.hdrbtns{display:flex;gap:8px;align-items:center}
+.listhead .hdrbtns select{width:auto}
+.bill.pastbill{opacity:.45}
+/* bill totals = red, profit = shiny gold */
+.billtot{color:#d11f26!important}
+@media (prefers-color-scheme: dark){.billtot{color:#ff6b6b!important}}
+.gold{background:linear-gradient(100deg,#8a6508 0%,#b8860b 22%,#e0b21c 40%,#f5d76e 50%,#e0b21c 60%,#b8860b 78%,#8a6508 100%);background-size:250% 100%;
+  -webkit-background-clip:text;background-clip:text;color:#b8860b;-webkit-text-fill-color:transparent;animation:goldshine 5s linear infinite;font-weight:800;filter:drop-shadow(0 0 .4px rgba(110,75,0,.55))}
+@media (prefers-color-scheme: dark){.gold{background-image:linear-gradient(100deg,#d4a017 0%,#f7d774 25%,#fff3b0 45%,#f7d774 60%,#d4a017 80%,#c08f0c 100%);filter:none}}
+@keyframes goldshine{from{background-position:100% 0}to{background-position:-150% 0}}
+@media (prefers-reduced-motion: reduce){.gold{animation:none;background-position:50% 0}}
+.cell .dp{font-size:10px;line-height:12px;white-space:nowrap}
+@media (min-width:700px){.cell .dp{font-size:12px;line-height:15px}}
+.foot{color:var(--muted);font-size:12px;text-align:center;margin-top:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Bills</h1>
+    <div class="hdrbtns"><button class="addtxt addBillBtn" id="addBillTop" aria-label="Add bill">＋ Add bill</button>
+    <button class="iconbtn" id="menuBtn" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>
+    </button></div>
+  </header>
+
+  <div class="seg" role="tablist">
+    <button id="modeCal" aria-pressed="true">Calendar</button>
+    <button id="modePay" aria-pressed="false">Payday</button>
+    <button id="modeAvg" aria-pressed="false">Prorated</button>
+    <button id="modeDue" aria-pressed="false">Actual due</button>
+  </div>
+
+  <div id="exBanner" class="banner hidden">
+    <span><b>Example bills</b> — tap Clear all to start fresh.</span>
+    <button id="clearEx">Clear all</button>
+  </div>
+
+  <!-- CALENDAR MODE -->
+  <section id="calView">
+    <div class="nav">
+      <button class="iconbtn" id="calPrev" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="ttl" id="calTitle"></div>
+      <button class="iconbtn" id="calNext" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+    <div class="flegend" id="calLegend"></div>
+    <div class="calhint hidden" id="calHint">📅 Add due dates to your bills to see when they hit — tap a bill’s day marker for details.</div>
+    <div class="cal" id="calGrid"></div>
+    <div class="card mtot" id="calTotal"></div>
+    <div class="card wf" id="wfCal"></div>
+    <div class="card" id="outlook"></div>
+  </section>
+
+  <!-- PAYDAY MODE -->
+  <section id="payView" class="hidden">
+    <div class="chips" id="payChips"></div>
+    <div class="card total">
+      <div class="lbl" id="payLbl">To savings each payday</div>
+      <div class="big" id="payBig">$0.00</div>
+      <div class="sub" id="paySub"></div>
+      <div class="checkrow"><label for="checkAmt">Take-home pay per check</label><input id="checkAmt" inputmode="decimal" placeholder="optional, e.g. 1,250.00"></div>
+      <div id="payBreak"></div>
+      <div class="sechead" style="margin-top:14px"><h2 style="font-size:15px">Other income <small style="color:var(--muted);font-weight:500">(optional)</small></h2><span id="incOtherTot" style="font-size:14px"></span></div>
+      <div id="incList"></div>
+      <button class="btn" id="addInc" style="margin-top:8px;min-height:44px">+ Add income source</button>
+    </div>
+    <div class="card wf" id="wfPay"></div>
+    <button class="btn addBillBtn" style="margin-top:14px;min-height:46px">＋ Add bill (recurring or one-time)</button>
+    <div class="sechead"><h2>Into savings</h2><span id="savTot" class="billtot"></span></div>
+    <div class="hint" style="margin:4px 2px 0">Bills due less often than you're paid. Put each one's per-check share into savings so the money is there when it comes due.</div>
+    <div id="savList"></div>
+    <div class="sechead"><h2>Paid from this check</h2><span id="dirTot" class="billtot"></span></div>
+    <div class="hint" style="margin:4px 2px 0">Bills due every paycheck or more often (per-check average shown).</div>
+    <div id="dirList"></div>
+    <div id="oneSec"><div class="sechead"><h2>Upcoming one-time</h2><span id="oneTot"></span></div>
+    <div class="hint" style="margin:4px 2px 0">One-time bills with no savings spread hit in full on their date.</div>
+    <div id="oneList"></div></div>
+  </section>
+
+  <!-- PRORATED MODE -->
+  <section id="avgView" class="hidden">
+    <div class="chips" id="periodChips"></div>
+    <div class="card total">
+      <div class="lbl" id="totLbl">Per month</div>
+      <div class="big billtot" id="totBig">$0.00</div>
+      <div class="sub" id="totSub"></div>
+    </div>
+    <div class="card mtot" id="avgPL"></div>
+    <div class="card" id="catCard">
+      <div class="chartrow">
+        <svg class="donut" id="donut" viewBox="0 0 120 120" aria-label="Category breakdown"></svg>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+    <div class="listhead">
+      <h2 id="listTitle">Bills</h2>
+      <div class="hdrbtns"><button class="addtxt sm addBillBtn">＋ Add</button>
+      <select id="sortSel" aria-label="Sort">
+        <option value="amount">Sort: Amount</option>
+        <option value="name">Sort: Name</option>
+        <option value="due">Sort: Due date</option>
+        <option value="category">Sort: Category</option>
+      </select></div>
+    </div>
+    <div id="billList"></div>
+  </section>
+
+  <!-- ACTUAL DUE MODE -->
+  <section id="dueView" class="hidden">
+    <div class="chips" id="dueChips"></div>
+    <div class="nav">
+      <button class="iconbtn" id="prevBtn" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="ttl" id="winTitle"></div>
+      <button class="iconbtn" id="nextBtn" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+    <div class="card">
+      <div class="cmp">
+        <div><div class="lbl">Actually due</div><div class="v" id="dueTot">$0.00</div></div>
+        <div><div class="lbl">Set aside (prorated)</div><div class="v" id="asideTot">$0.00</div></div>
+      </div>
+      <div class="diff" id="dueDiff"></div>
+    </div>
+    <div id="dueList"></div>
+  </section>
+
+  <div class="foot">Saved on this device only (localStorage). Use Menu → Export to back up.</div>
+</div>
+
+<button class="fab" id="addBtn" aria-label="Add bill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+
+<!-- Edit sheet -->
+<div class="scrim" id="editScrim">
+  <form class="sheet" id="editForm" autocomplete="off" novalidate>
+    <div class="grab"></div>
+    <h3><span id="editTitle">Add bill</span><button type="button" class="iconbtn" id="editClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></h3>
+    <div class="field"><label for="fName">Name</label><input id="fName" required placeholder="e.g. Rent" maxlength="80"></div>
+    <div class="row2">
+      <div class="field"><label for="fAmt">Amount (USD)</label><input id="fAmt" inputmode="decimal" placeholder="0.00"></div>
+      <div class="field"><label for="fFreq">Frequency</label>
+        <select id="fFreq">
+          <option value="weekly">Weekly</option>
+          <option value="biweekly">Every 2 weeks</option>
+          <option value="semimonthly">Twice a month</option>
+          <option value="monthly" selected>Monthly</option>
+          <option value="bimonthly">Every 2 months</option>
+          <option value="quarterly">Quarterly (3 mo)</option>
+          <option value="semiannual">Every 6 months</option>
+          <option value="annual">Annual</option>
+          <option value="custom">Custom…</option>
+          <option value="onetime">One-time</option>
+        </select></div>
+    </div>
+    <div class="row2 hidden" id="customRow">
+      <div class="field"><label for="fN">Every N</label><input id="fN" inputmode="numeric" placeholder="e.g. 10" value="1"></div>
+      <div class="field"><label for="fUnit">Unit</label>
+        <select id="fUnit"><option value="days">days</option><option value="weeks">weeks</option><option value="months" selected>months</option></select></div>
+    </div>
+    <div class="row2 hidden" id="spreadRow">
+      <div class="field"><label for="fSpreadUnit">Save up for it?</label>
+        <select id="fSpreadUnit"><option value="none">No — hits on its date</option><option value="weeks">Spread over N weeks</option><option value="months">Spread over N months</option></select></div>
+      <div class="field"><label for="fSpreadN">N</label><input id="fSpreadN" inputmode="numeric" value="4"></div>
+    </div>
+    <div class="hint" id="freqHint"></div>
+    <div class="field"><label for="fCat">Category (optional)</label><input id="fCat" list="catList" placeholder="e.g. Housing" maxlength="40"><datalist id="catList"></datalist></div>
+    <div class="field"><label for="fDue" id="fDueLbl">Next due date (optional)</label><input id="fDue" type="date"></div>
+    <div class="field"><label for="fNotes">Notes (optional)</label><textarea id="fNotes" maxlength="500"></textarea></div>
+    <div class="toggle"><span>Active</span><label class="switch"><input type="checkbox" id="fActive" checked aria-label="Active"><span></span></label></div>
+    <div class="btns">
+      <button type="submit" class="btn primary" id="saveBtn">Save</button>
+      <button type="button" class="btn danger hidden" id="delBtn">Delete bill</button>
+    </div>
+  </form>
+</div>
+
+<!-- Day/week detail sheet -->
+<div class="scrim" id="dayScrim">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3><span id="dayTitle">Day</span><button type="button" class="iconbtn" id="dayClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></h3>
+    <div id="dayBody"></div>
+  </div>
+</div>
+
+<!-- Income sheet -->
+<div class="scrim" id="incScrim">
+  <form class="sheet" id="incForm" autocomplete="off" novalidate>
+    <div class="grab"></div>
+    <h3><span id="incTitle">Income source</span><button type="button" class="iconbtn" id="incClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></h3>
+    <div class="field"><label for="iName">Name</label><input id="iName" placeholder="e.g. Side job" maxlength="60"></div>
+    <div class="row2">
+      <div class="field"><label for="iAmt">Take-home amount</label><input id="iAmt" inputmode="decimal" placeholder="0.00"></div>
+      <div class="field"><label for="iFreq">Frequency</label><select id="iFreq">
+        <option value="weekly">Weekly</option><option value="biweekly">Every 2 weeks</option><option value="semimonthly">Twice a month</option>
+        <option value="monthly" selected>Monthly</option><option value="quarterly">Quarterly</option><option value="annual">Annual</option></select></div>
+    </div>
+    <div class="btns"><button type="submit" class="btn primary">Save</button><button type="button" class="btn danger hidden" id="iDel">Delete income source</button></div>
+  </form>
+</div>
+
+<!-- Menu sheet -->
+<div class="scrim" id="menuScrim">
+  <div class="sheet menu">
+    <div class="grab"></div>
+    <h3><span>Menu</span><button type="button" class="iconbtn" id="menuClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></h3>
+    <div class="btns">
+      <button class="btn" id="expJson">⬇️ Export backup (JSON)</button>
+      <button class="btn" id="impJson">⬆️ Import backup (JSON)</button>
+      <button class="btn" id="expCsv">📄 Export CSV</button>
+      <div class="toggle" style="margin:0"><span>Week starts Monday</span><label class="switch"><input type="checkbox" id="weekMon" aria-label="Week starts Monday"><span></span></label></div>
+      <div class="toggle" style="margin:0"><span>Show inactive bills</span><label class="switch"><input type="checkbox" id="showInactive" checked aria-label="Show inactive bills"><span></span></label></div>
+      <button class="btn danger" id="clearEx2">Clear example bills</button>
+      <button class="btn danger" id="wipeAll">Clear all bills &amp; income</button>
+    </div>
+    <p class="hint" style="margin-top:14px">Conversions: 1 year = 12 months = 52.1775 weeks = 365.25 days. Tip: in Safari tap Share → “Add to Home Screen”.</p>
+    <input type="file" id="fileIn" accept="application/json,.json" class="hidden">
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- constants & math ---------- */
+var DAYS_PER_YEAR = 365.25, WEEKS_PER_YEAR = 52.1775, MONTHS_PER_YEAR = 12;
+var PERIODS = [
+  {k:'day',     label:'Day',      per:'per day',      perYear:DAYS_PER_YEAR},
+  {k:'week',    label:'Week',     per:'per week',     perYear:WEEKS_PER_YEAR},
+  {k:'month',   label:'Month',    per:'per month',    perYear:12},
+  {k:'quarter', label:'Quarter',  per:'per quarter',  perYear:4},
+  {k:'half',    label:'6 Months', per:'per 6 months', perYear:2},
+  {k:'year',    label:'Year',     per:'per year',     perYear:1}
+];
+var FREQ_LABEL = {weekly:'Weekly',biweekly:'Every 2 weeks',semimonthly:'Twice a month',monthly:'Monthly',
+  bimonthly:'Every 2 months',quarterly:'Quarterly',semiannual:'Every 6 months',annual:'Annual',custom:'Custom',onetime:'One-time'};
+// occurrences per year
+function timesPerYear(b){
+  switch(b.freq){
+    case 'weekly': return WEEKS_PER_YEAR;
+    case 'biweekly': return WEEKS_PER_YEAR/2;
+    case 'semimonthly': return 24;
+    case 'monthly': return 12;
+    case 'bimonthly': return 6;
+    case 'quarterly': return 4;
+    case 'semiannual': return 2;
+    case 'annual': return 1;
+    case 'onetime': return 0; // never part of recurring rates
+    case 'custom':
+      var n = Math.max(1, +b.n || 1);
+      if (b.unit==='days') return DAYS_PER_YEAR/n;
+      if (b.unit==='weeks') return WEEKS_PER_YEAR/n;
+      return MONTHS_PER_YEAR/n;
+  }
+  return 12;
+}
+function annualCost(b){ return (+b.amount||0) * timesPerYear(b); }
+function prorate(b, periodKey){ return annualCost(b) / periodByKey(periodKey).perYear; }
+function periodByKey(k){ for (var i=0;i<PERIODS.length;i++) if (PERIODS[i].k===k) return PERIODS[i]; return PERIODS[2]; }
+function freqText(b){
+  if (b.freq==='onetime'){ var sn=+b.spreadN||0; return 'One-time'+(sn&&b.spreadUnit&&b.spreadUnit!=='none'?' · saving over '+sn+' '+(sn===1?b.spreadUnit.replace(/s$/,''):b.spreadUnit):''); }
+  if (b.freq==='custom'){ var n=+b.n||1; var u=b.unit||'months'; return 'Every '+(n===1?u.replace(/s$/,''):n+' '+u); }
+  return FREQ_LABEL[b.freq]||b.freq;
+}
+
+/* ---------- dates (all local, day-granular, DST-safe via UTC day numbers) ---------- */
+function parseISO(s){ if(!s||!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null; var p=s.split('-'); return {y:+p[0],m:+p[1]-1,d:+p[2]}; }
+function dayNum(y,m,d){ return Math.round(Date.UTC(y,m,d)/864e5); }
+function fromDayNum(n){ var dt=new Date(n*864e5); return {y:dt.getUTCFullYear(),m:dt.getUTCMonth(),d:dt.getUTCDate()}; }
+function dim(y,m){ return new Date(Date.UTC(y,m+1,0)).getUTCDate(); }
+function todayNum(){ var t=new Date(); return dayNum(t.getFullYear(),t.getMonth(),t.getDate()); }
+function isoOf(n){ var o=fromDayNum(n); return o.y+'-'+String(o.m+1).padStart(2,'0')+'-'+String(o.d).padStart(2,'0'); }
+var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var MONTHS_FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function fmtDay(n, withYear){ var o=fromDayNum(n); var w=DOW[new Date(n*864e5).getUTCDay()];
+  return w+', '+MON[o.m]+' '+o.d+(withYear?', '+o.y:''); }
+function fmtShort(n){ var o=fromDayNum(n); return MON[o.m]+' '+o.d+(o.y!==fromDayNum(todayNum()).y?', '+o.y:''); }
+
+function stepDays(b){
+  if (b.freq==='weekly') return 7;
+  if (b.freq==='biweekly') return 14;
+  if (b.freq==='custom' && b.unit==='days') return Math.max(1,Math.round(+b.n||1));
+  if (b.freq==='custom' && b.unit==='weeks') return 7*Math.max(1,Math.round(+b.n||1));
+  return 0;
+}
+function stepMonths(b){
+  var map={monthly:1,bimonthly:2,quarterly:3,semiannual:6,annual:12};
+  if (map[b.freq]) return map[b.freq];
+  if (b.freq==='custom' && (b.unit==='months'||!b.unit)) return Math.max(1,Math.round(+b.n||1));
+  return 0;
+}
+/* All due dates (day numbers) in [s,e] inclusive, recurring both directions from the anchor (next due date). */
+function isOne(b){ return b.freq==='onetime'; }
+/* one-time savings spread: saving runs over (start, due]; null = no spread */
+function spreadStart(b){
+  var a=parseISO(b.due), N=parseInt(b.spreadN,10)||0; if(!a||!N||!b.spreadUnit||b.spreadUnit==='none') return null;
+  var an=dayNum(a.y,a.m,a.d);
+  if (b.spreadUnit==='weeks') return an-7*N;
+  var mi=a.y*12+a.m-N, y=Math.floor(mi/12), m=mi-y*12; return dayNum(y,m,Math.min(a.d,dim(y,m)));
+}
+function dueNum(b){ var a=parseISO(b.due); return a?dayNum(a.y,a.m,a.d):null; }
+function oneTimeShare(b, dn){
+  var an=dueNum(b); if(an==null) return 0; var st=spreadStart(b), amt=+b.amount||0;
+  if (st==null) return dn===an?amt:0;
+  return (dn>st && dn<=an) ? amt/(an-st) : 0;
+}
+function billRangeShare(b, s, e){
+  if (!isOne(b)) return annualCost(b)/DAYS_PER_YEAR*(e-s+1);
+  var v=0; for (var d=s; d<=e; d++) v+=oneTimeShare(b,d); return v;
+}
+function occurrences(b, s, e){
+  var a = parseISO(b.due); if (!a) return [];
+  if (b.freq==='onetime'){ var on=dayNum(a.y,a.m,a.d); return (on>=s&&on<=e)?[on]:[]; }
+  var out=[], an=dayNum(a.y,a.m,a.d), k, n;
+  var sd = stepDays(b);
+  if (sd){
+    for (k=Math.ceil((s-an)/sd); (n=an+k*sd)<=e; k++) if (n>=s) out.push(n);
+    return out;
+  }
+  var sm = stepMonths(b);
+  var aMI=a.y*12+a.m;
+  var S=fromDayNum(s), E=fromDayNum(e), sMI=S.y*12+S.m, eMI=E.y*12+E.m;
+  if (sm){
+    for (k=Math.floor((sMI-aMI)/sm); aMI+k*sm<=eMI; k++){
+      var mi=aMI+k*sm, y=Math.floor(mi/12), m=mi-y*12;
+      n=dayNum(y,m,Math.min(a.d,dim(y,m)));
+      if (n>=s && n<=e) out.push(n);
+    }
+    return out;
+  }
+  if (b.freq==='semimonthly'){
+    var d1 = a.d<=15 ? a.d : a.d-15, d2 = d1+15; // e.g. 1st & 16th, 15th & 30th (clamped)
+    for (var mi2=sMI; mi2<=eMI; mi2++){
+      var yy=Math.floor(mi2/12), mm=mi2-yy*12, last=dim(yy,mm);
+      [d1,d2].forEach(function(d){ var x=dayNum(yy,mm,Math.min(d,last)); if (x>=s&&x<=e) out.push(x); });
+    }
+    return out;
+  }
+  return out;
+}
+/* next due on/after today (null if no anchor) */
+function nextDue(b){
+  if (!parseISO(b.due)) return null;
+  var t=todayNum(), o=occurrences(b,t,t+4000);
+  return o.length?o[0]:null;
+}
+
+/* ---------- formatting ---------- */
+var USD = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'});
+function money(v){ return USD.format(Math.round((v+Number.EPSILON)*100)/100); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+var PALETTE=['#3b6ef5','#16a34a','#f59e0b','#e5484d','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#64748b','#14b8a6','#a855f7'];
+function colorFor(cat, cats){ var i=cats.indexOf(cat); return i<0?'#94a3b8':PALETTE[i%PALETTE.length]; }
+
+/* ---------- state ---------- */
+var KEY='bills.app.v1';
+var state = load();
+function defaults(){ return {bills:[], settings:{period:'month', sort:'amount', mode:'cal', payFreq:'weekly', checkAmt:'', dueSpan:'month', weekMon:false, showInactive:true, examplesCleared:false}}; }
+function load(){
+  var d=defaults();
+  try{ var raw=localStorage.getItem(KEY); if(raw){ var p=JSON.parse(raw); d.bills=Array.isArray(p.bills)?p.bills:[]; Object.assign(d.settings,p.settings||{}); } }catch(e){}
+  return d;
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ toast('Could not save (storage full or private mode)'); } }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+/* Generic EXAMPLE bills. Seeded only on the very first visit (no saved data key at all),
+   so after "Clear all" they never come back. */
+var FIRST_VISIT=(function(){ try{ return localStorage.getItem(KEY)===null; }catch(e){ return false; } })();
+function seedExamples(){
+  var t=fromDayNum(todayNum());
+  function on(day, addM){ var mi=t.y*12+t.m+(addM||0), y=Math.floor(mi/12), m=mi-y*12; return y+'-'+String(m+1).padStart(2,'0')+'-'+String(Math.min(day,dim(y,m))).padStart(2,'0'); }
+  var g=[
+    ['Rent',1200,'monthly','Housing',on(1,1)],
+    ['Groceries',150,'weekly','Food',''],
+    ['Gas',50,'weekly','Transportation',''],
+    ['Phone',60,'monthly','Utilities',on(15, t.d>=15?1:0)],
+    ['Streaming',25,'monthly','Subscriptions',''],
+    ['Car insurance',600,'semiannual','Insurance',''],
+    ['Gym',30,'monthly','Health','']
+  ];
+  state.bills=g.map(function(r){ return {id:uid(), name:r[0], amount:r[1], freq:r[2], n:1, unit:'months', category:r[3], due:r[4], notes:'Example bill', active:true, example:true}; });
+  save();
+}
+if (FIRST_VISIT) seedExamples();
+state.settings.mode='cal'; // Calendar is always the home screen on launch
+
+
+/* ---------- DOM helpers ---------- */
+function $(id){ return document.getElementById(id); }
+var toastT; function toast(msg){ var t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){t.classList.remove('show');},2200); }
+function visibleBills(){ return state.bills.filter(function(b){ return state.settings.showInactive || b.active!==false; }); }
+function activeBills(){ return state.bills.filter(function(b){ return b.active!==false; }); }
+function categories(){
+  var seen={},list=[]; state.bills.forEach(function(b){ var c=(b.category||'').trim()||'Uncategorized'; if(!seen[c]){seen[c]=1;list.push(c);} }); return list;
+}
+
+/* ---------- render ---------- */
+function render(){
+  var s=state.settings;
+  $('modeCal').setAttribute('aria-pressed', s.mode==='cal');
+  $('calView').classList.toggle('hidden', s.mode!=='cal');
+  $('modePay').setAttribute('aria-pressed', s.mode==='pay');
+  $('modeAvg').setAttribute('aria-pressed', s.mode==='avg');
+  $('payView').classList.toggle('hidden', s.mode!=='pay');
+  $('modeDue').setAttribute('aria-pressed', s.mode==='due');
+  $('avgView').classList.toggle('hidden', s.mode!=='avg');
+  $('dueView').classList.toggle('hidden', s.mode!=='due');
+  $('exBanner').classList.toggle('hidden', !state.bills.some(function(b){return b.example;}));
+  $('clearEx2').classList.toggle('hidden', !state.bills.some(function(b){return b.example;}));
+  $('sortSel').value=s.sort; $('weekMon').checked=!!s.weekMon; $('showInactive').checked=s.showInactive!==false;
+  if (s.mode==='cal') renderCal(); else if (s.mode==='pay') renderPay(); else if (s.mode==='avg') renderAvg(); else renderDue();
+}
+
+function renderAvg(){
+  var s=state.settings, P=periodByKey(s.period);
+  $('periodChips').innerHTML = PERIODS.map(function(p){ return '<button data-p="'+p.k+'" aria-pressed="'+(p.k===s.period)+'">'+p.label+'</button>'; }).join('');
+  var act=activeBills(), total=0;
+  act.forEach(function(b){ total+=prorate(b,s.period); });
+  var actRec=act.filter(function(b){return !isOne(b);});
+  $('totLbl').textContent='Total '+P.per;
+  $('totBig').textContent=money(total);
+  var yr=act.reduce(function(a,b){return a+annualCost(b);},0);
+  $('totSub').innerHTML = act.length ? '<b>'+actRec.length+'</b> recurring bill'+(actRec.length===1?'':'s')+(act.length>actRec.length?' (one-time bills not included)':'')+' · '+money(yr/12)+'/mo · '+money(yr/WEEKS_PER_YEAR)+'/wk · '+money(yr)+'/yr' : 'No active bills yet — tap + to add one.';
+
+  // income vs bills for this timeframe
+  var incP=incomeYearly()/P.perYear, gs={total:0};
+  actRec.forEach(function(b){ var g=groupOf(b), v=prorate(b,s.period); gs[g]=(gs[g]||0)+v; gs.total+=v; });
+  var ph='<div class="cardtitle">Income vs bills · '+P.per+'</div>'+
+    (incP>0?'<div class="row"><span>Take-home income</span><b class="pos-t" id="avgInc">'+money(incP)+'</b></div>':'')+
+    FG.filter(function(g){return gs[g.k]>0;}).map(function(g){ return '<div class="row" style="color:'+fcol(g.k)+'"><span>− '+g.label+' bills</span><b>'+money(gs[g.k])+'</b></div>'; }).join('')+
+    '<div class="row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span><b>Total bills</b></span><b class="billtot" id="avgBills">'+money(gs.total)+'</b></div>';
+  if (incP>0){ var pv=incP-gs.total; ph+='<div class="row" style="font-size:20px;padding-top:8px"><span><b>'+(pv>=0?'Profit':'Loss')+' '+P.per+'</b></span><b id="avgProfit" class="'+plCls(pv)+'" style="font-size:24px">'+plMoney(pv)+'</b></div>'; }
+  else ph+='<div class="prompt" style="margin-top:8px"><span>Enter your take-home pay to see profit/loss.</span><button type="button" class="goIncome">Enter pay</button></div>';
+  $('avgPL').innerHTML=ph;
+
+  // categories
+  var cats=categories(), sums={};
+  act.forEach(function(b){ var c=(b.category||'').trim()||'Uncategorized'; sums[c]=(sums[c]||0)+prorate(b,s.period); });
+  var rows=Object.keys(sums).filter(function(c){return sums[c]>0;}).map(function(c){return {c:c,v:sums[c]};}).sort(function(a,b){return b.v-a.v;});
+  $('catCard').classList.toggle('hidden', !rows.length);
+  drawDonut(rows, cats, total);
+  var max=rows.length?rows[0].v:1;
+  $('legend').innerHTML = rows.map(function(r){ var col=colorFor(r.c,cats);
+    return '<div class="lg"><i style="background:'+col+'"></i><span>'+esc(r.c)+' <small style="color:var(--muted)">'+(total?Math.round(r.v/total*100):0)+'%</small></span><span class="v">'+money(r.v)+'</span>'+
+      '<div class="bar"><div style="width:'+(max?(r.v/max*100):0).toFixed(1)+'%;background:'+col+'"></div></div></div>'; }).join('');
+
+  // list
+  var list=visibleBills().map(function(b){ return {b:b, v:prorate(b,s.period), nd:nextDue(b)}; });
+  var cmp={
+    amount:function(x,y){ return (y.b.active!==false)-(x.b.active!==false) || y.v-x.v; },
+    name:function(x,y){ return x.b.name.localeCompare(y.b.name,undefined,{sensitivity:'base'}); },
+    due:function(x,y){ return (x.nd==null?1e9:x.nd)-(y.nd==null?1e9:y.nd) || y.v-x.v; },
+    category:function(x,y){ return ((x.b.category||'~')+'').localeCompare((y.b.category||'~')+'') || y.v-x.v; }
+  }[s.sort]||function(){return 0;};
+  list.sort(cmp);
+  $('listTitle').textContent='Bills ('+list.length+')';
+  $('billList').innerHTML = list.length ? list.map(function(x){ var b=x.b, c=(b.category||'').trim()||'Uncategorized';
+    var meta=[money(+b.amount||0)+' '+freqText(b).toLowerCase()];
+    if (b.category) meta.push(esc(b.category));
+    if (isOne(b)) { var dn1=dueNum(b); if(dn1!=null) meta.push((dn1<todayNum()?'was ':'on ')+fmtShort(dn1)); }
+    else if (x.nd!=null) meta.push('next '+fmtShort(x.nd));
+    var past1=isOne(b)&&dueNum(b)!=null&&dueNum(b)<todayNum();
+    return '<button class="bill'+(b.active===false?' inactive':'')+(past1?' pastbill':'')+'" data-id="'+b.id+'">'+
+      '<span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
+      '<span class="mid"><div class="nm">'+esc(b.name)+(b.example?'<span class="tag">Example</span>':'')+(b.active===false?'<span class="tag past">Paused</span>':'')+'</div>'+
+      '<div class="meta">'+meta.join(' · ')+'</div></span>'+
+      (isOne(b)?'<span class="amt"><b style="color:var(--f-onetime)">'+money(+b.amount||0)+'</b><small>'+(past1?'past · ':'')+'one-time</small></span></button>'
+        :'<span class="amt"><b>'+money(x.v)+'</b><small>'+P.per.replace('per ','/ ')+'</small></span></button>'); }).join('')
+    : '<div class="empty">No bills yet.<br>Tap <b>+</b> to add your first one.</div>';
+}
+
+/* --- income & profit/loss --- */
+function incomeYearly(){
+  var st=state.settings, c=parseAmt(st.checkAmt), y=0, pf=(typeof PAY!=='undefined'&&PAY[st.payFreq])||{per:WEEKS_PER_YEAR};
+  if (isFinite(c)&&c>0) y+=c*pf.per;
+  (st.incomes||[]).forEach(function(i){ if(i.active!==false) y+=(+i.amount||0)*timesPerYear({freq:i.freq}); });
+  return y;
+}
+function hasIncome(){ return incomeYearly()>0; }
+function plCls(v){ return v>=0?'gold':'neg-t'; }
+function plMoney(v){ return (v<0?'Loss −':'+')+money(Math.abs(v)); }
+/* waterfall tiers: bills grouped by how often they come due (occurrences per year) */
+var TIERS=[
+  {k:'weekly',    label:'Weekly bills',              col:'weekly',     test:function(n){return n>=WEEKS_PER_YEAR-1e-6;}},
+  {k:'biweekly',  label:'2-week / 2×-month bills',   col:'biweekly',   test:function(n){return n>=24-1e-6;}},
+  {k:'monthly',   label:'Monthly bills',             col:'monthly',    test:function(n){return n>=12-1e-6;}},
+  {k:'quarterly', label:'2–3 month bills',           col:'quarterly',  test:function(n){return n>=4-1e-6;}},
+  {k:'semiannual',label:'6-month / annual bills',    col:'semiannual', test:function(){return true;}}];
+function tierOf(b){ var n=timesPerYear(b); for(var i=0;i<TIERS.length;i++) if(TIERS[i].test(n)) return TIERS[i].k; return 'semiannual'; }
+var WF_PERIODS={week:{label:'Week',per:WEEKS_PER_YEAR,word:'week'},month:{label:'Month',per:12,word:'month'},quarter:{label:'3 Months',per:4,word:'3 months'}};
+function waterfall(perKey){
+  var P=WF_PERIODS[perKey]||WF_PERIODS.week, inc=incomeYearly()/P.per, run=inc, steps=[];
+  TIERS.forEach(function(T){
+    var c=activeBills().filter(function(b){return tierOf(b)===T.k;}).reduce(function(a,b){return a+annualCost(b);},0)/P.per;
+    if (c>0){ run-=c; steps.push({t:T,cost:c,after:run}); }
+  });
+  return {income:inc, steps:steps, pl:run, P:P};
+}
+function waterfallHTML(){
+  var pk=state.settings.wfPeriod||'week', W=waterfall(pk);
+  var h='<div class="cardtitle">Profit / loss waterfall</div><div class="seg wfseg">'+Object.keys(WF_PERIODS).map(function(k){ return '<button data-wf="'+k+'" aria-pressed="'+(k===pk)+'">'+WF_PERIODS[k].label+'</button>'; }).join('')+'</div>';
+  if (!hasIncome()) return h+'<div class="prompt"><span>Enter your take-home pay to see profit/loss.</span><button type="button" class="goIncome">Enter pay</button></div>';
+  h+='<div class="row"><span>Take-home income</span><b class="pos-t">'+money(W.income)+'</b></div>';
+  W.steps.forEach(function(x){
+    h+='<div class="row" style="color:'+fcol(x.t.col)+'"><span>− '+x.t.label+'</span><b>−'+money(x.cost)+'</b></div>'+
+       '<div class="row subt"><span>= left after '+x.t.label.replace(' bills','').toLowerCase()+'</span><b class="'+(x.after<0?'neg-t':'')+'">'+(x.after<0?'−':'')+money(Math.abs(x.after))+'</b></div>';
+  });
+  h+='<div class="row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span>Total bills</span><b class="billtot wfCost">−'+money(W.income-W.pl)+'</b></div>';
+  h+='<div class="row final"><span>'+(W.pl>=0?'Profit':'Loss')+' per '+W.P.word+'</span><b class="wfFinal '+plCls(W.pl)+'">'+plMoney(W.pl)+'</b></div>';
+  return h;
+}
+function renderWF(id){ $(id).innerHTML=waterfallHTML(); }
+
+/* --- calendar mode --- */
+var FG=[ // frequency groups, in display order
+  {k:'weekly',label:'Weekly',sh:'W'},{k:'biweekly',label:'2-week',sh:'2W'},{k:'semimonthly',label:'2×/month',sh:'2×M'},
+  {k:'monthly',label:'Monthly',sh:'M'},{k:'bimonthly',label:'2-month',sh:'2M'},{k:'quarterly',label:'3-month',sh:'3M'},
+  {k:'semiannual',label:'6-month',sh:'6M'},{k:'annual',label:'Annual',sh:'Y'},{k:'custom',label:'Custom',sh:'C'},{k:'onetime',label:'One-time',sh:'1x'}];
+function fcol(k){ return 'var(--f-'+k+')'; }
+function groupOf(b){ return b.freq||'monthly'; }
+/* prorated share of each frequency group for one calendar day = yearly cost / 365.25 */
+function dayShares(dn){
+  var r={total:0};
+  activeBills().forEach(function(b){ var v=isOne(b)?oneTimeShare(b,dn):annualCost(b)/DAYS_PER_YEAR, g=groupOf(b); if(!v) return; r[g]=(r[g]||0)+v; r.total+=v; });
+  return r;
+}
+function addShares(acc, d){ Object.keys(d).forEach(function(k){ acc[k]=(acc[k]||0)+d[k]; }); return acc; }
+function abbr(v){ if(v>=9.995) return '$'+Math.round(v).toLocaleString('en-US'); if(v>=0.995) return '$'+v.toFixed(1).replace(/\.0$/,''); return v>0?'$'+v.toFixed(2).replace(/^0/,''):'$0'; }
+function famHTML(sh, cents){ // colored per-frequency amounts
+  return FG.filter(function(g){return sh[g.k]>0;}).map(function(g){
+    return '<span class="fam" style="color:'+fcol(g.k)+'"><small>'+g.sh+'</small>'+(cents?money(sh[g.k]):abbr(sh[g.k]))+'</span>'; }).join('');
+}
+var calOffset=0, calCache=null;
+function calMonth(){ var T=fromDayNum(todayNum()), mi=T.y*12+T.m+calOffset, y=Math.floor(mi/12), m=mi-y*12; return {y:y,m:m,s:dayNum(y,m,1),e:dayNum(y,m,dim(y,m))}; }
+function dueInRange(s,e){
+  var out=[]; activeBills().forEach(function(b){ occurrences(b,s,e).forEach(function(n){ out.push({b:b,n:n}); }); });
+  return out.sort(function(a,b){return a.n-b.n || b.b.amount-a.b.amount;});
+}
+function renderCal(){
+  var M=calMonth(), t=todayNum(), s=state.settings;
+  $('calTitle').innerHTML=MONTHS_FULL[M.m]+' '+M.y+'<small>'+(calOffset===0?'This month':'<a href="#" id="calToday" style="color:var(--accent)">Back to today</a>')+'</small>';
+  var act=activeBills();
+  var present=FG.filter(function(g){ return act.some(function(b){return groupOf(b)===g.k;}); });
+  $('calLegend').innerHTML=present.map(function(g){ return '<span style="color:'+fcol(g.k)+'"><i style="background:'+fcol(g.k)+'"></i>'+g.sh+' = '+g.label+'</span>'; }).join('')+
+    '<span style="color:var(--muted)">▲ = bill due</span>';
+  $('calHint').classList.toggle('hidden', !act.length || act.some(function(b){return parseISO(b.due);}));
+  var dues=dueInRange(M.s,M.e), dueBy={};
+  dues.forEach(function(x){ (dueBy[x.n]=dueBy[x.n]||[]).push(x); });
+  var startDow=s.weekMon?1:0, firstDow=new Date(M.s*864e5).getUTCDay();
+  var gs=M.s-((firstDow-startDow+7)%7);
+  var dows=[]; for(var i=0;i<7;i++) dows.push(DOW[(startDow+i)%7]);
+  var h='<div class="calrow">'+dows.map(function(d){return '<div class="dow">'+d.slice(0,2)+'</div>';}).join('')+'</div>';
+  var mtd={total:0}, wkNo=0, weeks=[], incD=incomeYearly()/DAYS_PER_YEAR, mtdInc=0, firstFull=false;
+  for (var ws=gs; ws<=M.e; ws+=7){
+    wkNo++; var wk={total:0}, inDays=0, row='<div class="calrow">';
+    for (var d=ws; d<ws+7; d++){
+      var o=fromDayNum(d);
+      if (d<M.s||d>M.e){ row+='<div class="cell out"><div class="dn">'+o.d+'</div></div>'; continue; }
+      inDays++;
+      var sh=dayShares(d); addShares(wk,sh); addShares(mtd,sh);
+      var du=dueBy[d]||[], mk='', names='';
+      if (du.length){
+        var byG={}; du.forEach(function(x){ var g=groupOf(x.b); byG[g]=(byG[g]||0)+1; });
+        names='<div class="dnames">'+du.map(function(x){return '<div style="color:'+fcol(groupOf(x.b))+'" title="'+esc(x.b.name)+'">'+(isOne(x.b)?'1x ':'▲')+abbr(+x.b.amount)+' '+esc(x.b.name)+'</div>';}).join('')+'</div>';
+      }
+      row+='<button class="cell'+(d===t?' today':'')+'" data-day="'+d+'" aria-label="'+fmtDay(d,true)+'"><div class="dn">'+o.d+'</div>'+mk+names+
+        (sh.total>0?'<div class="tt billtot">'+abbr(sh.total)+'</div>':'')+
+        (incD>0?(function(v){ return '<div class="dp '+(v>=0?'gold':'neg-t')+'">'+(v>=0?'+':'−')+abbr(Math.abs(v))+'</div>'; })(incD-sh.total):'')+'</button>';
+    }
+    row+='</div>';
+    var ws2=Math.max(ws,M.s), we2=Math.min(ws+6,M.e), partial=inDays<7;
+    var mtdCopy=Object.assign({},mtd); mtdInc+=incD*inDays;
+    weeks.push({s:ws2,e:we2,wk:wk,mtd:mtdCopy});
+    // partial first week -> its own days; first FULL week -> that week; every row after -> month-to-date
+    var mode, lbl, fig, figInc, rs=ws2;
+    if (!firstFull && partial){ mode='own'; lbl='Wk <small style="color:var(--muted);font-weight:600">('+inDays+' day'+(inDays===1?'':'s')+')</small>'; fig=wk; figInc=incD*inDays; }
+    else if (!firstFull){ firstFull=true; mode='week'; lbl='Wk'; fig=wk; figInc=incD*inDays; }
+    else { mode='mtd'; rs=M.s; lbl=(we2===M.e?'Month':'MTD <small style="color:var(--muted);font-weight:600">thru '+fromDayNum(we2).d+'</small>'); fig=mtdCopy; figInc=mtdInc; }
+    row+='<button class="wksum" data-mode="'+mode+'" data-ws="'+rs+'" data-we="'+we2+'">'+
+      '<div class="ln"><span class="k">'+lbl+'</span>'+famHTML(fig)+
+      '<span class="t billtot wkTot">= '+money(fig.total)+'</span>'+
+      (incD>0 ? '<span class="fam '+plCls(figInc-fig.total)+' wkPL"><small>'+(figInc-fig.total>=0?'Profit ':'')+'</small>'+plMoney(figInc-fig.total)+'</span>' : '')+'</div></button>';
+    weeks[weeks.length-1].mode=mode; weeks[weeks.length-1].inc=incD*inDays; weeks[weeks.length-1].pl=incD*inDays-wk.total; weeks[weeks.length-1].cumPl=mtdInc-mtdCopy.total;
+    h+=row;
+  }
+  $('calGrid').innerHTML=h;
+  // month total
+  var nDays=M.e-M.s+1, dueTot=dues.reduce(function(a,x){return a+(+x.b.amount||0);},0);
+  var yr=act.reduce(function(a,b){return a+annualCost(b);},0);
+  $('calTotal').innerHTML='<div class="total"><div class="lbl">'+MONTHS_FULL[M.m]+' total · prorated · '+nDays+' days</div><div class="big billtot" id="calMonthTotal">'+money(mtd.total)+'</div></div>'+
+    FG.filter(function(g){return mtd[g.k]>0;}).map(function(g){ return '<div class="row" style="color:'+fcol(g.k)+'"><span>'+g.label+' bills</span><b>'+money(mtd[g.k])+'</b></div>'; }).join('')+
+    (incD>0 ? '<div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span>Income (prorated, '+nDays+' days)</span><b class="pos-t">'+money(mtdInc)+'</b></div>'+
+      '<div class="row" style="font-size:18px"><span><b>'+(mtdInc-mtd.total>=0?'Profit':'Loss')+' this month</b></span><b id="calMonthPL" class="'+plCls(mtdInc-mtd.total)+'">'+plMoney(mtdInc-mtd.total)+'</b></div>'
+      : '<div class="prompt" style="margin-top:8px"><span>Enter your take-home pay to see profit/loss.</span><button type="button" class="goIncome">Enter pay</button></div>')+
+    '<div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span>Actually due this month'+(dues.length?' ('+dues.length+')':'')+'</span><b id="calDueTotal">'+money(dueTot)+'</b></div>'+
+    '<div class="row" style="color:var(--muted);font-size:13px"><span>Daily rate (yearly ÷ 365.25)</span><span>'+money(yr/DAYS_PER_YEAR)+'/day</span></div>'+
+    '<div class="row" style="color:var(--muted);font-size:13px"><span>Average month (yearly ÷ 12)</span><span>'+money(yr/12)+'</span></div>'+
+    (dues.length?'':'<div class="hint" style="margin:6px 0 0">No due dates in this month'+(act.some(function(b){return parseISO(b.due);})?'.':' — add due dates to see when bills hit.')+'</div>');
+  renderWF('wfCal'); renderOutlook();
+  calCache={weeks:weeks, M:M, monthInc:mtdInc, monthPL:mtdInc-mtd.total};
+}
+/* 3-month outlook: this month + next 2, stacked like a column */
+var outlookCache=null;
+function renderOutlook(){
+  var T=fromDayNum(todayNum()), incD=incomeYearly()/DAYS_PER_YEAR, cum=0, cumCost={total:0}, cumInc=0, h='<div class="cardtitle">3-month outlook</div>', rows=[];
+  for (var k=0;k<3;k++){
+    var mi=T.y*12+T.m+calOffset+k, y=Math.floor(mi/12), m=mi-y*12, s=dayNum(y,m,1), e=dayNum(y,m,dim(y,m)), sh={total:0};
+    for (var d=s; d<=e; d++) addShares(sh, dayShares(d));
+    var n=e-s+1, inc=incD*n, pl=inc-sh.total; cum+=pl; cumInc+=inc; addShares(cumCost, sh);
+    rows.push({m:MONTHS_FULL[m]+' '+y, cost:sh.total, inc:inc, pl:pl, cum:cum});
+    h+=(k?'<div class="olarrow">↓</div>':'')+'<div class="olbox"><div class="h"><span>'+MON[m]+' '+y+' <small style="color:var(--muted);font-weight:500">'+n+' days</small></span><span class="billtot">'+money(sh.total)+'</span></div>'+
+      '<div class="fl">'+famHTML(sh)+'</div>'+
+      (incD>0?'<div class="kv"><span>Income</span><b class="pos-t">'+money(inc)+'</b></div><div class="kv"><span>Profit / loss</span><b class="'+plCls(pl)+'">'+plMoney(pl)+'</b></div>'+
+        (k?'<div class="kv" style="color:var(--muted)"><span>Running total</span><b class="'+plCls(cum)+'">'+plMoney(cum)+'</b></div>':''):'')+'</div>';
+  }
+  h+='<div class="olarrow">↓</div><div class="olbox tot"><div class="h"><span>3-month total</span><span id="ol3Cost" class="billtot">'+money(cumCost.total)+'</span></div>'+
+    '<div class="fl">'+famHTML(cumCost,true)+'</div>'+
+    (incD>0?'<div class="kv"><span>Income</span><b class="pos-t">'+money(cumInc)+'</b></div><div class="kv" style="font-size:16px"><span><b>Profit / loss</b></span><b id="ol3PL" class="'+plCls(cum)+'">'+plMoney(cum)+'</b></div>'
+      :'<div class="prompt" style="margin-top:8px"><span>Enter your take-home pay to see profit/loss.</span><button type="button" class="goIncome">Enter pay</button></div>')+'</div>';
+  $('outlook').innerHTML=h; outlookCache={rows:rows, cost:cumCost.total, inc:cumInc, pl:cum};
+}
+function openRange(s,e){
+  var M=calMonth(), sh={total:0}, d;
+  for(d=s; d<=e; d++) addShares(sh, dayShares(d));
+  var mtd={total:0}; for(d=M.s; d<=e; d++) addShares(mtd, dayShares(d));
+  var nd=e-s+1;
+  $('dayTitle').textContent = nd===1 ? fmtDay(s,true) : fmtShort(s)+' – '+fmtShort(e)+' ('+nd+' days)';
+  var act=activeBills(), h='<div class="card total" style="margin-top:0"><div class="lbl">Bills · prorated '+(nd===1?'today':(nd<=7?'this week':'these '+nd+' days'))+'</div><div class="big billtot">'+money(sh.total)+'</div>'+
+    '<div class="sub">Month-to-date through '+fmtShort(e)+': <b>'+money(mtd.total)+'</b></div>'+
+    (hasIncome()?(function(){ var inc=incomeYearly()/DAYS_PER_YEAR*nd; return '<div class="sub">Income '+money(inc)+' · profit/loss <b class="'+plCls(inc-sh.total)+'">'+plMoney(inc-sh.total)+'</b></div>'; })():'')+'</div>';
+  FG.forEach(function(g){
+    var bs=act.filter(function(b){return groupOf(b)===g.k && billRangeShare(b,s,e)>0;}); if(!bs.length) return;
+    h+='<div class="dsec"><h4 style="color:'+fcol(g.k)+'"><span>'+g.label+'</span><span>'+money(sh[g.k]||0)+'</span></h4>'+
+      bs.map(function(b){ return '<div class="dline"><span>'+esc(b.name)+' <small style="color:var(--muted)">'+money(+b.amount)+' '+freqText(b).toLowerCase()+'</small></span><b style="color:'+fcol(g.k)+'">'+money(billRangeShare(b,s,e))+'</b></div>'; }).join('')+'</div>';
+  });
+  var du=dueInRange(s,e);
+  h+='<div class="dsec"><h4><span>▲ Actually due</span><span>'+money(du.reduce(function(a,x){return a+(+x.b.amount||0);},0))+'</span></h4>'+
+    (du.length? du.map(function(x){ return '<div class="dline"><span style="color:'+fcol(groupOf(x.b))+'">▲ '+esc(x.b.name)+(nd>1?' <small style="color:var(--muted)">'+fmtShort(x.n)+'</small>':'')+'</span><b>'+money(+x.b.amount)+'</b></div>'; }).join('')
+      : '<div class="hint" style="margin:6px 0">Nothing due'+(act.some(function(b){return parseISO(b.due);})?'.':' — add due dates to see when bills hit.')+'</div>')+'</div>';
+  $('dayBody').innerHTML=h; openSheet('dayScrim');
+}
+
+/* --- payday mode --- */
+var PAY={weekly:{label:'Weekly',per:WEEKS_PER_YEAR,word:'week'},biweekly:{label:'Every 2 weeks',per:WEEKS_PER_YEAR/2,word:'2 weeks'},
+  semimonthly:{label:'Twice a month',per:24,word:'half-month'},monthly:{label:'Monthly',per:12,word:'month'}};
+/* Sinking fund: assume saving started at the last due date; balance = share of the cycle elapsed. */
+function sinking(b, payPer){
+  var a=parseISO(b.due); if(!a) return null;
+  var t=todayNum(), next=nextDue(b); if(next==null) return null;
+  var past=occurrences(b,t-4000,t-1), last=past.length?past[past.length-1]:null;
+  var cycle = last!=null ? next-last : DAYS_PER_YEAR/timesPerYear(b);
+  var elapsed = last!=null ? t-last : Math.max(0, cycle-(next-t));
+  var frac=Math.min(1,Math.max(0,elapsed/cycle)), amt=+b.amount||0;
+  var payDays=DAYS_PER_YEAR/payPer, checksLeft=Math.max(0,Math.floor((next-t)/payDays));
+  return {bal:amt*frac, frac:frac, next:next, checksLeft:checksLeft, amt:amt};
+}
+function renderPay(){
+  var s=state.settings, PF=PAY[s.payFreq]||PAY.weekly, cats=categories();
+  $('payChips').innerHTML=Object.keys(PAY).map(function(k){ return '<button data-pf="'+k+'" aria-pressed="'+(k===(s.payFreq||'weekly'))+'">'+PAY[k].label+'</button>'; }).join('');
+  if (document.activeElement!==$('checkAmt')) $('checkAmt').value = s.checkAmt ? money(+s.checkAmt).replace('$','') : '';
+  var act=activeBills(), sav=[], dir=[], savTot=0, dirTot=0;
+  var ones=[], t0=todayNum(), payDays=DAYS_PER_YEAR/PF.per;
+  act.forEach(function(b){
+    if (isOne(b)){
+      var an=dueNum(b); if(an==null) return; var st=spreadStart(b), amt=+b.amount||0, away=Math.max(0,Math.floor((an-t0)/payDays));
+      if (an<t0){ ones.push({b:b,n:an,past:true}); return; }
+      if (st!=null && t0>=st && t0<an){ // actively saving toward it
+        var fr=(t0-st)/(an-st), sh1=amt*payDays/(an-st);
+        sav.push({b:b, v:sh1, one:true, f:{bal:amt*fr, frac:fr, next:an, checksLeft:away, amt:amt}}); savTot+=sh1; return;
+      }
+      ones.push({b:b,n:an,away:away,startsOn:(st!=null&&t0<st)?st:null}); return;
+    }
+    var share=annualCost(b)/PF.per, x={b:b, v:share};
+    // a bill is "direct" if it comes due at least as often as you get paid (tiny tolerance for 52.1775 vs 52.18)
+    if (timesPerYear(b) >= PF.per - 1e-6){ dir.push(x); dirTot+=share; } else { x.f=sinking(b,PF.per); sav.push(x); savTot+=share; }
+  });
+  sav.sort(function(a,b){return b.v-a.v;}); dir.sort(function(a,b){return b.v-a.v;});
+  $('payLbl').textContent='To savings each payday · '+PF.label.toLowerCase();
+  $('payBig').textContent=money(savTot);
+  var check=parseAmt(s.checkAmt), hasCheck=isFinite(check)&&check>0;
+  $('paySub').innerHTML = (hasCheck?'<b>'+(savTot/check*100).toFixed(1)+'%</b> of your check · ':'')+
+    'plus <b>'+money(dirTot)+'</b> for bills paid from the check · all bills ≈ '+money(savTot+dirTot)+' per paycheck';
+  if (hasCheck){
+    var left=check-savTot-dirTot, pct=function(v){return Math.max(0,Math.min(100,v/check*100)).toFixed(2)+'%';};
+    $('payBreak').innerHTML='<div class="paygrid"><span>Check</span><span class="r">'+money(check)+'</span>'+
+      '<span>− To savings</span><span class="r">'+money(savTot)+' <small style="color:var(--muted)">'+(savTot/check*100).toFixed(1)+'%</small></span>'+
+      '<span>− Bills from this check</span><span class="r">'+money(dirTot)+' <small style="color:var(--muted)">'+(dirTot/check*100).toFixed(1)+'%</small></span>'+
+      '<span class="tot">= Left over</span><span class="r tot'+(left<0?' neg-text':'')+'" id="leftOver">'+money(left)+'</span></div>'+
+      '<div class="stack" aria-hidden="true"><div style="width:'+pct(savTot)+';background:var(--accent)"></div><div style="width:'+pct(dirTot)+';background:#f59e0b"></div><div style="width:'+pct(Math.max(0,left))+';background:var(--ok)"></div></div>'+
+      '<div class="hint" style="margin:6px 0 0">■ <span style="color:var(--accent)">savings</span> ■ <span style="color:#f59e0b">bills</span> ■ <span style="color:var(--ok)">left over</span>'+(left<0?' — <b class="neg-text">bills exceed this check</b>':'')+'</div>';
+  } else $('payBreak').innerHTML='';
+  $('savTot').textContent=money(savTot); $('dirTot').textContent=money(dirTot);
+  function row(x, showFund){ var b=x.b, c=(b.category||'').trim()||'Uncategorized', f=showFund&&x.f;
+    var fund='';
+    if (f) fund='<div class="fund"><small>'+(x.one?'Savings goal':'Sinking fund')+' ≈ <b>'+money(f.bal)+'</b> of '+money(f.amt)+' · due '+fmtShort(f.next)+' · '+(f.checksLeft?f.checksLeft+' paycheck'+(f.checksLeft===1?'':'s')+' left':'<b>due before next payday</b>')+'</small>'+
+      '<div class="bar"><div style="width:'+(f.frac*100).toFixed(1)+'%;background:'+colorFor(c,cats)+'"></div></div></div>';
+    else if (showFund) fund='<div class="fund"><small>Add a next due date to track the sinking-fund balance.</small></div>';
+    return '<button class="bill col" data-id="'+b.id+'"><span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
+      '<span class="mid"><div class="nm">'+esc(b.name)+(b.example?'<span class="tag">Example</span>':'')+'</div>'+
+      '<div class="meta">'+money(+b.amount||0)+' '+freqText(b).toLowerCase()+(b.category?' · '+esc(b.category):'')+'</div></span>'+
+      '<span class="amt"><b>'+money(x.v)+'</b><small>per check</small></span>'+fund+'</button>'; }
+  ones.sort(function(a,b){ return ((a.past?1:0)-(b.past?1:0)) || (a.past? b.n-a.n : a.n-b.n); });
+  var upTot=ones.filter(function(o){return !o.past;}).reduce(function(a,o){return a+(+o.b.amount||0);},0);
+  $('oneSec').classList.toggle('hidden', !ones.length); $('oneTot').textContent=upTot?money(upTot):'';
+  $('oneList').innerHTML=ones.map(function(o){ var b=o.b;
+    var when = o.past ? 'was due '+fmtShort(o.n) : (o.n===t0 ? '<b>due today</b>' : 'due '+fmtShort(o.n)+' · '+(o.away? o.away+' paycheck'+(o.away===1?'':'s')+' away' : '<b>before next payday</b>'));
+    if (o.startsOn) when+=' · saving starts '+fmtShort(o.startsOn);
+    return '<button class="bill'+(o.past?' pastbill':'')+'" data-id="'+b.id+'"><span class="dot" style="background:var(--f-onetime)"></span>'+
+      '<span class="mid"><div class="nm">'+esc(b.name)+(o.past?'<span class="tag past">Past</span>':'')+'</div><div class="meta">'+when+'</div></span>'+
+      '<span class="amt"><b style="color:var(--f-onetime)">'+money(+b.amount||0)+'</b><small>one-time</small></span></button>'; }).join('');
+  $('savList').innerHTML = sav.length ? sav.map(function(x){return row(x,true);}).join('') : '<div class="empty">No bills need saving ahead at this pay frequency.</div>';
+  var incs=state.settings.incomes||[];
+  $('incList').innerHTML=incs.map(function(i){ return '<button type="button" class="incrow" data-inc="'+i.id+'"><span><b>'+esc(i.name||'Income')+'</b> <small style="color:var(--muted)">'+(PAY[i.freq]?PAY[i.freq].label:FREQ_LABEL[i.freq]||i.freq)+'</small></span><b class="pos-t">'+money(+i.amount||0)+'</b></button>'; }).join('');
+  $('incOtherTot').textContent=incs.length?'≈ '+money(incs.reduce(function(a,i){return a+(+i.amount||0)*timesPerYear({freq:i.freq});},0)/PF.per)+' per check':'';
+  renderWF('wfPay');
+  $('dirList').innerHTML = dir.length ? dir.map(function(x){return row(x,false);}).join('') : '<div class="empty">None.</div>';
+}
+
+function drawDonut(rows, cats, total){
+  var svg=$('donut'), R=48, C=2*Math.PI*R, off=0, h='';
+  h+='<circle cx="60" cy="60" r="'+R+'" fill="none" stroke="var(--chip)" stroke-width="18"/>';
+  if (total>0) rows.forEach(function(r){
+    var len=r.v/total*C; if (len<=0) return;
+    var gap=rows.length>1?Math.min(1.5,len/3):0;
+    h+='<circle cx="60" cy="60" r="'+R+'" fill="none" stroke="'+colorFor(r.c,cats)+'" stroke-width="18" stroke-dasharray="'+Math.max(0,len-gap).toFixed(3)+' '+(C).toFixed(3)+'" stroke-dashoffset="'+(-off).toFixed(3)+'" transform="rotate(-90 60 60)"/>';
+    off+=len; });
+  h+='<text x="60" y="57" text-anchor="middle" font-size="11" fill="var(--muted)" font-weight="600">'+rows.length+' categor'+(rows.length===1?'y':'ies')+'</text>';
+  h+='<text x="60" y="73" text-anchor="middle" font-size="13" fill="var(--text)" font-weight="700">'+(total>=10000?'$'+Math.round(total/1000)+'k':'$'+Math.round(total).toLocaleString('en-US'))+'</text>';
+  svg.innerHTML=h;
+}
+
+/* --- actual due mode --- */
+var winOffset=0;
+function windowRange(){
+  var s=state.settings, t=todayNum();
+  if (s.dueSpan==='week'){
+    var dow=new Date(t*864e5).getUTCDay(), startDow=s.weekMon?1:0;
+    var st=t-((dow-startDow+7)%7)+7*winOffset;
+    return {s:st, e:st+6, kind:'week'};
+  }
+  var T=fromDayNum(t), mi=T.y*12+T.m+winOffset, y=Math.floor(mi/12), m=mi-y*12;
+  return {s:dayNum(y,m,1), e:dayNum(y,m,dim(y,m)), kind:'month', y:y, m:m};
+}
+function renderDue(){
+  var s=state.settings, w=windowRange(), t=todayNum();
+  $('dueChips').innerHTML=[['week','Week'],['month','Month']].map(function(p){ return '<button data-span="'+p[0]+'" aria-pressed="'+(p[0]===s.dueSpan)+'">'+p[1]+'</button>'; }).join('')+
+    (winOffset!==0?'<button data-today="1">Today</button>':'');
+  var title, sub;
+  if (w.kind==='month'){ title=MONTHS_FULL[w.m]+' '+w.y; sub=winOffset===0?'This month':(winOffset===1?'Next month':(winOffset===-1?'Last month':'')); }
+  else { title=fmtShort(w.s)+' – '+fmtShort(w.e); sub=winOffset===0?'This week':(winOffset===1?'Next week':(winOffset===-1?'Last week':'')); }
+  $('winTitle').innerHTML=esc(title)+(sub?'<small>'+sub+'</small>':'');
+  var act=activeBills(), items=[], noDate=0;
+  act.forEach(function(b){ if(!parseISO(b.due)){noDate++;return;} occurrences(b,w.s,w.e).forEach(function(n){ items.push({b:b,n:n}); }); });
+  items.sort(function(a,b){ return a.n-b.n || b.b.amount-a.b.amount; });
+  var dueTotal=items.reduce(function(a,x){return a+(+x.b.amount||0);},0);
+  // prorated set-aside for this window: week -> weekly rate; month -> monthly rate (annual/12)
+  var aside=act.reduce(function(a,b){ return a+prorate(b, w.kind); },0);
+  $('dueTot').textContent=money(dueTotal); $('asideTot').textContent=money(aside);
+  var d=dueTotal-aside;
+  $('dueDiff').innerHTML = Math.abs(d)<0.005 ? 'Cash-flow matches the smoothed amount.' :
+    (d>0 ? 'This '+w.kind+' is <b class="pos">'+money(d)+' heavier</b> than the smoothed average — dip into savings.' :
+           'This '+w.kind+' is <b class="neg">'+money(-d)+' lighter</b> than average — set the difference aside.') +
+    (noDate?'<br>'+noDate+' active bill'+(noDate===1?' has':'s have')+' no due date and '+(noDate===1?'is':'are')+' excluded from “Actually due” (still counted in set-aside).':'');
+  var cats=categories(), h='', lastDay=null;
+  if (!items.length) h='<div class="empty">Nothing comes due in this '+w.kind+'.</div>';
+  items.forEach(function(x){
+    if (x.n!==lastDay){ h+='<div class="daygroup">'+fmtDay(x.n, fromDayNum(x.n).y!==fromDayNum(t).y)+(x.n===t?' · Today':'')+'</div>'; lastDay=x.n; }
+    var b=x.b, c=(b.category||'').trim()||'Uncategorized';
+    h+='<button class="bill" data-id="'+b.id+'"><span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
+      '<span class="mid"><div class="nm">'+esc(b.name)+(b.example?'<span class="tag">Example</span>':'')+(x.n<t?'<span class="tag past">Past</span>':'')+'</div>'+
+      '<div class="meta">'+freqText(b)+(b.category?' · '+esc(b.category):'')+'</div></span>'+
+      '<span class="amt"><b>'+money(+b.amount||0)+'</b><small>'+(isOne(b)?'one-time':'set aside '+money(prorate(b,w.kind)))+'</small></span></button>';
+  });
+  $('dueList').innerHTML=h;
+}
+
+/* ---------- edit sheet ---------- */
+var editingId=null;
+function openSheet(id){ $(id).classList.add('open'); document.body.style.overflow='hidden'; }
+function closeSheet(id){ $(id).classList.remove('open'); document.body.style.overflow=''; }
+function openEdit(id){
+  editingId=id||null;
+  var b=id?state.bills.find(function(x){return x.id===id;}):null;
+  $('editTitle').textContent=b?'Edit bill':'Add bill';
+  $('fName').value=b?b.name:''; $('fAmt').value=b?(+b.amount).toFixed(2):'';
+  $('fSpreadUnit').value=b&&b.spreadUnit&&+b.spreadN?b.spreadUnit:'none'; $('fSpreadN').value=b&&+b.spreadN?b.spreadN:4;
+  $('fFreq').value=b?b.freq:'monthly'; $('fN').value=b&&b.n?b.n:1; $('fUnit').value=b&&b.unit?b.unit:'months';
+  $('fCat').value=b?(b.category||''):''; $('fDue').value=b?(b.due||''):''; $('fNotes').value=b?(b.notes||''):'';
+  $('fActive').checked=b?b.active!==false:true;
+  $('delBtn').classList.toggle('hidden',!b);
+  $('catList').innerHTML=categories().filter(function(c){return c!=='Uncategorized';}).map(function(c){return '<option value="'+esc(c)+'">';}).join('');
+  updateFreqUI(); openSheet('editScrim');
+  if (!b && window.matchMedia('(min-width:700px)').matches) setTimeout(function(){$('fName').focus();},50);
+}
+function formBill(){
+  return {freq:$('fFreq').value, n:parseInt($('fN').value,10)||1, unit:$('fUnit').value, amount:parseAmt($('fAmt').value)};
+}
+function parseAmt(v){ v=String(v||'').replace(/[$,\s]/g,''); var n=parseFloat(v); return isFinite(n)?n:NaN; }
+function updateFreqUI(){
+  var fb=formBill(); $('customRow').classList.toggle('hidden', fb.freq!=='custom');
+  var one=fb.freq==='onetime'; $('spreadRow').classList.toggle('hidden',!one);
+  $('fDueLbl').textContent=one?'Date (required)':'Next due date (optional)';
+  if (one && !$('fDue').value) $('fDue').value=isoOf(todayNum());
+  $('fSpreadN').disabled=$('fSpreadUnit').value==='none';
+  if (one){ var a1=isFinite(fb.amount)?fb.amount:0, su=$('fSpreadUnit').value, sn=parseInt($('fSpreadN').value,10)||0;
+    $('freqHint').textContent = 'One-time: not counted in recurring rates; shows on its date in Calendar & Actual due.'+
+      (su!=='none'&&sn>0&&a1>0 ? ' Saving ≈ '+money(su==='weeks'?a1/sn:a1/(sn*WEEKS_PER_YEAR/12))+'/wk over '+sn+' '+su+'.' : '');
+    return; }
+  var a=isFinite(fb.amount)?fb.amount:0, yr=a*timesPerYear(fb);
+  $('freqHint').textContent = a>0 ? '≈ '+money(yr/WEEKS_PER_YEAR)+'/wk · '+money(yr/12)+'/mo · '+money(yr)+'/yr ('+(Math.round(timesPerYear(fb)*1000)/1000)+'× per year)' : '';
+}
+['fFreq','fN','fUnit','fAmt','fSpreadUnit','fSpreadN','fDue'].forEach(function(id){ $(id).addEventListener('input',updateFreqUI); $(id).addEventListener('change',updateFreqUI); });
+$('editForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  var name=$('fName').value.trim(), amt=parseAmt($('fAmt').value);
+  if (!name){ toast('Please enter a name'); $('fName').focus(); return; }
+  if (!isFinite(amt)||amt<0){ toast('Please enter a valid amount'); $('fAmt').focus(); return; }
+  var fb=formBill();
+  if (fb.freq==='custom' && !(fb.n>=1)){ toast('Custom interval must be 1 or more'); return; }
+  var data={name:name, amount:Math.round(amt*100)/100, freq:fb.freq, n:fb.n, unit:fb.unit, category:$('fCat').value.trim(),
+    due:$('fDue').value||'', notes:$('fNotes').value.trim(), active:$('fActive').checked};
+  if (fb.freq==='onetime'){
+    if (!data.due) data.due=isoOf(todayNum());
+    var su=$('fSpreadUnit').value, sn=parseInt($('fSpreadN').value,10)||0;
+    data.spreadUnit=su!=='none'&&sn>0?su:'none'; data.spreadN=data.spreadUnit==='none'?0:sn;
+  } else { data.spreadUnit='none'; data.spreadN=0; }
+  if (editingId){ var b=state.bills.find(function(x){return x.id===editingId;}); Object.assign(b,data); if(b.example && !/\(example\)/i.test(b.name)) delete b.example; toast('Saved'); }
+  else { data.id=uid(); state.bills.push(data); toast('Added '+name); }
+  save(); closeSheet('editScrim'); render();
+});
+$('delBtn').addEventListener('click',function(){
+  var b=state.bills.find(function(x){return x.id===editingId;}); if(!b) return;
+  if (!confirm('Delete “'+b.name+'”?')) return;
+  state.bills=state.bills.filter(function(x){return x.id!==editingId;});
+  if (!state.bills.length) state.settings.examplesCleared=true;
+  save(); closeSheet('editScrim'); render(); toast('Deleted');
+});
+$('editClose').addEventListener('click',function(){closeSheet('editScrim');});
+$('menuClose').addEventListener('click',function(){closeSheet('menuScrim');});
+['editScrim','menuScrim','dayScrim','incScrim'].forEach(function(id){ $(id).addEventListener('click',function(e){ if(e.target===this) closeSheet(id); }); });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ closeSheet('editScrim'); closeSheet('menuScrim'); closeSheet('dayScrim'); closeSheet('incScrim'); } });
+
+/* ---------- events ---------- */
+$('addBtn').addEventListener('click',function(){openEdit(null);});
+document.addEventListener('click',function(e){ if(e.target.closest('.addBillBtn')) openEdit(null); });
+$('menuBtn').addEventListener('click',function(){openSheet('menuScrim');});
+$('modeCal').addEventListener('click',function(){state.settings.mode='cal';save();render();});
+$('calPrev').addEventListener('click',function(){calOffset--;render();});
+$('calNext').addEventListener('click',function(){calOffset++;render();});
+$('calTitle').addEventListener('click',function(e){ if(e.target.id==='calToday'){ e.preventDefault(); calOffset=0; render(); } });
+$('calGrid').addEventListener('click',function(e){ var c=e.target.closest('[data-day]'); if(c){ var d=+c.dataset.day; openRange(d,d); return; }
+  var w=e.target.closest('.wksum'); if(w) openRange(+w.dataset.ws,+w.dataset.we); });
+$('dayClose').addEventListener('click',function(){closeSheet('dayScrim');});
+document.addEventListener('click',function(e){
+  var w=e.target.closest('[data-wf]'); if(w){ state.settings.wfPeriod=w.dataset.wf; save(); render(); return; }
+  if (e.target.closest('.goIncome')){ state.settings.mode='pay'; save(); render(); window.scrollTo(0,0); setTimeout(function(){ $('checkAmt').focus(); },50); }
+});
+var editingInc=null;
+function openInc(id){
+  editingInc=id||null; var i=id?(state.settings.incomes||[]).find(function(x){return x.id===id;}):null;
+  $('iName').value=i?i.name:''; $('iAmt').value=i?(+i.amount).toFixed(2):''; $('iFreq').value=i?i.freq:'monthly';
+  $('iDel').classList.toggle('hidden',!i); openSheet('incScrim');
+}
+$('addInc').addEventListener('click',function(){openInc(null);});
+$('incList').addEventListener('click',function(e){ var r=e.target.closest('[data-inc]'); if(r) openInc(r.dataset.inc); });
+$('incClose').addEventListener('click',function(){closeSheet('incScrim');});
+$('incForm').addEventListener('submit',function(e){
+  e.preventDefault(); var a=parseAmt($('iAmt').value); if(!isFinite(a)||a<0){ toast('Please enter a valid amount'); return; }
+  var list=state.settings.incomes=state.settings.incomes||[], data={name:$('iName').value.trim()||'Income', amount:Math.round(a*100)/100, freq:$('iFreq').value, active:true};
+  if (editingInc) Object.assign(list.find(function(x){return x.id===editingInc;}),data); else { data.id=uid(); list.push(data); }
+  save(); closeSheet('incScrim'); render(); toast('Income saved');
+});
+$('iDel').addEventListener('click',function(){ state.settings.incomes=(state.settings.incomes||[]).filter(function(x){return x.id!==editingInc;}); save(); closeSheet('incScrim'); render(); });
+$('modePay').addEventListener('click',function(){state.settings.mode='pay';save();render();});
+$('payChips').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; state.settings.payFreq=b.dataset.pf; save(); render(); });
+$('checkAmt').addEventListener('input',function(){ var v=parseAmt(this.value); state.settings.checkAmt=isFinite(v)&&v>0?String(Math.round(v*100)/100):''; save(); renderPay(); });
+$('checkAmt').addEventListener('blur',function(){ var v=state.settings.checkAmt; this.value=v?money(+v).replace('$',''):''; });
+$('savList').addEventListener('click',function(e){ var b=e.target.closest('.bill'); if(b) openEdit(b.dataset.id); });
+$('oneList').addEventListener('click',function(e){ var b=e.target.closest('.bill'); if(b) openEdit(b.dataset.id); });
+$('dirList').addEventListener('click',function(e){ var b=e.target.closest('.bill'); if(b) openEdit(b.dataset.id); });
+$('modeAvg').addEventListener('click',function(){state.settings.mode='avg';save();render();});
+$('modeDue').addEventListener('click',function(){state.settings.mode='due';save();render();});
+$('periodChips').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; state.settings.period=b.dataset.p; save(); render(); });
+$('dueChips').addEventListener('click',function(e){ var b=e.target.closest('button'); if(!b) return; if(b.dataset.today){winOffset=0;} else {state.settings.dueSpan=b.dataset.span; winOffset=0; save();} render(); });
+$('prevBtn').addEventListener('click',function(){winOffset--;render();});
+$('nextBtn').addEventListener('click',function(){winOffset++;render();});
+$('sortSel').addEventListener('change',function(){state.settings.sort=this.value;save();render();});
+$('billList').addEventListener('click',function(e){ var b=e.target.closest('.bill'); if(b) openEdit(b.dataset.id); });
+$('dueList').addEventListener('click',function(e){ var b=e.target.closest('.bill'); if(b) openEdit(b.dataset.id); });
+$('weekMon').addEventListener('change',function(){state.settings.weekMon=this.checked;save();render();});
+$('showInactive').addEventListener('change',function(){state.settings.showInactive=this.checked;save();render();});
+function clearExamples(){
+  var n=state.bills.filter(function(b){return b.example;}).length;
+  state.bills=state.bills.filter(function(b){return !b.example;}); state.settings.examplesCleared=true;
+  save(); render(); toast(n?'Removed '+n+' example bill'+(n===1?'':'s'):'No example bills');
+}
+function clearAll(){
+  if(!confirm('Clear ALL bills and income? (Export a backup first if you want to keep them.)')) return false;
+  state.bills=[]; state.settings.checkAmt=''; state.settings.incomes=[]; state.settings.examplesCleared=true;
+  save(); closeSheet('menuScrim'); render(); toast('Cleared — start fresh with ＋ Add bill'); return true;
+}
+$('clearEx').addEventListener('click',clearAll);
+$('clearEx2').addEventListener('click',function(){clearExamples();closeSheet('menuScrim');});
+$('wipeAll').addEventListener('click',clearAll);
+
+/* ---------- import / export ---------- */
+function stamp(){ return isoOf(todayNum()); }
+function download(name, text, type){
+  var blob=new Blob([text],{type:type}), url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1500);
+}
+$('expJson').addEventListener('click',function(){
+  download('bills-backup-'+stamp()+'.json', JSON.stringify({app:'bills',version:1,exported:new Date().toISOString(),bills:state.bills,settings:state.settings},null,2),'application/json');
+  toast('Backup exported');
+});
+$('expCsv').addEventListener('click',function(){
+  function q(v){ v=String(v==null?'':v); return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+  var head=['Name','Amount','Frequency','Category','Next due','Active','Notes','Per day','Per week','Per month','Per quarter','Per 6 months','Per year'];
+  var rows=state.bills.map(function(b){ return [b.name,(+b.amount).toFixed(2),freqText(b),b.category||'',b.due||'',b.active!==false?'yes':'no',b.notes||'']
+    .concat(PERIODS.map(function(p){return prorate(b,p.k).toFixed(2);})).map(q).join(','); });
+  download('bills-'+stamp()+'.csv', '\ufeff'+head.join(',')+'\r\n'+rows.join('\r\n')+'\r\n','text/csv');
+  toast('CSV exported');
+});
+$('impJson').addEventListener('click',function(){ $('fileIn').value=''; $('fileIn').click(); });
+$('fileIn').addEventListener('change',function(){
+  var f=this.files&&this.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var p=JSON.parse(r.result), bills=Array.isArray(p)?p:p.bills;
+      if(!Array.isArray(bills)) throw new Error('No bills array found');
+      var valid=FREQ_LABEL;
+      bills=bills.filter(function(b){return b&&b.name!=null&&isFinite(parseFloat(b.amount));}).map(function(b){
+        return {id:b.id||uid(), name:String(b.name), amount:parseFloat(b.amount), freq:valid[b.freq]?b.freq:'monthly', n:parseInt(b.n,10)||1,
+          unit:['days','weeks','months'].indexOf(b.unit)>=0?b.unit:'months', category:b.category?String(b.category):'', due:parseISO(b.due)?b.due:'',
+          notes:b.notes?String(b.notes):'', active:b.active!==false, example:!!b.example, source:b.source||undefined, spreadUnit:['weeks','months'].indexOf(b.spreadUnit)>=0?b.spreadUnit:'none', spreadN:parseInt(b.spreadN,10)||0};
+      });
+      if(!confirm('Import '+bills.length+' bills? This REPLACES your current '+state.bills.length+' bills.')) return;
+      state.bills=bills; state.settings.examplesCleared=true;
+      if(p.settings&&typeof p.settings==='object') ['period','sort','weekMon','showInactive','dueSpan','payFreq','checkAmt','incomes','wfPeriod'].forEach(function(k){ if(k in p.settings) state.settings[k]=p.settings[k]; });
+      save(); closeSheet('menuScrim'); render(); toast('Imported '+bills.length+' bills');
+    }catch(err){ alert('Import failed: '+err.message); }
+  };
+  r.readAsText(f);
+});
+
+
+// keep "today" fresh if app is left open past midnight / resumed from background
+document.addEventListener('visibilitychange',function(){ if(!document.hidden) render(); });
+
+// test hook
+window.BillsApp={oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
+render();
+})();
+</script>
+</body>
+</html>

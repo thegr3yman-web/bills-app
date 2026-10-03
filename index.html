@@ -232,6 +232,13 @@ textarea{min-height:70px;resize:vertical}
 .seg button{font-size:13px;line-height:1.15}
 .confirm .btns{margin-top:14px}
 #cfScrim{z-index:30}
+#shScrim{z-index:31}
+.tag.short{background:rgba(209,31,38,.12);color:#d11f26;text-transform:none;letter-spacing:0}
+.shortLine{display:flex;justify-content:flex-end;margin-top:4px}.shortLine button,.shortBtn{min-height:36px;padding:0 12px;border-radius:10px;background:var(--chip);font-weight:700;font-size:13px;color:#d11f26}
+.payShort{margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(209,31,38,.08);border:1px solid rgba(209,31,38,.25);font-size:14px}
+.payShort div+div{margin-top:4px}
+.duerow.short .bill{border:1px solid rgba(209,31,38,.35)}
+
 details.more{margin-top:12px}
 details.more>summary{list-style:none;cursor:pointer;background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:14px 16px;font-weight:700;display:flex;justify-content:space-between;align-items:center;min-height:50px}
 details.more>summary::-webkit-details-marker{display:none}
@@ -320,6 +327,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
       <div class="sub" id="paySub"></div>
       <div class="checkrow"><label for="checkAmt">Take-home pay per check</label><input id="checkAmt" inputmode="decimal" placeholder="optional, e.g. 1,250.00"></div>
       <div id="payBreak"></div>
+      <div id="payShort"></div>
       <div class="sechead" style="margin-top:14px"><h2 style="font-size:15px">Other income <small style="color:var(--muted);font-weight:500">(optional)</small></h2><span id="incOtherTot" style="font-size:14px"></span></div>
       <div id="incList"></div>
       <button class="btn" id="addInc" style="margin-top:8px;min-height:44px">+ Add income source</button>
@@ -437,6 +445,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
       <div class="hint" id="endHint" style="margin:6px 2px 0"></div>
       <div class="datewrap hidden" id="reenWrap" style="margin-top:8px"><button type="button" id="fReenable" style="flex:1">Re-enable this bill (never ends)</button></div></div>
     <div class="field"><label for="fNotes">Notes (optional)</label><textarea id="fNotes" maxlength="500"></textarea></div>
+    <div class="hidden" id="fShortWrap" style="margin-top:12px"><button type="button" class="btn" id="fShortBtn" style="color:#d11f26;min-height:44px">Didn’t set aside for this</button><div class="hint" id="fShortHint" style="margin:4px 2px 0"></div></div>
     <div class="toggle"><span>Active</span><label class="switch"><input type="checkbox" id="fActive" checked aria-label="Active"><span></span></label></div>
     <div class="btns">
       <button type="submit" class="btn primary" id="saveBtn">Save</button>
@@ -468,6 +477,19 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     </div>
     <div class="btns"><button type="submit" class="btn primary">Save</button><button type="button" class="btn danger hidden" id="iDel">Delete income source</button></div>
   </form>
+</div>
+
+<!-- Shortfall sheet -->
+<div class="scrim" id="shScrim">
+  <div class="sheet confirm" role="dialog" aria-labelledby="shTitle">
+    <div class="grab"></div>
+    <h3><span id="shTitle">Didn’t set aside for this</span><button type="button" class="iconbtn" id="shClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></h3>
+    <div class="field hidden" id="shPickWrap"><label for="shBill">Which bill?</label><select id="shBill"></select><div class="hint" style="margin:4px 2px 0">Only bills with a due date are listed.</div></div>
+    <div class="hint" id="shInfo" style="margin:0 2px 10px"></div>
+    <div class="field"><label for="shHave">How much did you set aside for this payment?</label><input id="shHave" inputmode="decimal" placeholder="0.00"></div>
+    <div class="hint" id="shCalc" style="margin:6px 2px 0"></div>
+    <div class="btns"><button type="button" class="btn primary" id="shSave">Add to Behind</button><button type="button" class="btn danger hidden" id="shDel">Remove shortfall</button></div>
+  </div>
 </div>
 
 <!-- Confirm sheet -->
@@ -701,6 +723,7 @@ state.settings.mode='pay'; // Payday is the start screen on launch
 /* one-time migration (v9): everything before the current week counts as done, so unchecked history isn't shown as Behind */
 if (!state.settings.behindMigrated){ (function(){ var t=todayNum(), dw=new Date(t*864e5).getUTCDay();
   state.settings.behindFrom=isoOf(t-((dw-(state.settings.weekMon?1:0)+7)%7)); state.settings.behindMigrated=true; save(); })(); }
+pruneShorts();
 
 
 /* ---------- DOM helpers ---------- */
@@ -1017,6 +1040,9 @@ function renderPay(){
       '<div class="stack" aria-hidden="true"><div style="width:'+pct(savTot)+';background:var(--accent)"></div><div style="width:'+pct(dirTot)+';background:#f59e0b"></div><div style="width:'+pct(Math.max(0,left))+';background:var(--ok)"></div></div>'+
       '<div class="hint" style="margin:6px 0 0">■ <span style="color:var(--accent)">set aside</span> ■ <span style="color:#f59e0b">bills</span> ■ <span style="color:var(--ok)">left over</span>'+(left<0?' — <b class="neg-text">bills exceed this check</b>':'')+'</div>';
   } else $('payBreak').innerHTML='';
+  var sl=allShorts().filter(function(x){return !x.done;});
+  $('payShort').innerHTML = sl.length ? '<div class="payShort">'+sl.map(function(x){ return '<div>⚠ <b>'+esc(x.b.name)+'</b> <span class="tag short" style="margin-left:2px">Short '+money(x.amt)+' — '+dueInText(x.n)+'</span></div>'; }).join('')+
+    '<div style="color:var(--muted);font-size:13px">Counted in Behind on the Bills due tab — ✓ it there once covered.</div></div>' : '';
   $('savTot').textContent=money(savTot); $('dirTot').textContent=money(dirTot);
   function row(x, showFund){ var b=x.b, c=(b.category||'').trim()||'Uncategorized', f=showFund&&x.f;
     var calc = x.one ? money(+b.amount||0)+' one-time, saved over the weeks before it’s due = '+money(x.v)+' per paycheck'
@@ -1026,7 +1052,7 @@ function renderPay(){
       '<div class="bar"><div style="width:'+(f.frac*100).toFixed(1)+'%;background:'+colorFor(c,cats)+'"></div></div></div>';
     else if (showFund) fund='<div class="fund"><small>Add a due date to estimate how much should be set aside by now.</small></div>';
     return '<div class="prow" data-id="'+b.id+'"><button class="phead" type="button" aria-expanded="false"><span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
-      '<span class="mid"><div class="nm">'+esc(b.name)+(b.example?'<span class="tag">Example</span>':'')+endTag(b)+'</div>'+
+      '<span class="mid"><div class="nm">'+esc(b.name)+(b.example?'<span class="tag">Example</span>':'')+endTag(b)+openShorts(b).map(function(e){return shortTag(b,e.due);}).join('')+'</div>'+
       '<div class="meta">'+(showFund?'Reserve':'Pay')+' <b class="billtot">'+money(x.v)+'</b> per paycheck</div></span><span class="chev">▾</span></button>'+
       '<div class="pdet"><div>'+calc+'</div>'+fund+'<button type="button" class="pedit">Edit bill</button></div></div>'; }
   ones.sort(function(a,b){ return ((a.past?1:0)-(b.past?1:0)) || (a.past? b.n-a.n : a.n-b.n); });
@@ -1121,7 +1147,8 @@ function behindModel(kind){
     M.direct.forEach(function(x){ if(!x.done){ items.push({x:x,kind:'direct',P:P}); tot+=x.amt; } });
     M.shares.forEach(function(x){ if(!x.done){ items.push({x:x,kind:'share',P:P}); tot+=x.amt; } }); }
   items.sort(function(a,b){ return a.P.s-b.P.s || b.x.amt-a.x.amt; });
-  return {items:items, total:tot};
+  var shorts=allShorts(); shorts.forEach(function(x){ if(!x.done) tot+=x.amt; });
+  return {items:items, total:tot, shorts:shorts};
 }
 function setItem(b, kind, P, n, on){ // set an item's explicit check state
   if (kind==='share'){ var key=periodKey(P); if (isSetAside(b,key)!==on) toggleSetAside(b,key); }
@@ -1140,6 +1167,23 @@ function unimply(P, bill, kind, n){ // un-check ONE auto-done item: track this p
   M.direct.forEach(function(x){ setItem(x.b,'direct',P,x.n,!(kind==='direct'&&x.b===bill&&x.n===n)); });
   M.shares.forEach(function(x){ setItem(x.b,'share',P,null,!(kind==='share'&&x.b===bill)); });
 }
+/* ---- missed set-aside for one payment: b.short = [{due:'YYYY-MM-DD', have:0, done:false}] (optional field).
+   Shortfall = amount − have. Shown in Behind until ✓ (done) — or cleared automatically once the due date has passed and that payment is checked paid. */
+function shortList(b){ return Array.isArray(b.short)?b.short:[]; }
+function shortAt(b, iso){ return shortList(b).filter(function(e){return e.due===iso;})[0]||null; }
+function shortAmt(b, e){ return Math.max(0, (+b.amount||0)-(+e.have||0)); }
+function shortLive(b, e){ var n=dueNum({due:e.due}); if(n==null||shortAmt(b,e)<=0.0049) return false; return !(n<todayNum() && isPaid(b,n)) && !(e.done && n<todayNum()); }
+function shortOpen(b, e){ return shortLive(b,e) && !e.done; }
+function dueInText(n){ var d=n-todayNum(); return d<0?'was due '+fmtShort(n):d===0?'due today':d===1?'due tomorrow':'due in '+d+' days'; }
+function shortTag(b, iso){ var e=shortAt(b,iso); if(!e||!shortOpen(b,e)) return ''; return '<span class="tag short">Short '+money(shortAmt(b,e))+' — '+dueInText(dueNum({due:iso}))+'</span>'; }
+function openShorts(b){ return shortList(b).filter(function(e){return shortOpen(b,e);}); }
+function allShorts(){ var out=[]; enabledBills().forEach(function(b){ shortList(b).forEach(function(e){ if(shortLive(b,e)) out.push({b:b,e:e,n:dueNum({due:e.due}),amt:shortAmt(b,e),done:!!e.done}); }); });
+  return out.sort(function(a,b){return a.n-b.n;}); }
+function setShort(b, iso, have){ var l=shortList(b).filter(function(e){return e.due!==iso;});
+  if (have!=null && have < (+b.amount||0)-0.0049) l.push({due:iso, have:Math.max(0,Math.round(have*100)/100), done:false});
+  l.sort(function(x,y){return x.due<y.due?-1:1;}); if (l.length>60) l=l.slice(-60); if (l.length) b.short=l; else delete b.short; }
+function pruneShorts(){ var t=todayNum(); state.bills.forEach(function(b){ if(!Array.isArray(b.short)) return;
+  b.short=b.short.filter(function(e){ var n=dueNum({due:e.due}); return n!=null && !(n<t-90 && (e.done||isPaid(b,n))); }); if(!b.short.length) delete b.short; }); }
 function periodName(P){ return P.kind==='month' ? MONTHS_FULL[fromDayNum(P.s).m] : 'week of '+fmtShort(P.s); }
 function renderDue(){
   var s=state.settings, w=windowRange(), t=todayNum();
@@ -1168,13 +1212,19 @@ function renderDue(){
       meta=money(+b.amount||0)+' '+freqText(b).toLowerCase()+(x.undated?'':' · due '+fmtShort(nextDue(b)!=null?nextDue(b):dueNum(b)));
       small=(x.undated&&payFromPeriod(b,per))?(P!==w?'that '+per:'this '+per)+' · no date':per+'’s share'; }
     else { tags+=x.done?'<span class="tag paid">Paid</span>':(x.n<t?'<span class="tag past">Past</span>':'');
-      meta='due '+fmtShort(x.n)+' — paid from set-aside'; small='not in total'; }
+      tags+=shortTag(b,isoOf(x.n)); meta='due '+fmtShort(x.n)+' — paid from set-aside'; small='not in total'; }
     if (P!==w) meta='<b>from '+periodName(P)+'</b> · '+meta;
     var dataN = (kind==='share' ? 'data-share="'+periodKey(P)+'"' : 'data-n="'+x.n+'"')+' data-ps="'+P.s+'" data-pe="'+P.e+'" data-pk="'+P.kind+'"'+(x.implied?' data-implied="1"':'');
     return '<div class="duerow'+(x.done?' paid':'')+(kind==='info'?' info':'')+(P!==w?' behind':'')+'" data-kind="'+kind+'"><button class="chk" data-pay="'+b.id+'" '+dataN+' aria-pressed="'+x.done+'" aria-label="'+(x.done?'Undo: ':(kind==='share'?'Mark set aside: ':'Mark paid: '))+esc(b.name)+'">✓</button>'+
       '<button class="bill" data-id="'+b.id+'"><span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
       '<span class="mid"><div class="nm">'+esc(b.name)+tags+'</div><div class="meta">'+meta+'</div></span>'+
-      '<span class="amt"><b class="'+(x.done||kind==='info'?'':'billtot')+'">'+money(x.amt)+'</b><small>'+small+'</small></span></button></div>'; }
+      '<span class="amt"><b class="'+(x.done||kind==='info'?'':'billtot')+'">'+money(x.amt)+'</b><small>'+small+'</small></span></button></div>'+
+      (kind==='info'&&!x.done&&P===w&&x.n>=t-31?'<div class="shortLine"><button type="button" class="shortBtn" data-sb="'+b.id+'" data-sn="'+isoOf(x.n)+'">'+(shortAt(b,isoOf(x.n))&&shortOpen(b,shortAt(b,isoOf(x.n)))?'Edit: didn’t set aside':'Didn’t set aside for this')+'</button></div>':''); }
+  function shortRowHTML(x){ var b=x.b, c=(b.category||'').trim()||'Uncategorized';
+    return '<div class="duerow short'+(x.done?' paid':'')+'" data-kind="short"><button class="chk" data-short="'+b.id+'" data-due="'+x.e.due+'" aria-pressed="'+x.done+'" aria-label="'+(x.done?'Undo: ':'Covered: ')+esc(b.name)+'">✓</button>'+
+      '<button class="bill" data-sid="'+b.id+'" data-sdue="'+x.e.due+'"><span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
+      '<span class="mid"><div class="nm">'+esc(b.name)+(x.done?'<span class="tag paid">Covered</span>':'')+'</div><div class="meta">not set aside, '+dueInText(x.n).replace(/^due /,'due ')+' · '+fmtShort(x.n)+' · had '+money(+x.e.have||0)+' of '+money(+b.amount||0)+' · tap to edit</div></span>'+
+      '<span class="amt"><b class="'+(x.done?'':'billtot')+'">'+money(x.amt)+'</b><small>not set aside</small></span></button></div>'; }
   var h='';
   function sec(title, list, kind, note){ if(!list.length) return;
     var open=list.reduce(function(a,x){return a+(kind==='info'||x.done?0:x.amt);},0);
@@ -1182,9 +1232,10 @@ function renderDue(){
   if (winOffset===0){
     var lastP=periodAt(w.kind,-1), lastM=dueModel(lastP), lastItems=lastM.direct.concat(lastM.shares), lastOpen=lastItems.length&&lastItems.every(function(x){return !x.done;});
     h+='<div class="behindSec" id="behindSec"><div class="dsec2"><h2>Behind — catch up</h2><span>'+(B.total>0?'<b class="billtot">'+money(B.total)+'</b> behind':'nothing behind ✓')+'</span></div>'+
+      B.shorts.map(shortRowHTML).join('')+
       B.items.map(function(it){ return rowHTML(it.x, it.kind, it.P); }).join('')+
-      '<div class="bbtns">'+(B.items.length?'<button type="button" class="ok" id="caughtUp">✓ I’m caught up</button>':'')+
-      (lastItems.length&&!lastOpen?'<button type="button" id="markLast">Mark last '+per+' as not paid</button>':'')+'</div>'+
+      '<div class="bbtns">'+(B.items.length||B.shorts.some(function(x){return !x.done;})?'<button type="button" class="ok" id="caughtUp">✓ I’m caught up</button>':'')+
+      (lastItems.length&&!lastOpen?'<button type="button" id="markLast">Mark last '+per+' as not paid</button>':'')+'<button type="button" id="missedBtn">+ I missed setting aside for a bill</button></div>'+
       '<div class="hint" style="margin:8px 2px 0">Behind a '+per+'? Tap “Mark last '+per+' as not paid” (or go back with ‹ and uncheck items) — they stay here until you ✓ them.</div></div>';
   } else if (winOffset<0){
     var allIt=M.direct.concat(M.shares);
@@ -1215,7 +1266,7 @@ function openEdit(id){
   $('fEnds').value=b&&parseISO(b.ends)?'date':'never'; $('fEndDate').value=b&&parseISO(b.ends)?b.ends:''; $('fEndN').value='';
   $('delBtn').classList.toggle('hidden',!b);
   $('catList').innerHTML=categories().filter(function(c){return c!=='Uncategorized';}).map(function(c){return '<option value="'+esc(c)+'">';}).join('');
-  updateFreqUI(); updateEndsUI(); openSheet('editScrim');
+  updateFreqUI(); updateEndsUI(); updateShortBtn(); openSheet('editScrim');
   if (!b && window.matchMedia('(min-width:700px)').matches) setTimeout(function(){$('fName').focus();},50);
 }
 function formBill(){
@@ -1287,6 +1338,42 @@ $('delBtn').addEventListener('click',function(){
     save(); closeSheet('editScrim'); render(); toast('Deleted'); }, true);
 });
 $('editClose').addEventListener('click',function(){closeSheet('editScrim');});
+/* ---- shortfall sheet ---- */
+var shCtx=null;
+function shortCandidates(){ return activeBills().filter(function(b){ return nextDue(b)!=null; }).sort(function(a,b){ return nextDue(a)-nextDue(b); }); }
+function openShort(id, iso){
+  var pick=!id; $('shPickWrap').classList.toggle('hidden',!pick);
+  if (pick){ var cs=shortCandidates();
+    $('shBill').innerHTML=cs.length?cs.map(function(b){ return '<option value="'+b.id+'">'+esc(b.name)+' — '+money(+b.amount||0)+', due '+fmtShort(nextDue(b))+'</option>'; }).join(''):'<option value="">No bills with a due date yet</option>';
+    id=cs.length?cs[0].id:null; }
+  shCtx={id:id, iso:iso, pick:pick}; fillShort(); $('shScrim').classList.add('open');
+}
+function fillShort(){
+  var b=shCtx.id&&state.bills.find(function(x){return x.id===shCtx.id;});
+  if (b && (shCtx.pick || !shCtx.iso)) shCtx.iso=nextDue(b)!=null?isoOf(nextDue(b)):null;
+  var ok=!!(b&&shCtx.iso), e=ok&&shortAt(b,shCtx.iso);
+  $('shSave').disabled=!ok; $('shDel').classList.toggle('hidden',!e);
+  $('shInfo').innerHTML = ok ? '<b>'+esc(b.name)+'</b> · '+money(+b.amount||0)+' · '+dueInText(dueNum({due:shCtx.iso}))+' ('+fmtDay(dueNum({due:shCtx.iso}))+')' : (b?'Add a due date to this bill first.':'');
+  $('shHave').value = e ? (+e.have||0).toFixed(2) : '0.00'; calcShort();
+}
+function calcShort(){ var b=shCtx&&shCtx.id&&state.bills.find(function(x){return x.id===shCtx.id;}); if(!b){ $('shCalc').textContent=''; return; }
+  var h=parseAmt($('shHave').value); if(!isFinite(h)) h=0; var sh=Math.max(0,(+b.amount||0)-h);
+  $('shCalc').innerHTML = sh>0.0049 ? 'Short <b class="billtot">'+money(sh)+'</b> — goes into <b>Behind</b> until you ✓ it.' : 'That covers it — nothing short.'; }
+function closeShort(){ $('shScrim').classList.remove('open'); shCtx=null; }
+$('shBill').addEventListener('change',function(){ shCtx.id=this.value||null; shCtx.iso=null; fillShort(); });
+$('shHave').addEventListener('input',calcShort);
+$('shClose').addEventListener('click',closeShort);
+$('shScrim').addEventListener('click',function(e){ if(e.target===this) closeShort(); });
+$('shSave').addEventListener('click',function(){ var b=state.bills.find(function(x){return x.id===shCtx.id;}); if(!b||!shCtx.iso) return;
+  var h=parseAmt($('shHave').value); if(!isFinite(h)||h<0) h=0; setShort(b,shCtx.iso,h); save(); closeShort(); render(); updateShortBtn();
+  var e=shortAt(b,shCtx?shCtx.iso:null); toast(shortList(b).length&&h<(+b.amount||0)?'Added to Behind: '+b.name+' short '+money(Math.max(0,(+b.amount||0)-h)):'Nothing short — removed'); });
+$('shDel').addEventListener('click',function(){ var b=state.bills.find(function(x){return x.id===shCtx.id;}); if(!b) return; setShort(b,shCtx.iso,null); save(); closeShort(); render(); updateShortBtn(); toast('Shortfall removed'); });
+function updateShortBtn(){ var b=editingId&&state.bills.find(function(x){return x.id===editingId;}), nd=b&&nextDue(b);
+  $('fShortWrap').classList.toggle('hidden', !(b&&nd!=null&&!isEnded(b)));
+  if (b&&nd!=null){ var e=shortAt(b,isoOf(nd)), on=e&&shortOpen(b,e);
+    $('fShortBtn').textContent=on?'Edit: didn’t set aside ('+money(shortAmt(b,e))+' short)':'Didn’t set aside for this';
+    $('fShortHint').textContent='For the payment '+dueInText(nd)+' ('+fmtShort(nd)+'). Puts the missing amount in Behind.'; } }
+$('fShortBtn').addEventListener('click',function(){ var b=state.bills.find(function(x){return x.id===editingId;}); if(b&&nextDue(b)!=null) openShort(b.id, isoOf(nextDue(b))); });
 var cfCb=null;
 function appConfirm(title, msg, okLabel, onOk, danger){
   $('cfTitle').textContent=title; $('cfMsg').textContent=msg||''; $('cfOk').textContent=okLabel||'OK';
@@ -1298,7 +1385,7 @@ $('fDueClear').addEventListener('click',function(){ $('fDue').value=''; updateFr
 $('guideX').addEventListener('click',function(){ state.settings.guideDismissed=true; save(); render(); });
 $('menuClose').addEventListener('click',function(){closeSheet('menuScrim');});
 ['editScrim','menuScrim','dayScrim','incScrim','cfScrim'].forEach(function(id){ $(id).addEventListener('click',function(e){ if(e.target===this) closeSheet(id); }); });
-document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ closeSheet('editScrim'); closeSheet('menuScrim'); closeSheet('dayScrim'); closeSheet('incScrim'); closeSheet('cfScrim'); } });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&$('shScrim').classList.contains('open')){ closeShort(); return; } if(e.key==='Escape'){ closeSheet('editScrim'); closeSheet('menuScrim'); closeSheet('dayScrim'); closeSheet('incScrim'); closeSheet('cfScrim'); } });
 
 /* ---------- events ---------- */
 $('addBtn').addEventListener('click',function(){openEdit(null);});
@@ -1351,6 +1438,11 @@ $('sortSel').addEventListener('change',function(){state.settings.sort=this.value
 $('billList').addEventListener('click',function(e){ var b=e.target.closest('.bill'); if(b) openEdit(b.dataset.id); });
 $('dueList').addEventListener('click',function(e){
   var c=e.target.closest('.chk');
+  if (c && c.dataset.short){ var sb=state.bills.find(function(x){return x.id===c.dataset.short;}), se=sb&&shortAt(sb,c.dataset.due); if(!se) return;
+    se.done=!se.done; save(); render(); toast(se.done?'Covered ✓ '+sb.name:'Back in Behind: '+sb.name); return; }
+  var sbt=e.target.closest('[data-sb]'); if (sbt){ openShort(sbt.dataset.sb, sbt.dataset.sn); return; }
+  var se2=e.target.closest('[data-sdue]'); if (se2){ openShort(se2.dataset.sid, se2.dataset.sdue); return; }
+  if (e.target.closest('#missedBtn')){ openShort(null,null); return; }
   if (c){ var bill=state.bills.find(function(x){return x.id===c.dataset.pay;}), n=+c.dataset.n; if(!bill) return;
     if (c.dataset.implied){ unimply({s:+c.dataset.ps,e:+c.dataset.pe,kind:c.dataset.pk}, bill, c.dataset.share?'share':'direct', n);
       toast('Unchecked '+bill.name+' — it now shows in Behind'); save(); render(); return; }
@@ -1422,7 +1514,7 @@ $('fileIn').addEventListener('change',function(){
       bills=bills.filter(function(b){return b&&b.name!=null&&isFinite(parseFloat(b.amount));}).map(function(b){
         return {id:b.id||uid(), name:String(b.name), amount:parseFloat(b.amount), freq:valid[b.freq]?b.freq:'monthly', n:parseInt(b.n,10)||1,
           unit:['days','weeks','months'].indexOf(b.unit)>=0?b.unit:'months', category:b.category?String(b.category):'', due:parseISO(b.due)?b.due:'',
-          notes:b.notes?String(b.notes):'', active:b.active!==false, example:!!b.example, source:b.source||undefined, spreadUnit:['weeks','months'].indexOf(b.spreadUnit)>=0?b.spreadUnit:'none', spreadN:parseInt(b.spreadN,10)||0, paid:Array.isArray(b.paid)?b.paid.filter(function(x){return !!parseISO(x);}):undefined, dom:(parseInt(b.dom,10)>=1&&parseInt(b.dom,10)<=31)?parseInt(b.dom,10):undefined, ends:parseISO(b.ends)?b.ends:undefined, created:parseISO(b.created)?b.created:undefined, setAside:Array.isArray(b.setAside)?b.setAside.filter(function(k){return /^(w:\d{4}-\d{2}-\d{2}|m:\d{4}-\d{2})$/.test(k);}):undefined};
+          notes:b.notes?String(b.notes):'', active:b.active!==false, example:!!b.example, source:b.source||undefined, spreadUnit:['weeks','months'].indexOf(b.spreadUnit)>=0?b.spreadUnit:'none', spreadN:parseInt(b.spreadN,10)||0, paid:Array.isArray(b.paid)?b.paid.filter(function(x){return !!parseISO(x);}):undefined, dom:(parseInt(b.dom,10)>=1&&parseInt(b.dom,10)<=31)?parseInt(b.dom,10):undefined, ends:parseISO(b.ends)?b.ends:undefined, short:Array.isArray(b.short)?b.short.filter(function(e){return e&&parseISO(e.due);}).map(function(e){return {due:e.due, have:Math.max(0,parseFloat(e.have)||0), done:!!e.done};}):undefined, created:parseISO(b.created)?b.created:undefined, setAside:Array.isArray(b.setAside)?b.setAside.filter(function(k){return /^(w:\d{4}-\d{2}-\d{2}|m:\d{4}-\d{2})$/.test(k);}):undefined};
       });
       appConfirm('Import '+bills.length+' bills?','This REPLACES your current '+state.bills.length+' bills.','Import',function(){
       state.bills=bills; state.settings.examplesCleared=true;
@@ -1438,7 +1530,7 @@ $('fileIn').addEventListener('change',function(){
 document.addEventListener('visibilitychange',function(){ if(!document.hidden) render(); });
 
 // test hook
-window.BillsApp={lastDay:lastDay, isEnded:isEnded, behindModel:behindModel, periodAt:periodAt, endFromForm:endFromForm, dueModel:dueModel, windowRange:windowRange, periodKey:periodKey, markPaid:markPaid, unmarkPaid:unmarkPaid, isPaid:isPaid, oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
+window.BillsApp={allShorts:allShorts, setShort:setShort, lastDay:lastDay, isEnded:isEnded, behindModel:behindModel, periodAt:periodAt, endFromForm:endFromForm, dueModel:dueModel, windowRange:windowRange, periodKey:periodKey, markPaid:markPaid, unmarkPaid:unmarkPaid, isPaid:isPaid, oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
 render();
 })();
 </script>

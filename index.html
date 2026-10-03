@@ -1436,7 +1436,7 @@ function planHTML(P, id){
   h+='<div class="pst">'+st+'</div><div class="psafe">'+sf+'</div>'+
     '<div class="hint" style="margin:6px 2px 8px">Each check pays ① late items & shortfalls (oldest first) ② bills due before the next check ③ set-asides for bigger bills ④ paying back borrowed set-asides. “Safe” = money no upcoming bill in the plan needs. Tap a check for the math.</div>';
   P.rows.forEach(function(r,i){ var paid=r.pays.reduce(function(a,x){return a+x.amt;},0);
-    var brief=r.pays.slice(0,3).map(function(x){return planLabel(x).replace(/ · due [^—]*/,'')+' '+money(x.amt);}).join(', ')+(r.pays.length>3?' …':'');
+    var brief=r.pays.slice(0,3).map(function(x){return planLabel(Object.assign({},x,{of:0})).replace(/ · due .*$/,'')+' '+money(x.amt)+(x.of?' (part)':'');}).join(', ')+(r.pays.length>3?' …':'');
     h+='<details class="prw" data-i="'+i+'"><summary><span class="pd">'+fmtShort(r.date)+' check <b class="pos-t">'+money(r.inc)+'</b>'+(r.kind==='est'?' <small style="color:var(--muted)">est.</small>':'')+'</span>'+
       (brief?' → pay '+brief:'')+' · left <b>'+money(r.left)+'</b>'+(r.rolledAmt>0.004?' · <b class="billtot">'+money(r.rolledAmt)+' rolls to next check</b>':'')+
       ' · safe <b class="gold">+'+money(r.safeInc)+'</b></summary>'+

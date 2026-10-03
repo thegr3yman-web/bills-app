@@ -1166,7 +1166,7 @@ function renderDue(){
       meta=fmtShort(x.n)+' · '+freqText(b)+(b.category?' · '+esc(b.category):''); small=isOne(b)?'one-time':'pay in full'; }
     else if (kind==='share'){ if(!x.implied) tags+=x.done?'<span class="tag paid">Set aside</span>':'';
       meta=money(+b.amount||0)+' '+freqText(b).toLowerCase()+(x.undated?'':' · due '+fmtShort(nextDue(b)!=null?nextDue(b):dueNum(b)));
-      small=(x.undated&&payFromPeriod(b,per))?'this '+per+' · no date':per+'’s share'; }
+      small=(x.undated&&payFromPeriod(b,per))?(P!==w?'that '+per:'this '+per)+' · no date':per+'’s share'; }
     else { tags+=x.done?'<span class="tag paid">Paid</span>':(x.n<t?'<span class="tag past">Past</span>':'');
       meta='due '+fmtShort(x.n)+' — paid from set-aside'; small='not in total'; }
     if (P!==w) meta='<b>from '+periodName(P)+'</b> · '+meta;

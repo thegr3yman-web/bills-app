@@ -234,6 +234,7 @@ textarea{min-height:70px;resize:vertical}
 #cfScrim{z-index:30}
 #shScrim{z-index:31}
 #ckScrim{z-index:25}
+.endNote{color:var(--muted);font-style:italic}
 .planCard{margin-top:14px;padding:12px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
 .planCard .dsec2{margin-top:0}
 .planCard .pst{font-size:15px;margin-top:6px}.planCard .psafe{font-size:15px;margin-top:4px}
@@ -618,6 +619,14 @@ function timesPerYear(b){
 }
 function annualCost(b){ return (+b.amount||0) * timesPerYear(b); }
 function prorate(b, periodKey){ return annualCost(b) / periodByKey(periodKey).perYear; }
+/* v13.1: prorated cost inside a real window that respects the bill's end date — a bill that ends inside the window only
+   counts the payments on/before its end (undated: only the days until the end); ended before the window = 0. */
+function prorateIn(b, k, R){ R=R||avgRange(k); var base=prorate(b,k), L=lastDay(b);
+  if (isOne(b) || L==null || L>=R.e) return base; if (L<R.s) return 0;
+  if (parseISO(b.due)) return occurrences(b,R.s,R.e).length*(+b.amount||0);
+  return base*liveDays(b,R.s,R.e)/(R.e-R.s+1); }
+function endsIn(b, R){ var L=lastDay(b); return !isOne(b) && L!=null && L>=R.s && L<R.e; }
+function endNote(b){ return 'ends '+fmtShort(lastDay(b))+' — counted until then'; }
 function periodByKey(k){ for (var i=0;i<PERIODS.length;i++) if (PERIODS[i].k===k) return PERIODS[i]; return PERIODS[2]; }
 function freqText(b){
   if (b.freq==='onetime'){ var sn=+b.spreadN||0; return 'One-time'+(sn&&b.spreadUnit&&b.spreadUnit!=='none'?' · set aside over '+sn+' '+(sn===1?b.spreadUnit.replace(/s$/,''):b.spreadUnit):''); }
@@ -821,16 +830,16 @@ function renderAvg(){
   var s=state.settings, P=periodByKey(s.period);
   $('periodChips').innerHTML = PERIODS.map(function(p){ return '<button data-p="'+p.k+'" aria-pressed="'+(p.k===s.period)+'">'+p.label+'</button>'; }).join('');
   var act=activeBills(), total=0;
-  act.forEach(function(b){ total+=prorate(b,s.period); });
+  var AR=avgRange(s.period); act.forEach(function(b){ total+=prorateIn(b,s.period,AR); });
   var actRec=act.filter(function(b){return !isOne(b);});
   $('totLbl').textContent='Total '+P.per;
   $('totBig').textContent=money(total);
-  var yr=act.reduce(function(a,b){return a+annualCost(b);},0);
-  $('totSub').innerHTML = act.length ? '<b>'+actRec.length+'</b> recurring bill'+(actRec.length===1?'':'s')+(act.length>actRec.length?' (one-time bills not included)':'')+' · '+money(yr/12)+'/mo · '+money(yr/WEEKS_PER_YEAR)+'/wk · '+money(yr)+'/yr' : 'No active bills yet — tap + to add one.';
+  var YR=avgRange('year'), yr=act.reduce(function(a,b){return a+prorateIn(b,'year',YR);},0), endL=act.filter(function(b){return endsIn(b,AR)||endsIn(b,YR);});
+  $('totSub').innerHTML = act.length ? '<b>'+actRec.length+'</b> recurring bill'+(actRec.length===1?'':'s')+(act.length>actRec.length?' (one-time bills not included)':'')+' · '+money(yr/12)+'/mo · '+money(yr/WEEKS_PER_YEAR)+'/wk · '+money(yr)+'/yr'+(endL.length?'<br><small id="avgEnds">'+endL.map(function(b){return esc(b.name)+' '+endNote(b);}).join(' · ')+'</small>':'') : 'No active bills yet — tap + to add one.';
 
   // income vs bills for this timeframe
   var incP=periodIncome(s.period, P.perYear), gs={total:0}, aR=avgRange(s.period);
-  actRec.forEach(function(b){ var g=groupOf(b), v=prorate(b,s.period); gs[g]=(gs[g]||0)+v; gs.total+=v; });
+  actRec.forEach(function(b){ var g=groupOf(b), v=prorateIn(b,s.period,AR); gs[g]=(gs[g]||0)+v; gs.total+=v; });
   var ph='<div class="cardtitle">Income vs bills · '+P.per+'</div>'+
     (incP>0?'<div class="row"><span>Take-home income'+(logMode()?'<span class="expl">'+(s.period==='day'||s.period==='week'||s.period==='month'?'this '+s.period+' · ':'from this month · ')+incLabel(aR.s,aR.e)+'</span>':'')+'</span><b class="pos-t" id="avgInc">'+money(incP)+'</b></div>':'')+
     FG.filter(function(g){return gs[g.k]>0;}).map(function(g){ return '<div class="row" style="color:'+fcol(g.k)+'"><span>− '+g.label+' bills</span><b>'+money(gs[g.k])+'</b></div>'; }).join('')+
@@ -842,7 +851,7 @@ function renderAvg(){
 
   // categories
   var cats=categories(), sums={};
-  act.forEach(function(b){ var c=(b.category||'').trim()||'Uncategorized'; sums[c]=(sums[c]||0)+prorate(b,s.period); });
+  act.forEach(function(b){ var c=(b.category||'').trim()||'Uncategorized'; sums[c]=(sums[c]||0)+prorateIn(b,s.period,AR); });
   var rows=Object.keys(sums).filter(function(c){return sums[c]>0;}).map(function(c){return {c:c,v:sums[c]};}).sort(function(a,b){return b.v-a.v;});
   $('catCard').classList.toggle('hidden', !rows.length);
   drawDonut(rows, cats, total);
@@ -852,7 +861,7 @@ function renderAvg(){
       '<div class="bar"><div style="width:'+(max?(r.v/max*100):0).toFixed(1)+'%;background:'+col+'"></div></div></div>'; }).join('');
 
   // list
-  var list=visibleBills().map(function(b){ return {b:b, v:prorate(b,s.period), nd:nextDue(b)}; });
+  var list=visibleBills().map(function(b){ return {b:b, v:prorateIn(b,s.period,AR), nd:nextDue(b)}; });
   var cmp={
     amount:function(x,y){ return (y.b.active!==false&&!isEnded(y.b))-(x.b.active!==false&&!isEnded(x.b)) || y.v-x.v; },
     name:function(x,y){ return x.b.name.localeCompare(y.b.name,undefined,{sensitivity:'base'}); },
@@ -866,6 +875,7 @@ function renderAvg(){
     if (b.category) meta.push(esc(b.category));
     if (isOne(b)) { var dn1=dueNum(b); if(dn1!=null) meta.push((dn1<todayNum()?'was ':'on ')+fmtShort(dn1)); }
     else if (x.nd!=null) meta.push('next '+fmtShort(x.nd));
+    if (endsIn(b,AR)) meta.push('<span class="endNote">'+endNote(b)+'</span>');
     var past1=isOne(b)&&dueNum(b)!=null&&dueNum(b)<todayNum();
     return '<button class="bill'+(b.active===false||isEnded(b)?' inactive':'')+(past1?' pastbill':'')+'" data-id="'+b.id+'">'+
       '<span class="dot" style="background:'+colorFor(c,cats)+'"></span>'+
@@ -945,13 +955,13 @@ var TIERS=[
 function tierOf(b){ var n=timesPerYear(b); for(var i=0;i<TIERS.length;i++) if(TIERS[i].test(n)) return TIERS[i].k; return 'semiannual'; }
 var WF_PERIODS={week:{label:'Week',per:WEEKS_PER_YEAR,word:'week'},month:{label:'Month',per:12,word:'month'},quarter:{label:'3 Months',per:4,word:'3 months'}};
 function waterfall(perKey){
-  var P=WF_PERIODS[perKey]||WF_PERIODS.week, inc=periodIncome(perKey, P.per), run=inc, steps=[];
+  var P=WF_PERIODS[perKey]||WF_PERIODS.week, inc=periodIncome(perKey, P.per), run=inc, steps=[], WR=avgRange(perKey);
   TIERS.forEach(function(T){
-    var c=activeBills().filter(function(b){return tierOf(b)===T.k;}).reduce(function(a,b){return a+annualCost(b);},0)/P.per;
+    var c=activeBills().filter(function(b){return tierOf(b)===T.k;}).reduce(function(a,b){return a+prorateIn(b,perKey,WR);},0);
     if (c>0){ run-=c; steps.push({t:T,cost:c,after:run}); }
   });
   var R=avgRange(perKey), cov=coversIn(R.s,R.e), cs=cov.reduce(function(a,x){return a+x.amt;},0);
-  return {income:inc, steps:steps, bills:inc-run, covers:cov, cov:cs, pl:run-cs, P:P};
+  return {income:inc, steps:steps, bills:inc-run, covers:cov, cov:cs, pl:run-cs, P:P, ends:activeBills().filter(function(b){return endsIn(b,WR);})};
 }
 function waterfallHTML(){
   var pk=state.settings.wfPeriod||'week', W=waterfall(pk);
@@ -962,6 +972,7 @@ function waterfallHTML(){
     h+='<div class="row" style="color:'+fcol(x.t.col)+'"><span>− '+x.t.label+'</span><b>−'+money(x.cost)+'</b></div>'+
        '<div class="row subt"><span>= left after '+x.t.label.replace(' bills','').toLowerCase()+'</span><b class="'+(x.after<0?'neg-t':'')+'">'+(x.after<0?'−':'')+money(Math.abs(x.after))+'</b></div>';
   });
+  if (W.ends.length) h+='<div class="hint wfEnds" style="margin:4px 2px">'+W.ends.map(function(b){return esc(b.name)+' '+endNote(b);}).join(' · ')+'</div>';
   h+='<div class="row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span>Total bills</span><b class="billtot wfCost">−'+money(W.bills)+'</b></div>'+coverRowsHTML(W.covers);
   h+='<div class="row final"><span>'+(W.pl>=0?'Income left after bills':'Bills exceed income')+'<span class="expl">per '+W.P.word+'</span></span><b class="wfFinal '+plCls(W.pl)+'">'+plMoney(W.pl)+'</b></div>';
   return h;
@@ -998,10 +1009,10 @@ function renderCal(){
   $('calTitle').innerHTML=MONTHS_FULL[M.m]+' '+M.y+'<small>'+(calOffset===0?'This month':'<a href="#" id="calToday" style="color:var(--accent)">Back to today</a>')+'</small>';
   var act=activeBills();
   var present=FG.filter(function(g){ return act.some(function(b){return groupOf(b)===g.k;}); });
-  var yrRec=act.reduce(function(a,b){return a+annualCost(b);},0), incDay=hasIncome()?incomeRange(M.s,M.e)/(M.e-M.s+1):0;
+  var yrRec=act.filter(function(b){return !isOne(b);}).reduce(function(a,b){return a+annualCost(b)*liveDays(b,M.s,M.e)/(M.e-M.s+1);},0), calEnds=act.filter(function(b){return endsIn(b,M);}), incDay=hasIncome()?incomeRange(M.s,M.e)/(M.e-M.s+1):0;
   $('calBudget').innerHTML='Daily budget: <b class="billtot" id="dailyBudget">'+money(yrRec/DAYS_PER_YEAR)+'</b>'+
     (incDay>0?' · income left per day <b class="'+plCls(incDay-yrRec/DAYS_PER_YEAR)+'">'+plMoney(incDay-yrRec/DAYS_PER_YEAR)+'</b>':'')+
-    '<small>Your recurring bills spread evenly across the year (yearly total ÷ 365.25).</small>';
+    '<small>Your recurring bills spread evenly across the year (yearly total ÷ 365.25).'+(calEnds.length?' '+calEnds.map(function(b){return esc(b.name)+' '+endNote(b);}).join(' · ')+' (averaged over this month).':'')+'</small>';
   $('calLegend').innerHTML='<span><i style="background:#d11f26"></i><b class="billtot">red</b>&nbsp;= bills</span>'+(incDay>0?'<span><i style="background:#d4a017"></i><b class="gold">gold</b>&nbsp;= income left</span>':'')+
     '<span style="color:var(--muted)">▲ = bill due · 1x = One-time bill (tap a day for details)</span>';
   $('calHint').classList.toggle('hidden', !act.length || act.some(function(b){return parseISO(b.due);}));
@@ -1049,7 +1060,7 @@ function renderCal(){
   var calBehind=behindModel(state.settings.dueSpan==='week'?'week':'month').total;
   mtdInc+=0; // (covered shortfalls already taken out of the daily income)
   var nDays=M.e-M.s+1, dueTot=dues.reduce(function(a,x){return a+(+x.b.amount||0);},0);
-  var yr=act.reduce(function(a,b){return a+annualCost(b);},0);
+  var CY={s:M.s,e:addMonthsNum(M.s,12)-1}, yr=act.filter(function(b){return !isOne(b);}).reduce(function(a,b){return a+prorateIn(b,'year',CY);},0);
   $('calTotal').innerHTML='<div class="total"><div class="lbl">'+MONTHS_FULL[M.m]+' bills total</div><div class="big billtot" id="calMonthTotal">'+money(mtd.total)+'</div>'+
       '<div class="sub">this month — '+nDays+' days'+(nDays>DAYS_PER_YEAR/12?', so more weekly bills fall in it than in an average month':', so fewer weekly bills fall in it than in an average month')+'</div></div>'+
     FG.filter(function(g){return mtd[g.k]>0;}).map(function(g){ return '<div class="row" style="color:'+fcol(g.k)+'"><span>'+g.label+' bills</span><b>'+money(mtd[g.k])+'</b></div>'; }).join('')+
@@ -1868,7 +1879,7 @@ $('fileIn').addEventListener('change',function(){
 document.addEventListener('visibilitychange',function(){ if(!document.hidden) render(); });
 
 // test hook
-window.BillsApp={catchupPlan:catchupPlan, planChecks:planChecks, save:save, render:render, coversIn:coversIn, applyChoice:applyChoice, shortOpenAmt:shortOpenAmt, incomeDay:incomeDay, incomeRange:incomeRange, periodMainIncome:periodMainIncome, payPeriodAt:payPeriodAt, checkTotals:checkTotals, logMode:logMode, allShorts:allShorts, setShort:setShort, lastDay:lastDay, isEnded:isEnded, behindModel:behindModel, periodAt:periodAt, endFromForm:endFromForm, dueModel:dueModel, windowRange:windowRange, periodKey:periodKey, markPaid:markPaid, unmarkPaid:unmarkPaid, isPaid:isPaid, oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
+window.BillsApp={prorateIn:prorateIn, avgRange:avgRange, catchupPlan:catchupPlan, planChecks:planChecks, save:save, render:render, coversIn:coversIn, applyChoice:applyChoice, shortOpenAmt:shortOpenAmt, incomeDay:incomeDay, incomeRange:incomeRange, periodMainIncome:periodMainIncome, payPeriodAt:payPeriodAt, checkTotals:checkTotals, logMode:logMode, allShorts:allShorts, setShort:setShort, lastDay:lastDay, isEnded:isEnded, behindModel:behindModel, periodAt:periodAt, endFromForm:endFromForm, dueModel:dueModel, windowRange:windowRange, periodKey:periodKey, markPaid:markPaid, unmarkPaid:unmarkPaid, isPaid:isPaid, oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
 render();
 })();
 </script>

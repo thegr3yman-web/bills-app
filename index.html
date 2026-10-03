@@ -233,6 +233,16 @@ textarea{min-height:70px;resize:vertical}
 .confirm .btns{margin-top:14px}
 #cfScrim{z-index:30}
 #shScrim{z-index:31}
+#ckScrim{z-index:25}
+.logBtn{margin-top:12px;min-height:50px}
+.ckPrompt{margin-top:12px;padding:10px 12px;border-radius:12px;background:#f59e0b18;border:1px solid #f59e0b55;font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.ckPrompt button{flex:0 0 auto;min-height:38px;padding:0 12px;border-radius:10px;background:#f59e0b;color:#fff;font-weight:700}
+.ckTotals{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.ckTotals>div{background:var(--chip);border-radius:12px;padding:8px 10px}
+.ckTotals small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}.ckTotals b{font-size:18px;font-variant-numeric:tabular-nums}
+.ckrow{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 2px;border-bottom:1px solid var(--line);background:none}
+.ckrow small{display:block;color:var(--muted);font-size:12px;margin-top:2px}.ckrow b.pos-t{font-size:16px;font-variant-numeric:tabular-nums}
+.estTag{font-size:11px;color:var(--muted);font-weight:600}
+
 .tag.short{background:rgba(209,31,38,.12);color:#d11f26;text-transform:none;letter-spacing:0}
 .shortLine{display:flex;justify-content:flex-end;margin-top:4px}.shortLine button,.shortBtn{min-height:36px;padding:0 12px;border-radius:10px;background:var(--chip);font-weight:700;font-size:13px;color:#d11f26}
 .payShort{margin-top:12px;padding:10px 12px;border-radius:12px;background:rgba(209,31,38,.08);border:1px solid rgba(209,31,38,.25);font-size:14px}
@@ -326,6 +336,8 @@ details.more[open]>summary::after{transform:rotate(180deg)}
       <div class="lbl" id="payLbl">Set aside each payday</div>
       <div class="big" id="payBig">$0.00</div>
       <div class="sub" id="paySub"></div>
+      <div id="checkPrompt"></div>
+      <button type="button" class="btn primary logBtn" id="logCheckBtn">＋ Log this week’s check</button>
       <div class="checkrow"><label for="checkAmt">Take-home pay per check</label><input id="checkAmt" inputmode="decimal" placeholder="optional, e.g. 1,250.00"></div>
       <div id="payBreak"></div>
       <div id="payShort"></div>
@@ -333,6 +345,9 @@ details.more[open]>summary::after{transform:rotate(180deg)}
       <div id="incList"></div>
       <button class="btn" id="addInc" style="margin-top:8px;min-height:44px">+ Add income source</button>
     </div>
+    <div class="card" id="checksCard"><div class="cardtitle" style="display:flex;justify-content:space-between;align-items:center"><span>Past checks <span id="ckCount" style="font-weight:600;color:var(--muted);font-size:12px"></span></span><button type="button" class="logCk" id="logCheckBtn2" style="min-height:36px;padding:0 12px;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;text-transform:none;letter-spacing:0">＋ Log a check</button></div>
+      <div class="ckTotals" id="ckTotals"></div><div id="ckList"></div>
+      <div class="hint" style="margin:8px 2px 0">Each logged check is used for that week’s income left. Weeks without one use your last check (marked “est. from last check”).</div></div>
     <details class="more" id="morePay"><summary>More details: income left after bills, step by step</summary><div class="card wf" id="wfPay"></div></details>
     <div class="sechead"><h2>Set aside for future bills</h2><span id="savTot" class="billtot"></span></div>
     <div class="hint" style="margin:4px 2px 0">Bills due less often than you're paid. Put each one's per-check share aside so the money is there when it comes due.</div>
@@ -390,6 +405,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
         </div>
         <div class="sub" id="dueAll"></div>
         <div class="sub"><span id="asideLbl">set aside per week</span> <b id="asideTot">$0.00</b> <span style="color:var(--muted)">(smooth average — doesn’t change as you check bills off)</span></div>
+        <div class="sub" id="dueIncome"></div>
         <div class="sub" id="cashLine" style="font-size:13px;color:var(--muted)"></div>
       </div>
       <div class="diff" id="dueDiff"></div>
@@ -480,6 +496,22 @@ details.more[open]>summary::after{transform:rotate(180deg)}
   </form>
 </div>
 
+<!-- Paycheck log sheet -->
+<div class="scrim" id="ckScrim">
+  <form class="sheet" id="ckForm" autocomplete="off" novalidate>
+    <div class="grab"></div>
+    <h3><span id="ckTitle">Log a check</span><button type="button" class="iconbtn" id="ckClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></h3>
+    <div class="row2">
+      <div class="field"><label for="ckDate">Date</label><input id="ckDate" type="date"></div>
+      <div class="field"><label for="ckAmt">Take-home amount</label><input id="ckAmt" inputmode="decimal" placeholder="0.00"></div>
+    </div>
+    <div class="field hidden" id="ckSrcWrap"><label for="ckSrc">Source</label><select id="ckSrc"></select></div>
+    <div class="field"><label for="ckNote">Note (optional)</label><input id="ckNote" maxlength="80" placeholder="e.g. overtime"></div>
+    <div class="hint" id="ckHint" style="margin:0 2px"></div>
+    <div class="btns"><button type="submit" class="btn primary" id="ckSave">Save check</button><button type="button" class="btn danger hidden" id="ckDel">Delete check</button></div>
+  </form>
+</div>
+
 <!-- Shortfall sheet -->
 <div class="scrim" id="shScrim">
   <div class="sheet confirm" role="dialog" aria-labelledby="shTitle">
@@ -512,6 +544,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
       <button class="btn" id="expJson">⬇️ Export backup (JSON)</button>
       <button class="btn" id="impJson">⬆️ Import backup (JSON)</button>
       <button class="btn" id="expCsv">📄 Export CSV</button>
+      <button class="btn" id="expChecks">💵 Export checks CSV</button>
       <div class="toggle" style="margin:0"><span>Week starts Monday</span><label class="switch"><input type="checkbox" id="weekMon" aria-label="Week starts Monday"><span></span></label></div>
       <div class="toggle" style="margin:0"><span>Show inactive bills</span><label class="switch"><input type="checkbox" id="showInactive" checked aria-label="Show inactive bills"><span></span></label></div>
       <button class="btn danger" id="clearEx2">Clear example bills</button>
@@ -699,7 +732,7 @@ function load(){
   try{ var raw=localStorage.getItem(KEY); if(raw){ var p=JSON.parse(raw); d.bills=Array.isArray(p.bills)?p.bills:[]; Object.assign(d.settings,p.settings||{}); } }catch(e){}
   return d;
 }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ toast('Could not save (storage full or private mode)'); } }
+function save(){ _inc={}; try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ toast('Could not save (storage full or private mode)'); } }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 /* Generic EXAMPLE bills. Seeded only on the very first visit (no saved data key at all),
    so after "Clear all" they never come back. */
@@ -739,6 +772,7 @@ function categories(){
 
 /* ---------- render ---------- */
 function render(){
+  _inc={};
   var s=state.settings;
   $('modeCal').setAttribute('aria-pressed', s.mode==='cal');
   $('calView').classList.toggle('hidden', s.mode!=='cal');
@@ -771,10 +805,10 @@ function renderAvg(){
   $('totSub').innerHTML = act.length ? '<b>'+actRec.length+'</b> recurring bill'+(actRec.length===1?'':'s')+(act.length>actRec.length?' (one-time bills not included)':'')+' · '+money(yr/12)+'/mo · '+money(yr/WEEKS_PER_YEAR)+'/wk · '+money(yr)+'/yr' : 'No active bills yet — tap + to add one.';
 
   // income vs bills for this timeframe
-  var incP=incomeYearly()/P.perYear, gs={total:0};
+  var incP=periodIncome(s.period, P.perYear), gs={total:0}, aR=avgRange(s.period);
   actRec.forEach(function(b){ var g=groupOf(b), v=prorate(b,s.period); gs[g]=(gs[g]||0)+v; gs.total+=v; });
   var ph='<div class="cardtitle">Income vs bills · '+P.per+'</div>'+
-    (incP>0?'<div class="row"><span>Take-home income</span><b class="pos-t" id="avgInc">'+money(incP)+'</b></div>':'')+
+    (incP>0?'<div class="row"><span>Take-home income'+(logMode()?'<span class="expl">'+(s.period==='day'||s.period==='week'||s.period==='month'?'this '+s.period+' · ':'from this month · ')+incLabel(aR.s,aR.e)+'</span>':'')+'</span><b class="pos-t" id="avgInc">'+money(incP)+'</b></div>':'')+
     FG.filter(function(g){return gs[g.k]>0;}).map(function(g){ return '<div class="row" style="color:'+fcol(g.k)+'"><span>− '+g.label+' bills</span><b>'+money(gs[g.k])+'</b></div>'; }).join('')+
     '<div class="row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span><b>Total bills</b></span><b class="billtot" id="avgBills">'+money(gs.total)+'</b></div>';
   if (incP>0){ var pv=incP-gs.total; ph+='<div class="row" style="font-size:20px;padding-top:8px"><span><b>'+(pv>=0?'Income left after bills':'Bills exceed income')+'</b><span class="expl">'+P.per+'</span></span><b id="avgProfit" class="'+plCls(pv)+'" style="font-size:24px">'+plMoney(pv)+'</b></div>'; }
@@ -824,7 +858,56 @@ function incomeYearly(){
   (st.incomes||[]).forEach(function(i){ if(i.active!==false) y+=(+i.amount||0)*timesPerYear({freq:i.freq}); });
   return y;
 }
-function hasIncome(){ return incomeYearly()>0; }
+function hasIncome(){ return incomeYearly()>0 || logMode(); }
+/* ---- paycheck log: settings.checks = [{id, date:'YYYY-MM-DD', amount, note, src}] (src '' = main paycheck, else an income id).
+   Once any check is logged, income is computed per PAY PERIOD (by pay frequency): a period with logged checks uses their actual sum;
+   a period without one uses the most recent earlier check ("est. from last check"), else the pay set in settings.
+   With nothing logged, everything works exactly as before (configured pay spread evenly). ---- */
+var _inc={};
+function checksAll(){ return Array.isArray(state.settings.checks)?state.settings.checks:[]; }
+function logMode(){ return checksAll().length>0; }
+function ckNum(c){ var a=parseISO(c.date); return a?dayNum(a.y,a.m,a.d):null; }
+function mainLogs(){ if(_inc.ml) return _inc.ml; return (_inc.ml=checksAll().filter(function(c){return !c.src && ckNum(c)!=null;}).sort(function(a,b){return ckNum(a)-ckNum(b);})); }
+function weekStartOf(d){ var dow=new Date(d*864e5).getUTCDay(); return d-((dow-(state.settings.weekMon?1:0)+7)%7); }
+function payPeriodAt(d){
+  var pf=state.settings.payFreq||'weekly', o;
+  if (pf==='weekly'){ var st=weekStartOf(d); return {s:st,e:st+6}; }
+  if (pf==='biweekly'){ var ml=mainLogs(), a=ml.length?weekStartOf(ckNum(ml[0])):weekStartOf(3), k=Math.floor((d-a)/14); return {s:a+14*k,e:a+14*k+13}; }
+  o=fromDayNum(d);
+  if (pf==='semimonthly') return o.d<=15?{s:dayNum(o.y,o.m,1),e:dayNum(o.y,o.m,15)}:{s:dayNum(o.y,o.m,16),e:dayNum(o.y,o.m,dim(o.y,o.m))};
+  return {s:dayNum(o.y,o.m,1),e:dayNum(o.y,o.m,dim(o.y,o.m))};
+}
+function periodMainIncome(P){
+  var k='p'+P.s; if(_inc[k]) return _inc[k];
+  var ml=mainLogs(), inP=ml.filter(function(c){ var n=ckNum(c); return n>=P.s&&n<=P.e; }), r;
+  if (inP.length) r={amt:inP.reduce(function(a,c){return a+(+c.amount||0);},0), kind:'logged', logs:inP};
+  else { var prev=ml.filter(function(c){return ckNum(c)<P.s;}), cfg=parseAmt(state.settings.checkAmt);
+    if (prev.length) r={amt:+prev[prev.length-1].amount||0, kind:'est', from:prev[prev.length-1]};
+    else if (isFinite(cfg)&&cfg>0) r={amt:cfg, kind:'plan'};
+    else if (ml.length) r={amt:+ml[0].amount||0, kind:'est', from:ml[0]};
+    else r={amt:0, kind:'none'}; }
+  return (_inc[k]=r);
+}
+function incomeDay(d){
+  if (!logMode()) return incomeYearly()/DAYS_PER_YEAR;
+  var k='d'+d; if (k in _inc) return _inc[k];
+  var P=payPeriodAt(d), len=P.e-P.s+1, v=periodMainIncome(P).amt/len;
+  (state.settings.incomes||[]).forEach(function(i){ if(i.active===false) return;
+    var lg=checksAll().filter(function(c){ var n=ckNum(c); return c.src===i.id && n!=null && n>=P.s && n<=P.e; });
+    v += lg.length ? lg.reduce(function(a,c){return a+(+c.amount||0);},0)/len : (+i.amount||0)*timesPerYear({freq:i.freq})/DAYS_PER_YEAR; });
+  return (_inc[k]=v);
+}
+function incomeRange(s,e){ var v=0; for (var d=s; d<=e; d++) v+=incomeDay(d); return v; }
+function rangeKinds(s,e){ var r={logged:0,est:0,plan:0}; if(!logMode()) return r; for (var d=s; d<=e; ){ var P=payPeriodAt(d); r[periodMainIncome(P).kind]=1; d=P.e+1; } return r; }
+function incLabel(s,e){ if(!logMode()) return ''; var k=rangeKinds(s,e);
+  return k.logged&&!k.est&&!k.plan?'logged check'+(e-s>8?'s':''):(k.logged?'logged + est. from last check':(k.est?'est. from last check':'from your pay settings')); }
+function avgRange(k){ var t=todayNum(), M=periodAt('month',0);
+  if (k==='day') return {s:t,e:t}; if (k==='week') return periodAt('week',0); if (k==='month') return {s:M.s,e:M.e};
+  var n={quarter:3,half:6,year:12}[k]||1; return {s:M.s, e:addMonthsNum(M.s,n)-1}; }
+function periodIncome(k, perYear){ if(!logMode()) return incomeYearly()/perYear; var R=avgRange(k); return incomeRange(R.s,R.e); }
+function checkTotals(){ var t=todayNum(), T=fromDayNum(t), ms=dayNum(T.y,T.m,1), ys=dayNum(T.y,0,1), r={month:0,last4:0,ytd:0};
+  checksAll().forEach(function(c){ var n=ckNum(c), a=+c.amount||0; if(n==null||n>t) return; if(n>=ms) r.month+=a; if(n>=t-27) r.last4+=a; if(n>=ys) r.ytd+=a; });
+  r.avg4=r.last4/4; return r; }
 function plCls(v){ return v>=0?'gold':'neg-t'; }
 function plMoney(v){ return (v<0?'Loss −':'+')+money(Math.abs(v)); }
 /* waterfall tiers: bills grouped by how often they come due (occurrences per year) */
@@ -837,7 +920,7 @@ var TIERS=[
 function tierOf(b){ var n=timesPerYear(b); for(var i=0;i<TIERS.length;i++) if(TIERS[i].test(n)) return TIERS[i].k; return 'semiannual'; }
 var WF_PERIODS={week:{label:'Week',per:WEEKS_PER_YEAR,word:'week'},month:{label:'Month',per:12,word:'month'},quarter:{label:'3 Months',per:4,word:'3 months'}};
 function waterfall(perKey){
-  var P=WF_PERIODS[perKey]||WF_PERIODS.week, inc=incomeYearly()/P.per, run=inc, steps=[];
+  var P=WF_PERIODS[perKey]||WF_PERIODS.week, inc=periodIncome(perKey, P.per), run=inc, steps=[];
   TIERS.forEach(function(T){
     var c=activeBills().filter(function(b){return tierOf(b)===T.k;}).reduce(function(a,b){return a+annualCost(b);},0)/P.per;
     if (c>0){ run-=c; steps.push({t:T,cost:c,after:run}); }
@@ -848,7 +931,7 @@ function waterfallHTML(){
   var pk=state.settings.wfPeriod||'week', W=waterfall(pk);
   var h='<div class="cardtitle">Income left after bills — step by step</div><div class="seg wfseg">'+Object.keys(WF_PERIODS).map(function(k){ return '<button data-wf="'+k+'" aria-pressed="'+(k===pk)+'">'+WF_PERIODS[k].label+'</button>'; }).join('')+'</div>';
   if (!hasIncome()) return h+'<div class="hint" style="margin:6px 0 0">Shows once your take-home pay is set up.</div>';
-  h+='<div class="row"><span>Take-home income</span><b class="pos-t">'+money(W.income)+'</b></div>';
+  var wR=avgRange(pk); h+='<div class="row"><span>Take-home income'+(logMode()?'<span class="expl">this '+(pk==='quarter'?'month + next 2':pk)+' · '+incLabel(wR.s,wR.e)+'</span>':'')+'</span><b class="pos-t" id="wfInc">'+money(W.income)+'</b></div>';
   W.steps.forEach(function(x){
     h+='<div class="row" style="color:'+fcol(x.t.col)+'"><span>− '+x.t.label+'</span><b>−'+money(x.cost)+'</b></div>'+
        '<div class="row subt"><span>= left after '+x.t.label.replace(' bills','').toLowerCase()+'</span><b class="'+(x.after<0?'neg-t':'')+'">'+(x.after<0?'−':'')+money(Math.abs(x.after))+'</b></div>';
@@ -889,7 +972,7 @@ function renderCal(){
   $('calTitle').innerHTML=MONTHS_FULL[M.m]+' '+M.y+'<small>'+(calOffset===0?'This month':'<a href="#" id="calToday" style="color:var(--accent)">Back to today</a>')+'</small>';
   var act=activeBills();
   var present=FG.filter(function(g){ return act.some(function(b){return groupOf(b)===g.k;}); });
-  var yrRec=act.reduce(function(a,b){return a+annualCost(b);},0), incDay=incomeYearly()/DAYS_PER_YEAR;
+  var yrRec=act.reduce(function(a,b){return a+annualCost(b);},0), incDay=hasIncome()?incomeRange(M.s,M.e)/(M.e-M.s+1):0;
   $('calBudget').innerHTML='Daily budget: <b class="billtot" id="dailyBudget">'+money(yrRec/DAYS_PER_YEAR)+'</b>'+
     (incDay>0?' · income left per day <b class="'+plCls(incDay-yrRec/DAYS_PER_YEAR)+'">'+plMoney(incDay-yrRec/DAYS_PER_YEAR)+'</b>':'')+
     '<small>Your recurring bills spread evenly across the year (yearly total ÷ 365.25).</small>';
@@ -902,36 +985,36 @@ function renderCal(){
   var gs=M.s-((firstDow-startDow+7)%7);
   var dows=[]; for(var i=0;i<7;i++) dows.push(DOW[(startDow+i)%7]);
   var h='<div class="calrow">'+dows.map(function(d){return '<div class="dow">'+d.slice(0,2)+'</div>';}).join('')+'</div>';
-  var mtd={total:0}, wkNo=0, weeks=[], incD=incomeYearly()/DAYS_PER_YEAR, mtdInc=0, firstFull=false;
+  var mtd={total:0}, wkNo=0, weeks=[], incD=hasIncome()?1:0, mtdInc=0, firstFull=false;
   for (var ws=gs; ws<=M.e; ws+=7){
-    wkNo++; var wk={total:0}, inDays=0, row='<div class="calrow">';
+    wkNo++; var wk={total:0}, inDays=0, wkInc=0, row='<div class="calrow">';
     for (var d=ws; d<ws+7; d++){
       var o=fromDayNum(d);
       if (d<M.s||d>M.e){ row+='<div class="cell out"><div class="dn">'+o.d+'</div></div>'; continue; }
       inDays++;
-      var sh=dayShares(d); addShares(wk,sh); addShares(mtd,sh);
+      var sh=dayShares(d), iDay=incD?incomeDay(d):0; wkInc+=iDay; addShares(wk,sh); addShares(mtd,sh);
       var du=dueBy[d]||[], mk='', names='';
       if (du.length){
         var byG={}; du.forEach(function(x){ var g=groupOf(x.b); byG[g]=(byG[g]||0)+1; });
         names='<div class="dnames">'+du.map(function(x){return '<div style="color:'+fcol(groupOf(x.b))+'" title="'+esc(x.b.name)+'">'+(isOne(x.b)?'1x ':'▲')+abbr(+x.b.amount)+' '+esc(x.b.name)+'</div>';}).join('')+'</div>';
       }
       row+='<button class="cell'+(d===t?' today':'')+'" data-day="'+d+'" aria-label="'+fmtDay(d,true)+'"><div class="dn">'+o.d+'</div>'+mk+names+
-        (incD>0?(function(v){ return '<div class="dp '+(v>=0?'gold':'neg-t')+'">'+(v>=0?'+':'−')+abbr(Math.abs(v))+'</div>'; })(incD-sh.total):'')+'</button>';
+        (incD>0?(function(v){ return '<div class="dp '+(v>=0?'gold':'neg-t')+'">'+(v>=0?'+':'−')+abbr(Math.abs(v))+'</div>'; })(iDay-sh.total):'')+'</button>';
     }
     row+='</div>';
     var ws2=Math.max(ws,M.s), we2=Math.min(ws+6,M.e), partial=inDays<7;
-    var mtdCopy=Object.assign({},mtd); mtdInc+=incD*inDays;
+    var mtdCopy=Object.assign({},mtd); mtdInc+=wkInc;
     weeks.push({s:ws2,e:we2,wk:wk,mtd:mtdCopy});
     // partial first week -> its own days; first FULL week -> that week; every row after -> month-to-date
     var mode, lbl, fig, figInc, rs=ws2;
-    if (!firstFull && partial){ mode='own'; lbl='Wk <small style="color:var(--muted);font-weight:600">('+inDays+' day'+(inDays===1?'':'s')+')</small>'; fig=wk; figInc=incD*inDays; }
-    else if (!firstFull){ firstFull=true; mode='week'; lbl='Wk'; fig=wk; figInc=incD*inDays; }
+    if (!firstFull && partial){ mode='own'; lbl='Wk <small style="color:var(--muted);font-weight:600">('+inDays+' day'+(inDays===1?'':'s')+')</small>'; fig=wk; figInc=wkInc; }
+    else if (!firstFull){ firstFull=true; mode='week'; lbl='Wk'; fig=wk; figInc=wkInc; }
     else { mode='mtd'; rs=M.s; lbl=(we2===M.e?'Month':'MTD <small style="color:var(--muted);font-weight:600">thru '+fromDayNum(we2).d+'</small>'); fig=mtdCopy; figInc=mtdInc; }
     row+='<button class="wksum" data-mode="'+mode+'" data-ws="'+rs+'" data-we="'+we2+'">'+
       '<div class="ln"><span class="k">'+lbl+'</span>'+
       '<span class="t billtot wkTot">= '+money(fig.total)+'</span>'+
-      (incD>0 ? '<span class="fam '+plCls(figInc-fig.total)+' wkPL"><small>'+(figInc-fig.total>=0?'Left ':'')+'</small>'+plMoney(figInc-fig.total)+'</span>' : '')+'</div></button>';
-    weeks[weeks.length-1].mode=mode; weeks[weeks.length-1].inc=incD*inDays; weeks[weeks.length-1].pl=incD*inDays-wk.total; weeks[weeks.length-1].cumPl=mtdInc-mtdCopy.total;
+      (incD>0 ? '<span class="fam '+plCls(figInc-fig.total)+' wkPL"><small>'+(logMode()&&!rangeKinds(rs,we2).logged?'<span class="estTag" title="est. from last check">est. </span>':'')+(figInc-fig.total>=0?'Left ':'')+'</small>'+plMoney(figInc-fig.total)+'</span>' : '')+'</div></button>';
+    weeks[weeks.length-1].mode=mode; weeks[weeks.length-1].inc=wkInc; weeks[weeks.length-1].pl=wkInc-wk.total; weeks[weeks.length-1].cumPl=mtdInc-mtdCopy.total;
     h+=row;
   }
   $('calGrid').innerHTML=h;
@@ -941,7 +1024,7 @@ function renderCal(){
   $('calTotal').innerHTML='<div class="total"><div class="lbl">'+MONTHS_FULL[M.m]+' bills total</div><div class="big billtot" id="calMonthTotal">'+money(mtd.total)+'</div>'+
       '<div class="sub">this month — '+nDays+' days'+(nDays>DAYS_PER_YEAR/12?', so more weekly bills fall in it than in an average month':', so fewer weekly bills fall in it than in an average month')+'</div></div>'+
     FG.filter(function(g){return mtd[g.k]>0;}).map(function(g){ return '<div class="row" style="color:'+fcol(g.k)+'"><span>'+g.label+' bills</span><b>'+money(mtd[g.k])+'</b></div>'; }).join('')+
-    (incD>0 ? '<div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span>Income (prorated, '+nDays+' days)</span><b class="pos-t">'+money(mtdInc)+'</b></div>'+
+    (incD>0 ? '<div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span>Income '+(logMode()?'<span class="expl">'+incLabel(M.s,M.e)+'</span>':'(prorated, '+nDays+' days)')+'</span><b class="pos-t">'+money(mtdInc)+'</b></div>'+
       '<div class="row" style="font-size:18px"><span><b>'+(mtdInc-mtd.total>=0?'Income left after bills':'Bills exceed income')+'</b><span class="expl">this month</span></span><b id="calMonthPL" class="'+plCls(mtdInc-mtd.total)+'">'+plMoney(mtdInc-mtd.total)+'</b></div>'
       : '')+
     '<div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px"><span>Bills with a due date'+(dues.length?' ('+dues.length+')':'')+'<span class="expl">only bills with a due date this month</span></span><b id="calDueTotal" class="billtot">'+money(dueTot)+'</b></div>'+
@@ -953,11 +1036,11 @@ function renderCal(){
 /* 3-month outlook: this month + next 2, stacked like a column */
 var outlookCache=null;
 function renderOutlook(){
-  var T=fromDayNum(todayNum()), incD=incomeYearly()/DAYS_PER_YEAR, cum=0, cumCost={total:0}, cumInc=0, h='<div class="cardtitle">3-month outlook</div>', rows=[];
+  var T=fromDayNum(todayNum()), incD=hasIncome()?1:0, cum=0, cumCost={total:0}, cumInc=0, h='<div class="cardtitle">3-month outlook'+(logMode()?' <small style="font-weight:500;color:var(--muted)">· future weeks: est. from last check</small>':'')+'</div>', rows=[];
   for (var k=0;k<3;k++){
     var mi=T.y*12+T.m+calOffset+k, y=Math.floor(mi/12), m=mi-y*12, s=dayNum(y,m,1), e=dayNum(y,m,dim(y,m)), sh={total:0};
     for (var d=s; d<=e; d++) addShares(sh, dayShares(d));
-    var n=e-s+1, inc=incD*n, pl=inc-sh.total; cum+=pl; cumInc+=inc; addShares(cumCost, sh);
+    var n=e-s+1, inc=incD?incomeRange(s,e):0, pl=inc-sh.total; cum+=pl; cumInc+=inc; addShares(cumCost, sh);
     rows.push({m:MONTHS_FULL[m]+' '+y, cost:sh.total, inc:inc, pl:pl, cum:cum});
     h+=(k?'<div class="olarrow">↓</div>':'')+'<div class="olbox"><div class="h"><span>'+MON[m]+' '+y+' <small style="color:var(--muted);font-weight:500">'+n+' days</small></span><span class="billtot">'+money(sh.total)+'</span></div>'+
       '<div class="fl">'+famHTML(sh)+'</div>'+
@@ -978,7 +1061,7 @@ function openRange(s,e){
   $('dayTitle').textContent = nd===1 ? fmtDay(s,true) : fmtShort(s)+' – '+fmtShort(e)+' ('+nd+' days)';
   var act=enabledBills(), h='<div class="card total" style="margin-top:0"><div class="lbl">Bills · prorated '+(nd===1?'today':(nd<=7?'this week':'these '+nd+' days'))+'</div><div class="big billtot">'+money(sh.total)+'</div>'+
     '<div class="sub">Month-to-date through '+fmtShort(e)+': <b>'+money(mtd.total)+'</b></div>'+
-    (hasIncome()?(function(){ var inc=incomeYearly()/DAYS_PER_YEAR*nd; return '<div class="sub">Income '+money(inc)+' · income left after bills <b class="'+plCls(inc-sh.total)+'">'+plMoney(inc-sh.total)+'</b></div>'; })():'')+'</div>';
+    (hasIncome()?(function(){ var inc=incomeRange(s,e); return '<div class="sub">Income '+money(inc)+(logMode()?' <small>('+incLabel(s,e)+')</small>':'')+' · income left after bills <b class="'+plCls(inc-sh.total)+'">'+plMoney(inc-sh.total)+'</b></div>'; })():'')+'</div>';
   FG.forEach(function(g){
     var bs=act.filter(function(b){return groupOf(b)===g.k && billRangeShare(b,s,e)>0;}); if(!bs.length) return;
     h+='<div class="dsec"><h4 style="color:'+fcol(g.k)+'"><span>'+g.label+'</span><span>'+money(sh[g.k]||0)+'</span></h4>'+
@@ -1029,13 +1112,18 @@ function renderPay(){
   sav.sort(function(a,b){return b.v-a.v;}); dir.sort(function(a,b){return b.v-a.v;});
   $('payLbl').textContent='Set aside each payday · '+PF.label.toLowerCase();
   $('payBig').textContent=money(savTot);
-  var check=parseAmt(s.checkAmt), hasCheck=isFinite(check)&&check>0;
+  var cpP=payPeriodAt(t0), cpM=logMode()?periodMainIncome(cpP):null, check=cpM&&cpM.amt>0?cpM.amt:parseAmt(s.checkAmt), hasCheck=isFinite(check)&&check>0;
+  var ckLbl = !cpM ? 'Check' : cpM.kind==='logged' ? 'This check <small style="color:var(--muted)">(logged '+cpM.logs.map(function(c){return fmtShort(ckNum(c));}).join(', ')+')</small>' : cpM.kind==='est' ? 'This check <small style="color:var(--muted)">(est. from last check)</small>' : 'Check';
+  var perWord=PF.word==='week'?'week':'pay period';
+  $('logCheckBtn').textContent = '＋ Log this '+(PF.word==='week'?'week’s check':'paycheck');
+  $('checkPrompt').innerHTML = cpM&&cpM.kind==='logged' ? '' : '<div class="ckPrompt"><span>This '+perWord+'’s check isn’t logged yet'+(cpM&&cpM.kind==='est'?' — using your last check ('+money(cpM.amt)+')':'')+'.</span><button type="button" class="logCk">Log it</button></div>';
   $('paySub').innerHTML = (hasCheck?'<b>'+(savTot/check*100).toFixed(1)+'%</b> of your check · ':'')+
     'plus <b>'+money(dirTot)+'</b> for bills paid from the check · all bills ≈ '+money(savTot+dirTot)+' per paycheck';
   if (hasCheck){
     var left=check-savTot-dirTot, pct=function(v){return Math.max(0,Math.min(100,v/check*100)).toFixed(2)+'%';};
-    $('payBreak').innerHTML='<div class="paygrid"><span>Check</span><span class="r">'+money(check)+'</span>'+
+    $('payBreak').innerHTML='<div class="paygrid"><span>'+ckLbl+'</span><span class="r" id="payCheck">'+money(check)+'</span>'+
       '<span>− Set aside</span><span class="r">'+money(savTot)+' <small style="color:var(--muted)">'+(savTot/check*100).toFixed(1)+'%</small></span>'+
+      '<span>= Left after set-aside</span><span class="r" id="leftAfterAside">'+money(check-savTot)+'</span>'+
       '<span>− Bills from this check</span><span class="r">'+money(dirTot)+' <small style="color:var(--muted)">'+(dirTot/check*100).toFixed(1)+'%</small></span>'+
       '<span class="tot">= Left over</span><span class="r tot'+(left<0?' neg-text':'')+'" id="leftOver">'+money(left)+'</span></div>'+
       '<div class="stack" aria-hidden="true"><div style="width:'+pct(savTot)+';background:var(--accent)"></div><div style="width:'+pct(dirTot)+';background:#f59e0b"></div><div style="width:'+pct(Math.max(0,left))+';background:var(--ok)"></div></div>'+
@@ -1071,6 +1159,17 @@ function renderPay(){
   $('incOtherTot').textContent=incs.length?'≈ '+money(incs.reduce(function(a,i){return a+(+i.amount||0)*timesPerYear({freq:i.freq});},0)/PF.per)+' per check':'';
   renderWF('wfPay');
   $('dirList').innerHTML = dir.length ? dir.map(function(x){return row(x,false);}).join('') : '<div class="empty">None.</div>';
+  renderChecks();
+}
+function srcName(c){ if(!c.src) return ''; var i=(state.settings.incomes||[]).find(function(x){return x.id===c.src;}); return i?(i.name||'Income'):'Other income'; }
+function renderChecks(){
+  var cs=checksAll().filter(function(c){return ckNum(c)!=null;}).slice().sort(function(a,b){return ckNum(b)-ckNum(a) || (b.id>a.id?1:-1);}), T=checkTotals();
+  $('ckCount').textContent=cs.length?'· '+cs.length+' logged':'';
+  $('ckTotals').innerHTML = cs.length ? [['This month',T.month,'ckMonth'],['Last 4 weeks',T.last4,'ckLast4'],['Year to date',T.ytd,'ckYtd'],['4-week average',T.avg4,'ckAvg4']]
+    .map(function(x){ return '<div><small>'+x[0]+'</small><b class="pos-t" id="'+x[2]+'">'+money(x[1])+'</b>'+(x[2]==='ckAvg4'?'<small style="text-transform:none;letter-spacing:0;font-weight:500">per week</small>':'')+'</div>'; }).join('') : '';
+  $('ckList').innerHTML = cs.length ? cs.map(function(c){ var n=ckNum(c), sn=srcName(c);
+    return '<button type="button" class="ckrow" data-ck="'+c.id+'"><span><b>'+fmtDay(n,fromDayNum(n).y!==fromDayNum(todayNum()).y)+'</b><small>week of '+fmtShort(weekStartOf(n))+(sn?' · '+esc(sn):'')+(c.note?' · '+esc(c.note):'')+'</small></span><b class="pos-t">'+money(+c.amount||0)+'</b></button>'; }).join('')
+    : '<div class="empty" style="padding:14px 0">No checks logged yet. Tap <b>Log this week’s check</b> each payday.</div>';
 }
 
 function drawDonut(rows, cats, total){
@@ -1201,6 +1300,8 @@ function renderDue(){
   var B = winOffset===0 ? behindModel(w.kind) : {items:[], total:0};
   $('behindBox').classList.toggle('hidden', winOffset!==0); $('behindLbl').textContent='Behind — earlier '+per+'s'; $('behindTot').textContent=money(B.total);
   $('dueAll').innerHTML = winOffset===0 ? 'Total to cover now: <b class="billtot" id="dueAllTot">'+money(unpaid+shareOpen+B.total)+'</b> <span style="color:var(--muted)">(unpaid + set aside + behind)</span>' : '';
+  var dInc=hasIncome()?incomeRange(w.s,w.e):0;
+  $('dueIncome').innerHTML = dInc>0 ? 'Income this '+per+': <b class="pos-t" id="dueIncTot">'+money(dInc)+'</b>'+(logMode()?' <small>('+incLabel(w.s,w.e)+')</small>':'')+' · income left after bills <b id="duePL" class="'+plCls(dInc-M.aside)+'">'+plMoney(dInc-M.aside)+'</b>' : '';
   $('cashLine').innerHTML = M.cash>0 ? 'Cash actually leaving this '+per+' (full bills dated in it): '+money(M.cash) : '';
   var all=M.direct.concat(M.shares), nd=all.filter(function(x){return x.done;}).length;
   $('dueDiff').innerHTML = all.length ? nd+' of '+all.length+' checked off. Tap ✓ when it’s paid or set aside; tap again to undo. Set-aside checks reset each '+per+'.' : '';
@@ -1339,6 +1440,39 @@ $('delBtn').addEventListener('click',function(){
     save(); closeSheet('editScrim'); render(); toast('Deleted'); }, true);
 });
 $('editClose').addEventListener('click',function(){closeSheet('editScrim');});
+/* ---- paycheck log sheet ---- */
+var editingCk=null;
+function openCheck(id){
+  editingCk=id||null; var c=id?checksAll().find(function(x){return x.id===id;}):null, ml=mainLogs(), incs=state.settings.incomes||[];
+  $('ckTitle').textContent=c?'Edit check':'Log a check';
+  $('ckDate').value=c?c.date:isoOf(todayNum());
+  var last=ml.length?+ml[ml.length-1].amount:parseAmt(state.settings.checkAmt);
+  $('ckAmt').value=c?(+c.amount).toFixed(2):(isFinite(last)&&last>0?(+last).toFixed(2):'');
+  $('ckSrcWrap').classList.toggle('hidden',!incs.length);
+  $('ckSrc').innerHTML='<option value="">Main paycheck</option>'+incs.map(function(i){return '<option value="'+i.id+'">'+esc(i.name||'Income')+'</option>';}).join('');
+  $('ckSrc').value=c&&c.src?c.src:''; $('ckNote').value=c?(c.note||''):'';
+  $('ckHint').textContent=c?'':'Prefilled with your last check — change it if this one is different.';
+  $('ckDel').classList.toggle('hidden',!c); openSheet('ckScrim');
+}
+$('ckForm').addEventListener('submit',function(e){ e.preventDefault();
+  var a=parseAmt($('ckAmt').value), d=$('ckDate').value; if(!parseISO(d)){ toast('Pick the check date'); return; } if(!isFinite(a)||a<0){ toast('Please enter the amount'); $('ckAmt').focus(); return; }
+  var list=state.settings.checks=checksAll().slice(), data={date:d, amount:Math.round(a*100)/100, note:$('ckNote').value.trim(), src:$('ckSrc').value||''};
+  if (editingCk) Object.assign(list.find(function(x){return x.id===editingCk;}),data); else { data.id=uid(); list.push(data); }
+  if (list.length>1000) list.splice(0,list.length-1000);
+  save(); closeSheet('ckScrim'); render(); toast(editingCk?'Check updated':'Logged '+money(data.amount)+' for '+fmtShort(ckNum(data)));
+});
+$('ckDel').addEventListener('click',function(){ var id=editingCk, c=checksAll().find(function(x){return x.id===id;}); if(!c) return;
+  appConfirm('Delete this check?', money(+c.amount)+' on '+fmtDay(ckNum(c),true)+'. That week will use your last check instead.','Delete',function(){
+    state.settings.checks=checksAll().filter(function(x){return x.id!==id;}); save(); closeSheet('ckScrim'); render(); toast('Check deleted'); }, true); });
+$('ckClose').addEventListener('click',function(){closeSheet('ckScrim');});
+$('ckScrim').addEventListener('click',function(e){ if(e.target===this) closeSheet('ckScrim'); });
+$('logCheckBtn').addEventListener('click',function(){ openCheck(null); });
+$('payView').addEventListener('click',function(e){ if(e.target.closest('.logCk')){ openCheck(null); return; } var r=e.target.closest('[data-ck]'); if(r) openCheck(r.dataset.ck); });
+$('expChecks').addEventListener('click',function(){
+  function q(v){ v=String(v==null?'':v); return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+  var cs=checksAll().filter(function(c){return ckNum(c)!=null;}).slice().sort(function(a,b){return ckNum(a)-ckNum(b);});
+  var rows=cs.map(function(c){ return [c.date,(+c.amount).toFixed(2),srcName(c)||'Main paycheck',c.note||'',isoOf(weekStartOf(ckNum(c)))].map(q).join(','); });
+  download('checks-'+stamp()+'.csv','\ufeffDate,Amount,Source,Note,Week of\r\n'+rows.join('\r\n')+(rows.length?'\r\n':''),'text/csv'); toast('Checks CSV exported'); });
 /* ---- shortfall sheet ---- */
 var shCtx=null;
 function shortCandidates(){ return activeBills().filter(function(b){ return nextDue(b)!=null; }).sort(function(a,b){ return nextDue(a)-nextDue(b); }); }
@@ -1386,7 +1520,7 @@ $('fDueClear').addEventListener('click',function(){ $('fDue').value=''; updateFr
 $('guideX').addEventListener('click',function(){ state.settings.guideDismissed=true; save(); render(); });
 $('menuClose').addEventListener('click',function(){closeSheet('menuScrim');});
 ['editScrim','menuScrim','dayScrim','incScrim','cfScrim'].forEach(function(id){ $(id).addEventListener('click',function(e){ if(e.target===this) closeSheet(id); }); });
-document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&$('shScrim').classList.contains('open')){ closeShort(); return; } if(e.key==='Escape'){ closeSheet('editScrim'); closeSheet('menuScrim'); closeSheet('dayScrim'); closeSheet('incScrim'); closeSheet('cfScrim'); } });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&$('shScrim').classList.contains('open')){ closeShort(); return; } if(e.key==='Escape'){ closeSheet('ckScrim'); closeSheet('editScrim'); closeSheet('menuScrim'); closeSheet('dayScrim'); closeSheet('incScrim'); closeSheet('cfScrim'); } });
 
 /* ---------- events ---------- */
 $('addBtn').addEventListener('click',function(){openEdit(null);});
@@ -1519,7 +1653,9 @@ $('fileIn').addEventListener('change',function(){
       });
       appConfirm('Import '+bills.length+' bills?','This REPLACES your current '+state.bills.length+' bills.','Import',function(){
       state.bills=bills; state.settings.examplesCleared=true;
-      if(p.settings&&typeof p.settings==='object') ['period','sort','weekMon','showInactive','dueSpan','payFreq','checkAmt','incomes','wfPeriod','behindFrom','behindKeys','behindMigrated'].forEach(function(k){ if(k in p.settings) state.settings[k]=p.settings[k]; });
+      if (p.settings && Array.isArray(p.settings.checks)) p.settings.checks=p.settings.checks.filter(function(c){return c&&parseISO(c.date)&&isFinite(parseFloat(c.amount));}).map(function(c){ return {id:c.id||uid(), date:c.date, amount:parseFloat(c.amount), note:c.note?String(c.note):'', src:c.src?String(c.src):''}; });
+      else if (p.settings) delete p.settings.checks;
+      if(p.settings&&typeof p.settings==='object') ['period','sort','weekMon','showInactive','dueSpan','payFreq','checkAmt','incomes','wfPeriod','behindFrom','behindKeys','behindMigrated','checks'].forEach(function(k){ if(k in p.settings) state.settings[k]=p.settings[k]; });
       save(); closeSheet('menuScrim'); render(); toast('Imported '+bills.length+' bills'); });
     }catch(err){ alert('Import failed: '+err.message); }
   };
@@ -1531,7 +1667,7 @@ $('fileIn').addEventListener('change',function(){
 document.addEventListener('visibilitychange',function(){ if(!document.hidden) render(); });
 
 // test hook
-window.BillsApp={allShorts:allShorts, setShort:setShort, lastDay:lastDay, isEnded:isEnded, behindModel:behindModel, periodAt:periodAt, endFromForm:endFromForm, dueModel:dueModel, windowRange:windowRange, periodKey:periodKey, markPaid:markPaid, unmarkPaid:unmarkPaid, isPaid:isPaid, oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
+window.BillsApp={incomeDay:incomeDay, incomeRange:incomeRange, periodMainIncome:periodMainIncome, payPeriodAt:payPeriodAt, checkTotals:checkTotals, logMode:logMode, allShorts:allShorts, setShort:setShort, lastDay:lastDay, isEnded:isEnded, behindModel:behindModel, periodAt:periodAt, endFromForm:endFromForm, dueModel:dueModel, windowRange:windowRange, periodKey:periodKey, markPaid:markPaid, unmarkPaid:unmarkPaid, isPaid:isPaid, oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
 render();
 })();
 </script>

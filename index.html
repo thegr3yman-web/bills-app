@@ -1409,7 +1409,7 @@ function catchupPlan(withdraw, opts){
   var t=todayNum(), cs=planChecks(), kind=state.settings.dueSpan==='week'?'week':'month', init=[];
   behindModel(kind).items.forEach(function(it){ var d=it.kind==='direct'?it.x.n:it.P.e; init.push({b:it.x.b, amt:it.x.amt, prio:1, p0:1, date:d, due:d, pre:true, kind:'late'}); });
   allShorts().forEach(function(x){ if(x.done) return; var lender=Array.isArray(x.e.lentTo)&&x.e.lentTo.length, late=x.n<t&&!x.e.nodue;
-    init.push({b:x.b, amt:x.amt, prio:lender?4:1, p0:lender?4:1, date:x.n, due:x.n, pre:late||(x.n<t), kind:lender?'repay':'short', late:late}); });
+    var pr=lender?4:((late||x.n<t)?1:3); init.push({b:x.b, amt:x.amt, prio:pr, p0:pr, date:x.n, due:x.n, pre:late||(x.n<t), kind:lender?'repay':'short', late:late}); });
   var rows=[], queue=[], cash=0, cumInc=0, cumOb=0, cumW=0, cumAdd=0;
   for (var i=0;i<cs.length-1;i++){
     var c=cs[i], nx=cs[i+1], ws=i?c:Math.min(c,t), we=nx-1, P=payPeriodAt(c), MI=periodMainIncome(P), cfg=parseAmt(state.settings.checkAmt), len=P.e-P.s+1,
@@ -1501,7 +1501,7 @@ function planHTML(P, id){
   var st = P.status==='none' ? '<b style="color:var(--ok)">Nothing behind ✓</b>' : P.status==='caught' ? 'Caught up by <b id="planCaught">'+fmtShort(P.caughtDate)+'</b>'+(P.caughtIdx===0?' (this check)':'') : '<b class="billtot" id="planShort">Not caught up within 8 weeks — short '+money(P.shortEnd)+'</b>';
   var sf = 'Safe to take now: <b class="gold" id="planSafeNow">'+money(P.safeNow)+'</b>'+(P.safeNow<0.005?(P.firstSafe?' <small style="color:var(--muted)">· after '+fmtShort(P.firstSafe.date)+' (+'+money(P.firstSafe.amt)+')</small>':' <small style="color:var(--muted)">· not within the plan</small>'):'');
   h+='<div class="pst">'+st+'</div><div class="psafe">'+sf+'</div>'+beHTML(P)+needsHTML(P)+
-    '<div class="hint" style="margin:6px 2px 8px">Each check pays ① late items & shortfalls (oldest first) ② bills due before the next check ③ set-asides for bigger bills ④ paying back borrowed set-asides. “Safe” = money no upcoming bill in the plan needs. Tap a check for the math.</div>';
+    '<div class="hint" style="margin:6px 2px 8px">Each check pays ① late items & overdue shortfalls (oldest first) ② bills due before the next check ③ set-asides for bigger bills (and shortfalls not due yet) ④ paying back borrowed set-asides. “Safe” = money no upcoming bill in the plan needs. Tap a check for the math.</div>';
   P.rows.forEach(function(r,i){ var paid=r.pays.reduce(function(a,x){return a+x.amt;},0);
     var brief=r.pays.slice(0,3).map(function(x){return planLabel(Object.assign({},x,{of:0})).replace(/ · due .*$/,'')+' '+money(x.amt)+(x.of?' (part)':'');}).join(', ')+(r.pays.length>3?' …':'');
     h+='<details class="prw" data-i="'+i+'"><summary><span class="pd">'+fmtShort(r.date)+' check <b class="pos-t">'+money(r.inc)+'</b>'+(r.kind==='est'?' <small style="color:var(--muted)">est.</small>':'')+'</span>'+

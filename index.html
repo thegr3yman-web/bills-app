@@ -324,7 +324,7 @@ textarea{min-height:70px;resize:vertical}
 .ckTotals{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.ckTotals>div{background:var(--chip);border-radius:12px;padding:8px 10px}
 .ckTotals small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}.ckTotals b{font-size:18px;font-variant-numeric:tabular-nums}
 .ckrow{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 2px;border-bottom:1px solid var(--line);background:none}
-.ckrow small{display:block;color:var(--muted);font-size:12px;margin-top:2px}.ckrow b.pos-t{font-size:16px;font-variant-numeric:tabular-nums}
+.ckrow small{display:block;color:var(--muted);font-size:12px;margin-top:2px}.ckrow b.pos-t{font-size:16px;font-variant-numeric:tabular-nums;margin-left:auto}.ckrow .ckMore{color:var(--muted);font-size:18px;line-height:1;padding-left:2px}
 .estTag{font-size:11px;color:var(--muted);font-weight:600}
 
 .tag.short{background:rgba(209,31,38,.12);color:#d11f26;text-transform:none;letter-spacing:0}
@@ -1445,7 +1445,7 @@ function renderChecks(){
   $('ckTotals').innerHTML = cs.length ? [['This month',T.month,'ckMonth'],['Last 4 weeks',T.last4,'ckLast4'],['Year to date',T.ytd,'ckYtd'],['4-week average',T.avg4,'ckAvg4']]
     .map(function(x){ return '<div><small>'+x[0]+'</small><b class="pos-t" id="'+x[2]+'">'+money(x[1])+'</b>'+(x[2]==='ckAvg4'?'<small style="text-transform:none;letter-spacing:0;font-weight:500">per week</small>':'')+'</div>'; }).join('') : '';
   $('ckList').innerHTML = cs.length ? cs.map(function(c){ var n=ckNum(c), sn=srcName(c);
-    return '<button type="button" class="ckrow" data-ck="'+esc(c.id)+'"><span><b>'+fmtDay(n,fromDayNum(n).y!==fromDayNum(todayNum()).y)+'</b><small>week of '+fmtShort(weekStartOf(n))+(sn?' · '+esc(sn):'')+(c.note?' · '+esc(c.note):'')+'</small></span><b class="pos-t">'+money(+c.amount||0)+'</b></button>'; }).join('')
+    return '<button type="button" class="ckrow" data-ck="'+esc(c.id)+'"><span><b>'+fmtDay(n,fromDayNum(n).y!==fromDayNum(todayNum()).y)+'</b><small>week of '+fmtShort(weekStartOf(n))+(sn?' · '+esc(sn):'')+(c.note?' · '+esc(c.note):'')+'</small></span><b class="pos-t">'+money(+c.amount||0)+'</b><span class="ckMore" aria-hidden="true">…</span></button>'; }).join('')
     : '<div class="empty" style="padding:14px 0">No checks logged yet. Tap <b>Log a check</b> each payday.</div>';
 }
 

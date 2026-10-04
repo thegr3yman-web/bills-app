@@ -615,7 +615,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <div class="field hidden" id="ckSrcWrap"><label for="ckSrc">Source</label><select id="ckSrc"></select></div>
     <div class="field"><label for="ckNote">Note (optional)</label><input id="ckNote" maxlength="80" placeholder="e.g. overtime"></div>
     <div class="hint" id="ckHint" style="margin:0 2px"></div>
-    <div class="btns"><button type="submit" class="btn primary" id="ckSave">Save check</button><button type="button" class="btn danger hidden" id="ckDel">Delete check</button></div>
+    <div class="btns"><button type="submit" class="btn primary" id="ckSave">Save check</button><button type="button" class="btn danger hidden" id="ckDel">Delete this check</button></div>
   </form>
 </div>
 
@@ -2759,7 +2759,7 @@ $('ckForm').addEventListener('submit',function(e){ e.preventDefault();
   else commit();
 });
 $('ckDel').addEventListener('click',function(){ var id=editingCk, c=checksAll().find(function(x){return x.id===id;}); if(!c) return;
-  appConfirm('Delete this check?', money(+c.amount)+' on '+fmtDay(ckNum(c),true)+'. That week will use your last check instead.','Delete',function(){
+  appConfirm('Delete this check?', money(+c.amount)+' on '+fmtDay(ckNum(c),true)+'. Everything goes back to how it was before you logged it (estimate, plan, cash).','Delete',function(){
     state.settings.checks=checksAll().filter(function(x){return x.id!==id;}); save(); closeSheet('ckScrim'); render(); toast('Check deleted'); }, true); });
 $('ckClose').addEventListener('click',function(){closeSheet('ckScrim');});
 $('ckScrim').addEventListener('click',function(e){ if(e.target===this) closeSheet('ckScrim'); });

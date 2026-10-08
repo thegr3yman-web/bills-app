@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; manifest-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="app-version" content="v13.16">
+<meta name="app-version" content="v13.17">
 <title>Bills</title>
 <meta name="description" content="Recurring bills, prorated to any period.">
 <meta name="color-scheme" content="light dark">
@@ -540,7 +540,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <button type="button" class="mfLink" id="allBillsBtn">📋 All bills <span>›</span></button>
   </section>
 
-  <div class="foot">Not financial advice · Your data stays on this device. · v13.16</div>
+  <div class="foot">Not financial advice · Your data stays on this device. · v13.17</div>
 </div>
 
 <button class="fab" id="addBtn" aria-label="Add bill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="fabL">Add bill</span></button>
@@ -951,16 +951,17 @@ function load(){
   return d;
 }
 /* v13.6: every stored/imported value is type-checked (bad imports used to crash or freeze every launch; ids are restricted so they can't inject HTML) */
-function cleanId(v){ v=v==null?'':String(v); return /^[A-Za-z0-9_.:-]{1,64}$/.test(v)?v:''; }
+function cleanId(v){ v=v==null?'':String(v); return /^[A-Za-z0-9_.:-]{1,64}$/.test(v)&&!(v in Object.prototype)&&v!=='__proto__'?v:''; }   // v13.17: no 'constructor' / '__proto__' ids
 function cleanAmt(v){ var n=typeof v==='number'?v:parseFloat(String(v==null?'':v).replace(/[$,\s]/g,'')); return isFinite(n)&&n>0?Math.min(Math.round(n*100)/100,MAX_AMT):0; }
 function cleanISO(v){ return parseISO(v)?v:''; }
 function cleanKey(v){ return typeof v==='string'&&/^(w:\d{4}-\d{2}-\d{2}|m:\d{4}-\d{2})$/.test(v); }
+function hasOwn(o,k){ return o!=null && (typeof k==='string') && Object.prototype.hasOwnProperty.call(o,k); }   // v13.17: '__proto__' / 'toString' are not valid keys
 function sanitizeState(d){
   var FQ=(typeof FREQ_LABEL!=='undefined')?FREQ_LABEL:{weekly:1,biweekly:1,semimonthly:1,monthly:1,bimonthly:1,quarterly:1,semiannual:1,annual:1,custom:1,onetime:1};
-  var seen={};
+  var seen=Object.create(null);
   d.bills=(Array.isArray(d.bills)?d.bills:[]).filter(function(b){ return b&&typeof b==='object'&&!Array.isArray(b); }).map(function(b){
     var id=cleanId(b.id); if(!id||seen[id]) id=uid(); seen[id]=1; b.id=id;
-    b.name=String(b.name==null?'Bill':b.name).slice(0,120); b.amount=cleanAmt(b.amount); if(!FQ[b.freq]) b.freq='monthly';
+    b.name=String(b.name==null?'Bill':b.name).slice(0,120); b.amount=cleanAmt(b.amount); if(!hasOwn(FQ,b.freq)) b.freq='monthly';
     b.n=Math.max(1,Math.min(999,parseInt(b.n,10)||1)); if(['days','weeks','months'].indexOf(b.unit)<0) b.unit='months';
     ['category','notes'].forEach(function(k){ b[k]=b[k]==null?'':String(b[k]).slice(0,500); });
     b.due=cleanISO(b.due); if (b.ends!=null) b.ends=cleanISO(b.ends); if (b.start!=null){ b.start=cleanISO(b.start); if(!b.start) delete b.start; } if (b.created!=null) b.created=cleanISO(b.created);
@@ -981,15 +982,17 @@ function sanitizeState(d){
     b.active=b.active!==false; return b; });
   var st=d.settings=(d.settings&&typeof d.settings==='object'&&!Array.isArray(d.settings))?d.settings:{};
   var PF=(typeof PAY!=='undefined')?PAY:{weekly:1,biweekly:1,semimonthly:1,monthly:1};
-  if (!PF[st.payFreq]) st.payFreq='weekly';
+  if (!hasOwn(PF,st.payFreq)) st.payFreq='weekly';
+  if (st.trackFrom!=null){ st.trackFrom=cleanISO(st.trackFrom); if (!st.trackFrom) delete st.trackFrom; }
+  if (st.nextPay!=null && !parseISO(String(st.nextPay))) delete st.nextPay;
   if (st.view!=null && st.view!=='basic' && st.view!=='advanced') delete st.view;
   if (st.nextPay!=null && !/^\d{4}-\d{2}-\d{2}$/.test(String(st.nextPay))) delete st.nextPay;
   if (st.fcWin!=null && ['one','two','month'].indexOf(st.fcWin)<0) delete st.fcWin;
   ['checkAmt','planCash'].forEach(function(k){ if (st[k]==null||st[k]==='') { st[k]=''; return; } var v=cleanAmt(st[k]); st[k]=v>0?String(v):(k==='planCash'&&/^\s*\$?0+(\.0*)?\s*$/.test(String(st[k]))?'0':''); });
   st.behindKeys=Array.isArray(st.behindKeys)?st.behindKeys.filter(cleanKey):[];
-  var iseen={}; st.incomes=Array.isArray(st.incomes)?st.incomes.filter(function(i){return i&&typeof i==='object';}).map(function(i){ var id=cleanId(i.id); if(!id||iseen[id]) id=uid(); iseen[id]=1;
-    return {id:id, name:String(i.name==null?'Income':i.name).slice(0,120), amount:cleanAmt(i.amount), freq:FQ[i.freq]&&i.freq!=='onetime'?i.freq:'monthly', active:i.active!==false}; }):[];
-  var cseen={}; st.checks=Array.isArray(st.checks)?st.checks.filter(function(c){return c&&typeof c==='object'&&parseISO(c.date)&&isFinite(parseFloat(c.amount))&&parseFloat(c.amount)>=0;}).map(function(c){ var id=cleanId(c.id); if(!id||cseen[id]) id=uid(); cseen[id]=1;
+  var iseen=Object.create(null); st.incomes=Array.isArray(st.incomes)?st.incomes.filter(function(i){return i&&typeof i==='object';}).map(function(i){ var id=cleanId(i.id); if(!id||iseen[id]) id=uid(); iseen[id]=1;
+    return {id:id, name:String(i.name==null?'Income':i.name).slice(0,120), amount:cleanAmt(i.amount), freq:hasOwn(FQ,i.freq)&&i.freq!=='onetime'?i.freq:'monthly', active:i.active!==false}; }):[];
+  var cseen=Object.create(null); st.checks=Array.isArray(st.checks)?st.checks.filter(function(c){return c&&typeof c==='object'&&parseISO(c.date)&&isFinite(parseFloat(c.amount))&&parseFloat(c.amount)>=0;}).map(function(c){ var id=cleanId(c.id); if(!id||cseen[id]) id=uid(); cseen[id]=1;
     return {id:id, date:c.date, amount:Math.min(MAX_AMT,Math.round(parseFloat(c.amount)*100)/100), note:c.note?String(c.note).slice(0,80):'', src:cleanId(c.src), cashAdded:isFinite(parseFloat(c.cashAdded))&&parseFloat(c.cashAdded)>0?Math.min(MAX_AMT,Math.round(parseFloat(c.cashAdded)*100)/100):undefined}; }).slice(-1000):[];
   if (['week','month'].indexOf(st.dueSpan)<0) st.dueSpan='month';
   if (['day','week','month','quarter','half','year'].indexOf(st.period)<0) st.period='month';
@@ -1030,6 +1033,7 @@ function seedExamples(){
 }
 if (FIRST_VISIT) seedExamples();
 if (NEW_VISIT) state.settings.mode='due';
+if (!state.settings.trackFrom){ state.settings.trackFrom=(String(state.settings.planCashAt||'').slice(0,10)&&parseISO(String(state.settings.planCashAt).slice(0,10)))?String(state.settings.planCashAt).slice(0,10):isoOf(todayNum()); save(); }   // v13.17: stored once
 keepStorage();   // v13.15: a brand-new visitor starts on Home; everyone else keeps their last tab
 /* one-time migration (v9): everything before the current week counts as done, so unchecked history isn't shown as Behind */
 if (!state.settings.behindMigrated){ (function(){ var t=todayNum(), dw=new Date(t*864e5).getUTCDay();
@@ -1046,7 +1050,7 @@ function visibleBills(){ return state.bills.filter(function(b){ return state.set
 function activeBills(){ return state.bills.filter(function(b){ return b.active!==false && !isEnded(b); }); } // live today
 function enabledBills(){ return state.bills.filter(function(b){ return b.active!==false; }); } // incl. ended (for dated views)
 function categories(){
-  var seen={},list=[]; state.bills.forEach(function(b){ var c=(b.category||'').trim()||'Uncategorized'; if(!seen[c]){seen[c]=1;list.push(c);} }); return list;
+  var seen=Object.create(null),list=[]; state.bills.forEach(function(b){ var c=(b.category||'').trim()||'Uncategorized'; if(!seen[c]){seen[c]=1;list.push(c);} }); return list;
 }
 
 /* ---------- render ---------- */
@@ -1751,7 +1755,7 @@ function asideSet(b){ if (b.active===false || isEnded(b)) return null; var w=exW
 function asideBarHTML(b, n){ var A=asideSet(b); if (!A||!(A.amt>0)) return ''; if (n!=null && A.D!=null && isDirectB(b) && n!==A.D) return '';   /* one bar per bill: only on the occurrence it's for */ var pct=Math.round(Math.min(1,A.set/A.amt)*1000)/10;
   return '<div class="abar'+(pct>=100?' full':'')+'" aria-hidden="true"><i style="width:'+pct+'%"></i></div><div class="abarT">'+money(A.set)+' of '+money(A.amt)+' set aside'+(A.D!=null?' for '+fmtShort(A.D):(state.settings.payFreq||'weekly')==='weekly'?' this week':' this pay period')+schedTxt(b,A)+'</div>'; }
 function schedTxt(b,A){ if (A.D==null || isDirectB(b) || isOne(b) || isSpend(b) || A.set>=A.amt-0.004) return ''; var B=planBehind(), x=B.list.filter(function(y){ return y.b.id===b.id && y.due===A.D; })[0];   // v13.13: a missed set-aside step is "behind schedule", never late or due
-  if (!(moneyFor().cashSet)) return ''; if (x && Math.abs(x.c-Math.round((A.amt-A.set)*100))<=1) return ' · <span class="schB">'+money(A.amt-A.set)+' more needed by '+fmtShort(A.D)+'</span>';   // v13.14: no payday left before it's due → behind = what's still needed, said once
+  if (!(moneyFor().cashSet)) return ''; var nd=(B.need||[]).filter(function(y){ return y.b.id===b.id && y.due===A.D; })[0]; if (nd) return ' · <span class="schB">'+mc(nd.c)+' more needed by '+fmtShort(A.D)+'</span>';   // v13.17 (a): no payday left before it's due
   return x?' · <span class="schB">'+mc(x.c)+' behind schedule</span>':' · on schedule'; }
 function pfList(){ return Array.isArray(state.settings.payFirst)?state.settings.payFirst:[]; }
 function pfRank(id,D){ var L=pfList(); for (var i=0;i<L.length;i++) if (L[i].id===id && L[i].n===D) return i; return -1; }
@@ -2302,12 +2306,25 @@ function statusModel(){ var Hm=headModel(), P=Hm.P; if (!P) return {Hm:Hm};
 /* v13.12 plan states. Behind plan = for each bill money is set aside for (not one-time, not paid in full from each check), what its prorated schedule says it should
    have by the last payday (amount × share of its cycle — last due date to next — gone by) minus what it has now (Money you have now split by due date + Set aside extra), when positive. */
 function planStrict(){ return state.settings.planWarn!=='relaxed'; }
-function planBehind(){ if (_inc.pbh) return _inc.pbh; var M=moneyFor(), t=todayNum(), cs=planChecks(56), L=[], tot=0, per=0;
-  var last=cs.length?(cs[0]<=t?cs[0]:(cs.length>1?cs[0]-(cs[1]-cs[0]):t)):t;
+/* v13.17 behind schedule = a LABEL only (Late/Short come only from the cash forecast). For each bill's next due date:
+   start = the later of (when you started tracking it) and (the day after its previous due date);
+   steps = paychecks from start to before the due date — received ones (logged and in Money you have now) are done, the rest are still coming;
+   should have = amount × done ÷ all steps. No paycheck left before the due date → not "behind": the rest is "needed by [date]".
+   Tracking start: the bill's added date (b.created); old bills without one use the first logged check or trackFrom (stored once:
+   the planCashAt date or the day this version first ran / the import date), whichever is earlier. Editing a bill never changes b.created. */
+function trackAnchor(){ var ml=mainLogs(), c=[], tf=isoDayNum(state.settings.trackFrom); if (ml.length) c.push(ckNum(ml[0])); if (tf!=null) c.push(tf); return c.length?Math.min.apply(null,c):todayNum(); }
+function billStart(b){ var cn=createdNum(b); return cn!=null?cn:trackAnchor(); }
+function pastPaydays(cs, from, t){ var out=[]; if (logMode()){ mainLogs().forEach(function(c){ var n=ckNum(c); if (n>=from && n<=t && n!==cs.pend && (!out.length||out[out.length-1]!==n)) out.push(n); }); return out; }
+  if (cs.length<2) return out; var st=cs[1]-cs[0], d=cs[0]-st, g=0; while (d>=from && g++<400){ if (d<=t) out.unshift(d); d-=st; } return out; }
+function schedStart(b, due){ var tpy=timesPerYear(b), iv=Math.max(1,Math.round(365.25/(tpy>0?tpy:12))), pv=occRaw(b, due-iv-40, due-1), d0=pv.length?pv[pv.length-1]:null; return Math.max(billStart(b), d0!=null?d0+1:-Infinity); }   // (d) after a paid cycle, start the day after the last due date
+function planBehind(){ if (_inc.pbh) return _inc.pbh; var M=moneyFor(), t=todayNum(), cs=planChecks(56), L=[], N=[], tot=0, per=0;
   if (M.cashSet) M.list.forEach(function(x){ var b=x.b; if (x.direct || isOne(b) || isSpend(b)) return; var tpy=timesPerYear(b); if (!(tpy>0)) return;
-    var iv=Math.max(1,Math.round(365.25/tpy)), pv=occRaw(b, x.due-iv-40, x.due-1), d0=pv.length?pv[pv.length-1]:x.due-iv; iv=Math.max(1,x.due-d0); var nxc=cs.filter(function(c){ return c>last; })[0], f=(nxc==null||x.due<nxc)?1:Math.max(0,Math.min(1,(last-d0)/iv)), want=Math.round(x.amount*f*100), gap=want-Math.round(x.saved*100);
-    if (gap>50){ var k=cs.filter(function(c){ return c>=t && c<x.due; }).length||1; L.push({b:b, due:x.due, c:gap, want:want, per:Math.ceil(gap/k)}); tot+=gap; per+=Math.ceil(gap/k); } });
-  return (_inc.pbh={list:L, c:tot, per:per}); }
+    var fut=cs.filter(function(c){ return c<x.due; }).length, rem=Math.round((x.amount-x.saved)*100);
+    if (!fut){ if (rem>50) N.push({b:b, due:x.due, c:rem}); return; }   // (a) no paycheck left before it's due: the full rest is needed by then, not "behind"
+    var st=schedStart(b, x.due);
+    var done=pastPaydays(cs, st, t).length, want=done?Math.round(x.amount*done/(done+fut)*100):0, gap=want-Math.round(x.saved*100);
+    if (gap>50){ L.push({b:b, due:x.due, c:gap, want:want, per:Math.ceil(gap/fut)}); tot+=gap; per+=Math.ceil(gap/fut); } });
+  return (_inc.pbh={list:L, need:N, c:tot, per:per}); }
 function planState(){ if (_inc.pst) return _inc.pst; var S=statusModel(), r; if (!S.P) r={k:'none'}; else if (S.kind==='unknown') r={k:'unknown'};
   else { var pe=peStatusModel(); if (pe.k==='late' || S.kind!=='ok') r={k:'late', pe:pe}; else { var B=planBehind(); r={k:B.c>0?'behind':'on', B:B}; } }
   return (_inc.pst=r); }
@@ -2348,7 +2365,7 @@ function basicHeadHTML(onDue){
       if (la && la.none){ var ne1=notCoveredModel().filter(function(e){ return !e.spend; })[0]; if (ne1) la={k:'late', name:ne1.b.name, c:ne1.c, due:ne1.due, past:ne1.due<todayNum()}; }   // v13.11: NC with no unfinished row still names the first uncovered bill
       h=(la&&la.k==='late'&&!la.past&&!la.spend&&!la.none&&la.name?'<div class="bLA" id="bLateAhead">Late bill ahead: '+lateBillTxt(la.name, la.c, la.due)+'</div>':'')+'<div class="bH '+cls+'" id="bHeadline"><span id="bStatus">'+statusHTML(S)+'</span></div>'+(sub?'<div class="bS" id="bStatusSub">'+sub+'</div>':''); }
     if (Hm.TD.length) h+='<div class="bToday" id="bToday"><span class="tag today">Due today</span> '+TDn+'</div>'; }
-  if (P){ if (cashAsk) h+='<div class="bAsk cashAsk2" id="cashAsk" role="status">'+esc(cashAsk.msg)+' Make money you have now <b>'+money(cashAsk.v)+'</b>? <div class="bAskR"><button type="button" id="cashAskYes">Yes, update</button><button type="button" id="cashAskNo" class="ghost">No</button></div></div>';
+  if (P){ if (cashAsk) h+='<div class="bAsk cashAsk2" id="cashAsk" role="status">'+esc(cashAsk.msg)+(cashAsk.paid?' Take <b>'+money(cashAsk.d)+'</b> off Money you have now (→ <b>'+money(cashAsk.v)+'</b>)? <div class="bAskR"><button type="button" id="cashAskYes">Yes</button><button type="button" id="cashAskNo" class="ghost">No, it’s already updated</button></div></div>':' Make money you have now <b>'+money(cashAsk.v)+'</b>? <div class="bAskR"><button type="button" id="cashAskYes">Yes, update</button><button type="button" id="cashAskNo" class="ghost">No</button></div></div>');
     if (!P.cashSet || bCashEdit){ var ask='<div class="bAsk" id="bAsk"><label for="bCash">'+(P.cashSet?'Money you have now':'How much do you have right now?')+'</label>'+infoB('cash')+infoL('cash')+'<small>All your money right now (bank + wallet). The app splits it across your bills by due date — that’s what’s already set aside.'+(P.cashSet?'':' Until you enter it, your bills status is unknown.')+'</small><div class="bAskR"><input id="bCash" inputmode="decimal" placeholder="$0" value="'+esc(bCashErr?bCashErr.v:(P.cashSet?String(P.held):''))+'"><button type="button" id="bCashSave">OK</button></div>'+(bCashErr?'<div class="bErr" id="bCashErr" role="alert">'+esc(bCashErr.m)+'</div>':'')+'</div>';
       if (!P.cashSet) h=ask+h; else h+=ask; }   // v13.10: blank → the question stays at the top until it's filled
     if (state.settings.ticksGone===1) h='<div class="bAsk" id="ticksNote" role="status">Paid ticks are gone — the app now splits Money you have now across your bills. <div class="bAskR"><button type="button" id="ticksOk">OK</button></div></div>'+h;
@@ -3027,7 +3044,7 @@ $('editForm').addEventListener('submit',function(e){
     data.spreadUnit=su!=='none'&&sn>0?su:'none'; data.spreadN=data.spreadUnit==='none'?0:sn;
   } else { data.spreadUnit='none'; data.spreadN=0; }
   if (fb.freq!=='onetime' && data.due) data.start=data.due;   // v13.10: the date typed is the next one owed; nothing before it is late
-  if (editingId){ var b=state.bills.find(function(x){return x.id===editingId;}); if (b.due!==data.due) delete b.dom; else if (b.start) data.start=b.start; else delete data.start; Object.assign(b,data); if (lv!==(billLvl(b)?'wait':'first')) b.prio=lv; if(b.example && !/\(example\)/i.test(b.name)) delete b.example; toast('Bill updated'); }
+  if (editingId){ var b=state.bills.find(function(x){return x.id===editingId;}); if (b.due!==data.due) delete b.dom; else if (b.start) data.start=b.start; else delete data.start; Object.assign(b,keepStart(data)); if (lv!==(billLvl(b)?'wait':'first')) b.prio=lv; if(b.example && !/\(example\)/i.test(b.name)) delete b.example; toast('Bill updated'); }
   else { data.id=uid(); data.created=stamp(); if (lv!==(billLvl(data)?'wait':'first')) data.prio=lv; state.bills.push(data); toast('Added '+name); }
   pinDefaultPay();
   save(); closeSheet('editScrim'); render();
@@ -3332,10 +3349,11 @@ $('dueBasic').addEventListener('click',function(e){ if (e.target.closest('[data-
   var c=e.target.closest('.chk'), D=_inc.bdue||basicDueModel();
   if (c && c.dataset.bl!=null){ var x=D.late[+c.dataset.bl]; if(!x) return;
     x.srcs.forEach(function(sr){ if (sr.k==='short'){ var se=shortAt(x.b,sr.due); if (se){ if (shortResolved(x.b,se)) undoChoice(x.b,se); se.done=true; } } else setItem(x.b, sr.k, sr.P, sr.n, true); });
-    if (!x.miss) askCash(-x.c/100, 'You paid '+mc(x.c)+' for '+x.b.name+'.'); save(); render(); toast((x.miss?'Set aside ✓ ':x.short?'Covered ✓ ':'Paid ✓ ')+x.b.name); return; }
+    if (!x.miss){ askCash(-x.c/100, 'You paid '+mc(x.c)+' for '+x.b.name+'.'); if (cashAsk){ cashAsk.paid=true; cashAsk.d=x.c/100; } } save(); render(); toast((x.miss?'Set aside ✓ ':x.short?'Covered ✓ ':'Paid ✓ ')+x.b.name); return; }
   if (c && c.dataset.bp){ var bill=billById(c.dataset.bp), n=+c.dataset.n; if(!bill) return;
-    if (isPaidOcc(bill,n)){ unmarkPaid(bill,n); var uk=bill.id+'|'+n; cashAsk=null; if (cashPaidLog[uk]){ askCash(cashPaidLog[uk], bill.name+' is due again, so the '+money(cashPaidLog[uk])+' wasn’t spent.'); if (cashAsk) cashAsk.unkey=uk; }   /* v13.10c: undo puts the money back too */ var se4=shortAt(bill,isoOf(n)); if (se4&&se4.byPay){ se4.done=false; delete se4.byPay; } toast('Unchecked — '+bill.name+' is due again'); } else { markPaid(bill,n); if (n<=todayNum()+7){ askCash(-(+bill.amount||0), 'You paid '+money(+bill.amount||0)+' for '+bill.name+'.'); if (cashAsk){ cashAsk.key=bill.id+'|'+n; cashAsk.d=+bill.amount||0; } } var se3=shortAt(bill,isoOf(n)); if (se3&&!se3.done){ if (shortResolved(bill,se3)) undoChoice(bill,se3); se3.done=true; se3.byPay=1; }   // paying the bill settles its shortfall too
-      toast('Paid ✓ '+bill.name+(isOne(bill)?'':' · next due '+fmtShort(dueNum(bill)))); }
+    if (isPaidOcc(bill,n)){ unmarkPaid(bill,n); var uk=bill.id+'|'+n; cashAsk=null; if (cashPaidLog[uk]){ askCash(cashPaidLog[uk], bill.name+' is due again, so the '+money(cashPaidLog[uk])+' wasn’t spent.'); if (cashAsk) cashAsk.unkey=uk; }   /* v13.10c: undo puts the money back too */ var se4=shortAt(bill,isoOf(n)); if (se4&&se4.byPay){ se4.done=false; delete se4.byPay; } toast('Unchecked — '+bill.name+' is due again'); } else { var pv=earlyAgain(bill,n);
+      if (pv!=null){ appConfirm('Also mark the '+fmtShort(n)+' one paid early?', bill.name+' '+fmtShort(pv)+' is already marked paid.', 'Mark paid', function(){ doMarkPaid(bill,n); save(); render(); }); return; }   // v13.17: a second tap doesn't silently pay next month too
+      doMarkPaid(bill,n); }
     save(); render(); return; }
   var sr2=e.target.closest('[data-bsid]'); if (sr2){ var sb=billById(sr2.dataset.bsid), se2=sb&&shortAt(sb,sr2.dataset.bsdue);
     appConfirm('Not set aside for: '+(sb?sb.name:''), 'You didn’t have enough set aside for this bill when it came due, so '+(se2?money(shortOpenAmt(sb,se2)):'the missing amount')+' is still owed. It’s counted in Late and in what you need. Tick ✓ once it’s paid. (To cover it from leftover or borrow from another bill’s set-aside money, turn on Advanced view in Settings.)', 'OK', null); return; }
@@ -3350,6 +3368,10 @@ document.addEventListener('click',function(e){ if (e.target.closest('.abOpen')){
   if (e.target.closest('#cashAskNo')){ cashAsk=null; render(); } });
 /* v13.10: after paying a bill or logging a check near today, offer to update "money you have now" (only when it was entered) */
 var cashPaidLog={};   // bill|date → money taken off Money you have now when it was marked Paid (so Undo can offer it back)
+function earlyAgain(bill,n){ var tN=todayNum(), L=occRaw(bill, n-400, n-1), pv=L.length?L[L.length-1]:null; return (n>tN && pv!=null && pv>=tN-7 && isPaidOcc(bill,pv))?pv:null; }   // v13.17: the one before is already paid → ask before paying this one early
+function doMarkPaid(bill,n){ markPaid(bill,n); askCash(-(+bill.amount||0), 'You paid '+money(+bill.amount||0)+' for '+bill.name+'.'); if (cashAsk){ cashAsk.key=bill.id+'|'+n; cashAsk.d=+bill.amount||0; cashAsk.paid=true; }   // v13.17: early too — Money you have now is your balance, so ask, never change it silently
+  var se3=shortAt(bill,isoOf(n)); if (se3&&!se3.done){ if (shortResolved(bill,se3)) undoChoice(bill,se3); se3.done=true; se3.byPay=1; }   // paying the bill settles its shortfall too
+  toast('Paid ✓ '+bill.name+(isOne(bill)?'':' · next due '+fmtShort(dueNum(bill)))); }
 function askCash(delta, msg){ var raw=String(state.settings.planCash==null?'':state.settings.planCash).trim(); if (raw===''||!isBasic()) { cashAsk=null; return; } var v=parseAmt(raw); if (!isFinite(v)) return;
   cashAsk={v:Math.max(0,Math.round((v+delta)*100)/100), msg:msg}; }
 $('abList').addEventListener('click',function(e){ var b=e.target.closest('.bill[data-id]'); if(!b) return; closeSheet('abScrim'); openEdit(b.dataset.id); });
@@ -3389,6 +3411,9 @@ $('wipeAll').addEventListener('click',clearAll);
 
 /* ---------- import / export ---------- */
 function stamp(){ return isoOf(todayNum()); }
+function keepStart(data){ delete data.created; return data; }   // v13.17 (c): editing amount / due date / name never resets when you started tracking a bill
+function isFullBackup(p){ return !!(p && !Array.isArray(p) && p.settings && typeof p.settings==='object' && !Array.isArray(p.settings)); }
+var IMPORT_KEYS=['period','sort','weekMon','showInactive','dueSpan','payFreq','checkAmt','incomes','wfPeriod','behindFrom','behindKeys','behindMigrated','checks','planCash','nextPay','view','payFreqSet','fcWin','spendNoticeSeen','payFirst','expect','planCashAt','cashInc','trackFrom'];
 function download(name, text, type){
   var blob=new Blob([text],{type:type}), url=URL.createObjectURL(blob), a=document.createElement('a');
   a.href=url; a.download=name; document.body.appendChild(a); a.click();
@@ -3418,23 +3443,28 @@ $('fileIn').addEventListener('change',function(){
       var p=JSON.parse(r.result), bills=Array.isArray(p)?p:(p&&p.bills);
       if(!Array.isArray(bills)) throw new Error('No bills array found');
       var valid=FREQ_LABEL;
-      var nIn=bills.length, ids={}, nDup=0, nNeg=0, nBad=0;
+      var nIn=bills.length, ids=Object.create(null), nDup=0, nNeg=0, nBad=0;
       bills=bills.filter(function(b){ if (!(b&&typeof b==='object'&&b.name!=null&&String(b.name).trim()!=='')){ nBad++; return false; } var v=typeof b.amount==='number'?b.amount:parseAmt(b.amount); if (!isFinite(v)){ nBad++; return false; } if (v<0){ nNeg++; return false; }
-        if (b.id!=null&&String(b.id)!==''){ if (ids[b.id]){ nDup++; return false; } ids[b.id]=1; } b.__amt=v; return true; }).map(function(b){
-        return {id:b.id||uid(), name:String(b.name), amount:b.__amt, freq:valid[b.freq]?b.freq:'monthly', n:parseInt(b.n,10)||1,
+        var cid=cleanId(b.id); if (cid){ if (ids[cid]){ nDup++; return false; } ids[cid]=1; } b.__amt=v; return true; }).map(function(b){
+        return {id:cleanId(b.id)||uid(), name:String(b.name), amount:b.__amt, freq:hasOwn(valid,b.freq)?b.freq:'monthly', n:parseInt(b.n,10)||1,
           unit:['days','weeks','months'].indexOf(b.unit)>=0?b.unit:'months', category:b.category?String(b.category):'', due:parseISO(b.due)?b.due:'',
           notes:b.notes?String(b.notes):'', active:b.active!==false, example:!!b.example, source:b.source||undefined, spreadUnit:['weeks','months'].indexOf(b.spreadUnit)>=0?b.spreadUnit:'none', spreadN:parseInt(b.spreadN,10)||0, paid:Array.isArray(b.paid)?b.paid.filter(function(x){return !!parseISO(x);}):undefined, dom:(parseInt(b.dom,10)>=1&&parseInt(b.dom,10)<=31)?parseInt(b.dom,10):undefined, ends:parseISO(b.ends)?b.ends:undefined, short:Array.isArray(b.short)?b.short.filter(function(e){return e&&parseISO(e.due);}).map(function(e){ var o={due:e.due, have:Math.max(0,parseFloat(e.have)||0), done:!!e.done}; if(isFinite(parseFloat(e.amt))) o.amt=Math.max(0,parseFloat(e.amt)); if(e.nodue) o.nodue=true; if(e.how==='leftover'&&parseISO(e.covOn)){ o.how='leftover'; o.covOn=e.covOn; } if(e.how==='borrow'&&e.lender&&parseISO(e.lenderDue)){ o.how='borrow'; o.lender=String(e.lender); o.lenderDue=e.lenderDue; o.lent=Math.max(0,parseFloat(e.lent)||0); } if(Array.isArray(e.lentTo)){ var lt=e.lentTo.filter(function(k){return k&&k.id&&parseISO(k.due);}).map(function(k){return {id:String(k.id),due:k.due,amt:Math.max(0,parseFloat(k.amt)||0)};}); if(lt.length) o.lentTo=lt; } return o;}):undefined, created:parseISO(b.created)?b.created:undefined, setAside:Array.isArray(b.setAside)&&b.setAside.length?['m:2000-01']:undefined,
           notSpend:b.notSpend===true?true:undefined, extra:Array.isArray(b.extra)?b.extra:undefined, prio:b.prio==='first'||b.prio==='wait'?b.prio:undefined, start:parseISO(b.start)?b.start:undefined, skipped:Array.isArray(b.skipped)&&b.skipped.some(function(x){return !!parseISO(x);})?b.skipped.filter(function(x,i,a){return !!parseISO(x)&&a.indexOf(x)===i;}).sort():undefined};   // v13.8b
       });
       var skipTxt=[nDup?plural(nDup,'duplicate bill')+' (same id — kept the first)':'', nNeg?plural(nNeg,'bill')+' with a negative amount':'', nBad?plural(nBad,'bill')+' with no name or no amount':''].filter(Boolean);
-      appConfirm('Import '+bills.length+' bills?','This REPLACES your current '+state.bills.length+' bills.'+(skipTxt.length?' Skipped '+skipTxt.join(', ')+' — '+(nIn-bills.length)+' of '+nIn+' not imported.':''),'Import',function(){
+      var full=isFullBackup(p), skipNote=(skipTxt.length?' Skipped '+skipTxt.join(', ')+' — '+(nIn-bills.length)+' of '+nIn+' not imported.':'');
+      if (!full && !bills.length) throw new Error('No bills found in this file');
+      if (!full){ appConfirm('Import '+plural(bills.length,'bill')+'?','This replaces your current '+plural(state.bills.length,'bill')+'. Your checks, Money you have now, pay schedule and settings stay as they are.'+skipNote,'Import',function(){   // v13.17: a list of bills only touches bills
+        state.bills=bills; state.settings.examplesCleared=true; sanitizeState(state); _inc={}; save(); closeSheet('menuScrim'); render(); toast('Imported '+plural(bills.length,'bill')); }); return; }
+      var nCk=checksAll().length, cashTxt=String(state.settings.planCash||'')!==''?money(planCash()):'';
+      appConfirm('Restore this backup?','This replaces everything on this device: your '+plural(state.bills.length,'bill')+', '+plural(nCk,'logged check')+', Money you have now'+(cashTxt?' ('+cashTxt+')':'')+', your pay schedule and settings. Export first if you want to keep them.'+skipNote,'Restore',function(){
       state.bills=bills; state.settings.examplesCleared=true;
-      if (p.settings && Array.isArray(p.settings.checks)){ var ckSeen={}; p.settings.checks=p.settings.checks.filter(function(c){ var v=c&&(typeof c.amount==='number'?c.amount:parseAmt(c.amount)); if (!(c&&parseISO(c.date)&&isFinite(v)&&v>=0)) return false; var k=c.date+'|'+(c.src||'')+'|'+Math.round(v*100); if (ckSeen[k]) return false; ckSeen[k]=1; c.__amt=v; return true; }).map(function(c){ return {id:c.id||uid(), date:c.date, amount:c.__amt, note:c.note?String(c.note):'', src:c.src?String(c.src):''}; }); }
+      if (p.settings && Array.isArray(p.settings.checks)){ var ckSeen={}; p.settings.checks=p.settings.checks.filter(function(c){ var v=c&&(typeof c.amount==='number'?c.amount:parseAmt(c.amount)); if (!(c&&parseISO(c.date)&&isFinite(v)&&v>=0)) return false; var k=c.date+'|'+(c.src||'')+'|'+Math.round(v*100); if (ckSeen[k]) return false; ckSeen[k]=1; c.__amt=v; return true; }).map(function(c){ var o={id:c.id||uid(), date:c.date, amount:c.__amt, note:c.note?String(c.note):'', src:c.src?String(c.src):''}; var ca=parseFloat(c.cashAdded); if (isFinite(ca)&&ca>0) o.cashAdded=Math.round(ca*100)/100; return o; }); }
       else if (p.settings) delete p.settings.checks;
       var ps=(p.settings&&typeof p.settings==='object'&&!Array.isArray(p.settings))?p.settings:{};
-      ['period','sort','weekMon','showInactive','dueSpan','payFreq','checkAmt','incomes','wfPeriod','behindFrom','behindKeys','behindMigrated','checks','planCash','nextPay','view','payFreqSet','fcWin','spendNoticeSeen','payFirst','expect','planCashAt','cashInc'].forEach(function(k){ if(k in ps) state.settings[k]=ps[k]; else if (k==='planCashAt'||k==='cashInc') delete state.settings[k]; else if (k==='checks'||k==='incomes'||k==='behindKeys') state.settings[k]=[]; else if (k==='planCash') state.settings[k]=''; else if (k==='nextPay') delete state.settings.nextPay; });
+      IMPORT_KEYS.forEach(function(k){ if(k in ps) state.settings[k]=ps[k]; else if (k==='planCashAt'||k==='cashInc') delete state.settings[k]; else if (k==='trackFrom') state.settings.trackFrom=isoOf(todayNum()); else if (k==='checks'||k==='incomes'||k==='behindKeys') state.settings[k]=[]; else if (k==='planCash') state.settings[k]=''; else if (k==='nextPay') delete state.settings.nextPay; });
       sanitizeState(state);
-      save(); closeSheet('menuScrim'); render(); toast('Imported '+bills.length+' bills'); });
+      save(); closeSheet('menuScrim'); render(); toast('Restored '+plural(bills.length,'bill')); });
     }catch(err){ appConfirm('Import failed', String(err&&err.message||err)+' — nothing was changed.', 'OK', null); $('cfCancel').classList.add('hidden'); }
   };
   r.readAsText(f);
@@ -3531,14 +3561,14 @@ function selfTest(){ var keep={state:state, today:__today, st:__st, sx:spendX}, 
     var gone=deleteCheck('n1'), d2=ckSnap();
     eq('Delete this check: the forecast goes back to exactly how it was; the … opens that check; “added to money you have now” survives export / import', [d1!==d0, d2===d0, /data-ckopen="n1"/.test(opt), gone&&gone.cashAdded, J5.settings.checks.map(function(c){ return c.cashAdded||null; })], [true, true, true, 1600, [null,1600]]);
     restoreCheck(gone, 1); eq('…Undo (restore) brings the deleted check back and the forecast with it', [ckSnap()===d1, state.settings.checks.map(function(c){ return c.id; })], [true, ['o1','n1']]);
-    var pl=function(cash, set){ use([{id:'rt',name:'Rent',amount:cash==='late'?5000:800,freq:'monthly',due:'2026-03-20'}], Object.assign({planCash:cash==='late'?'0':cash}, set||{})); var o=planState(), B=planBehind();
+    var pl=function(cash, set){ use([{id:'rt',name:'Rent',amount:cash==='late'?5000:800,freq:'monthly',due:'2026-03-20'}], Object.assign({planCash:cash==='late'?'0':cash, trackFrom:'2026-01-01'}, set||{})); var o=planState(), B=planBehind();
       return [o.k, r2(B.c/100), r2(B.per/100), profGold(), /plAmb/.test(planLineHTML()), /plNote/.test(planLineHTML()), /plAmb/.test(planLineHTML(null,true)), /to fully set aside/.test(profNote())]; };
     eq('plan states: on schedule (Rent has more than its prorated share) → green "On schedule", Profit gold', pl('500'), ['on', 0, 0, true, false, false, false, false]);
-    eq('…behind schedule, no bill late, Strict (default) → amber "Bills still on time · $X behind schedule · set aside $Y more a week", Profit not gold + "$X to fully set aside"', pl('100'), ['behind', 100, 50, false, true, false, true, true]);
-    eq('…same, Relaxed → green with a grey note, Profit gold; Payday still amber', pl('100',{planWarn:'relaxed'}), ['behind', 100, 50, true, false, true, true, false]);
+    eq('…behind schedule, no bill late, Strict (default) → amber "Bills still on time · $X behind schedule · set aside $Y more a week", Profit not gold + "$X to fully set aside"', pl('100'), ['behind', 166.67, 83.34, false, true, false, true, true]);
+    eq('…same, Relaxed → green with a grey note, Profit gold; Payday still amber', pl('100',{planWarn:'relaxed'}), ['behind', 166.67, 83.34, true, false, true, true, false]);
     eq('…a bill that will be late → "late" (red line comes from the late-bill status), never green', pl('late').slice(0,1), ['late']);
-    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'100'}); var sb1=asideBarHTML(billById('rt')); state.settings.planCash='500'; _inc={}; var sb2=asideBarHTML(billById('rt'));
-    eq('set-aside progress says behind schedule / on schedule (never late or due)', [/\$100\.00 behind schedule/.test(sb1), /on schedule/.test(sb2), /late|behind plan/.test(sb1+sb2)], [true, true, false]);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'100', trackFrom:'2026-01-01'}); var sb1=asideBarHTML(billById('rt')); state.settings.planCash='500'; _inc={}; var sb2=asideBarHTML(billById('rt'));
+    eq('set-aside progress says behind schedule / on schedule (never late or due)', [/\$166\.67 behind schedule/.test(sb1), /on schedule/.test(sb2), /late|behind plan/.test(sb1+sb2)], [true, true, false]);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-04'},{id:'sn',name:'Snacks',amount:40,freq:'weekly',due:'2026-03-03'}],{planCash:'0'}); var C13=ccModel(catchupPlan()), SM13=statusModel(), SH13=statusHTML(SM13);
     eq('late count = bills that miss their real due date only; uncovered spending is counted apart (amber), never late', [C13.nLate, C13.nNc>0, C13.occ.filter(function(o){ return o.spend && o.st==='late'; }).length], [1, true, 0]);
     eq('need before the next check: "needed by Mar 4, before your next check", never "more a week"', [/needed by Mar 4, before your next check/.test(SH13), /more a week/.test(SH13)], [true, false]);
@@ -3555,12 +3585,32 @@ function selfTest(){ var keep={state:state, today:__today, st:__st, sx:spendX}, 
     eq('v13.16 usual check: every unlogged check uses it (forecast, break-even "your check"); (you set) beats it, logged checks are real; empty = history estimate', [e0, M16.amt, M16.usual, estWhy(M16), cr16.filter(function(r){ return r.kind==='est'; }).every(function(r){ return Math.abs(r.inc-950)<0.01; }), be16, x16, l16], [1250, 950, true, 'your usual check', true, 950, 900, 1250]);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'0'}); var o16=spendEdges(), A16=awayInfo(o16), h16=awayHTML(o16);
     eq('v13.16 "$X away from a late bill" = T2 (none when T2 is 0 or a bill is late/short)', [!!o16&&o16.kind, A16?A16.c===spendT2(o16):null, /away from a late bill|No late bill even if/.test(h16), awayInfo({kind:'late'}), awayInfo({kind:'ok', T2:0, cap:100})], ['ok', true, true, null, null]);
+    var J17={bills:[{id:'constructor',name:'A',amount:5,freq:'__proto__',unit:'toString',spreadUnit:'__proto__',due:'2026-03-20'},{id:'toString',name:'B',amount:6,freq:'toString',due:'2026-03-21'},{id:'__proto__',name:'C',amount:7,freq:'constructor',due:'2026-03-22'}],settings:{payFreq:'__proto__',incomes:[{id:'hasOwnProperty',name:'i',amount:1,freq:'toString'}],checks:[{id:'valueOf',date:'2026-02-27',amount:500}]}}; sanitizeState(J17);
+    var ok17=true; try{ use(J17.bills,{payFreq:'__proto__'}); statusModel(); planBehind(); basicDueModel(); catchupPlan(); }catch(e){ ok17=e.message; }
+    eq('v13.17 #1 imported enums/ids are whitelisted: __proto__ / toString / constructor become monthly / months / none / new ids / weekly, and the app still works', [J17.bills.map(function(b){ return b.freq+'/'+b.unit+'/'+(b.spreadUnit||'')+'/'+(['constructor','toString','__proto__'].indexOf(b.id)<0); }).join(' '), J17.settings.payFreq, J17.settings.incomes[0].freq, ['hasOwnProperty','valueOf'].indexOf(J17.settings.incomes[0].id)+['hasOwnProperty','valueOf'].indexOf(J17.settings.checks[0].id), hasOwn(FREQ_LABEL,'toString'), hasOwn(FREQ_LABEL,'monthly'), ok17], ['monthly/months/none/true monthly/months//true monthly/months//true', 'weekly', 'monthly', -2, false, true, true]);
+    use([{id:'ph',name:'Phone',amount:80,freq:'monthly',due:'2026-03-20'}],{planCash:'500'}); var ph=state.bills[0], inL=function(){ _inc={}; return moneyFor().list.some(function(x){ return x.b.id==='ph' && x.due===dayNum(2026,2,20); }); }, in0=inL(); doMarkPaid(ph, dayNum(2026,2,20)); var ca17=cashAsk, in1=inL(), h17=''; try{ h17=basicHeadHTML(); }catch(e){ h17='ERR'; }
+    eq('v13.17 #2 Mark paid early: Money you have now is not changed silently; asks "Take $80.00 off Money you have now?" (Yes / No, it’s already updated); the paid bill no longer counts against the money; a second tap on the next one asks first', [in0, in1, state.settings.planCash, ca17&&ca17.paid, ca17&&ca17.v, /Take <b>\$80\.00<\/b> off Money you have now/.test(h17), /No, it’s already updated/.test(h17), earlyAgain(ph, dayNum(2026,3,20))===dayNum(2026,2,20), earlyAgain(ph, dayNum(2026,2,20))], [true, false, '500', true, 420, true, true, true, null]);
+    eq('v13.17 #3 a plain list of bills is a bills-only import (checks, money, pay schedule, settings kept); a full backup replaces all and carries trackFrom / planCashAt / cashInc', [isFullBackup([{name:'x',amount:1}]), isFullBackup({bills:[]}), isFullBackup({bills:[],settings:[]}), isFullBackup({bills:[],settings:{}}), ['trackFrom','planCashAt','cashInc','checks','planCash','nextPay'].every(function(k){ return IMPORT_KEYS.indexOf(k)>=0; })], [false, false, false, true, true]);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'100'}); var d1a=planBehind().c, d1b=schedTxt(state.bills[0], asideSet(state.bills[0]));
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20',created:'2026-03-02'}],{planCash:'100', trackFrom:'2026-01-01'}); var d1c=planBehind().c;
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'100', trackFrom:'2026-03-02', checks:[{id:'k1',date:'2026-02-27',amount:900}]}); var d1d=[isoOf(trackAnchor()), planBehind().c];
+    eq('v13.17 #4 behind schedule counts only from when you started tracking: day one → none; a bill added today → none; old data counts from the first logged check (earlier than trackFrom)', [d1a, /behind/.test(d1b), d1c, d1d[0], d1d[1]>0], [0, false, 0, '2026-02-27', true]);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-04'},{id:'ph',name:'Phone',amount:50,freq:'monthly',due:'2026-03-20'}],{planCash:'0', trackFrom:'2026-01-01'}); var Ba=planBehind(), na=Ba.need.filter(function(y){ return y.b.id==='rt'; })[0], st17=planState();
+    eq('v13.17 (a) no paycheck before the due date: full amount "needed by" (not behind, no divide-by-zero); Late/Short still come only from the forecast', [na&&na.c, Ba.list.some(function(y){ return y.b.id==='rt'; }), isFinite(Ba.c)&&isFinite(Ba.per), /\$800\.00 more needed by Mar 4/.test(schedTxt(state.bills[0], asideSet(state.bills[0]))), st17.k], [80000, false, true, true, 'late']);
+    use([{id:'o',name:'Old',amount:300,freq:'monthly',due:'2026-03-20'},{id:'n',name:'New',amount:300,freq:'monthly',due:'2026-03-20',created:'2026-02-25'}],{trackFrom:'2026-02-01', checks:[{id:'k1',date:'2026-02-13',amount:900}]});
+    eq('v13.17 (b) a bill with no added date starts at the earliest anchor (first logged check / trackFrom), never today; a bill with one starts there', [isoOf(billStart(state.bills[0])), isoOf(billStart(state.bills[1]))], ['2026-02-01', '2026-02-25']);
+    var b17=state.bills[1]; Object.assign(b17, keepStart({name:'Renamed', amount:999, due:'2026-03-25', created:'2026-03-02'}));
+    eq('v13.17 (c) editing name / amount / due date keeps the start date', [b17.name, b17.amount, b17.created, isoOf(billStart(b17))], ['Renamed', 999, '2026-02-25', '2026-02-25']);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20',created:'2026-01-01'},{id:'r2',name:'Rent2',amount:800,freq:'monthly',due:'2026-03-20',created:'2026-03-01'}],{});
+    eq('v13.17 (d) after a paid cycle the schedule starts the day after the last due date, not the added date', [isoOf(schedStart(state.bills[0], dayNum(2026,2,20))), isoOf(schedStart(state.bills[1], dayNum(2026,2,20)))], ['2026-02-21', '2026-03-01']);
+    var J17e=JSON.parse(JSON.stringify(state)); J17e.settings.trackFrom='2026-02-01'; sanitizeState(J17e); var J17f=JSON.parse(JSON.stringify(J17e)); J17f.bills[0].created='bad'; J17f.settings.trackFrom='nope'; sanitizeState(J17f);
+    eq('v13.17 (e) export / import carries the added date and trackFrom as-is (bad values dropped)', [J17e.bills[0].created, J17e.settings.trackFrom, J17f.bills[0].created||'', J17f.settings.trackFrom===undefined], ['2026-01-01', '2026-02-01', '', true]);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{}); var bk1=bkDue(); state.settings.lastExportAt='2026-02-25'; var bk2=bkDue(); state.settings.lastExportAt='2026-02-10'; var bk3=bkDue(); state.settings.bkSnoozeTo='2026-03-10'; var bk4=bkDue(); state.bills[0].example=true; var bk5=bkDue();
     var J15=JSON.parse(JSON.stringify(state)); J15.settings.lastExportAt='nope'; J15.settings.tipA2HS='x'; sanitizeState(J15);
     eq('v13.15 backup nudge: never exported → nudge; Export within 14 days → none; 14+ days → nudge; Not now snoozes; examples only → none; bad values dropped', [bk1, bk2, bk3, bk4, bk5, 'lastExportAt' in J15.settings, 'tipA2HS' in J15.settings, J15.settings.bkSnoozeTo], [true, false, true, false, false, false, false, '2026-03-10']);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{checkAmt:'1000', payExample:true}); var pe1=payEntered(); delete state.settings.payExample; var pe2=payEntered(); var csp=(document.querySelector('meta[http-equiv="Content-Security-Policy"]')||{}).content||'';
     eq('v13.15 "Enter your pay" ticks only for pay you entered; CSP blocks other sites', [pe1, pe2, /default-src 'self'/.test(csp), /connect-src 'self'/.test(csp), /https?:|\*/.test(csp)], [false, true, true, true, false]);
-    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-04'}],{planCash:'300'}); var rb=state.bills[0], pbR=planBehind().list.filter(function(y){ return y.b.id==='rt'; })[0], A14=asideSet(rb), sT=schedTxt(rb,A14), lbt=lateBillTxt('Rent', 50000, dayNum(2026,2,4), false);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-04'}],{planCash:'300'}); var rb=state.bills[0], pbR=planBehind().need.filter(function(y){ return y.b.id==='rt'; })[0], A14=asideSet(rb), sT=schedTxt(rb,A14), lbt=lateBillTxt('Rent', 50000, dayNum(2026,2,4), false);
     eq('v13.14 remaining amount says so: "$500.00 more needed (of $800.00)"; Late line shows full + set aside + more needed; behind schedule = what is still needed when no payday is left before the due date', [moreTxt(rb,50000), isRemC(rb,80000), isRemC(rb,50000), /Rent \$800\.00 due Mar 4 · \$300\.00 set aside · <b>\$500\.00 more needed<\/b>/.test(lbt), pbR&&pbR.c, /\$500\.00 more needed by Mar 4/.test(sT), /behind schedule/.test(sT)], ['$500.00 more needed (of $800.00)', false, true, true, 50000, true, false]);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'100'}); var bh=beHTML(catchupPlan());
     eq('Paycheck needed: weekly cost of all bills first, bare minimum second with its note, no gold', [bh.indexOf('Weekly cost of all bills (prorated)')>0 && bh.indexOf('Weekly cost')<bh.indexOf('Bare minimum to stay on time'), /doesn’t fully set aside for bigger bills/.test(bh), /gold/.test(bh)], [true, true, false]);

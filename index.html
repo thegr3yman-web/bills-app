@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; manifest-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="app-version" content="v13.17">
+<meta name="app-version" content="v13.18">
 <title>Bills</title>
 <meta name="description" content="Recurring bills, prorated to any period.">
 <meta name="color-scheme" content="light dark">
@@ -540,7 +540,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <button type="button" class="mfLink" id="allBillsBtn">📋 All bills <span>›</span></button>
   </section>
 
-  <div class="foot">Not financial advice · Your data stays on this device. · v13.17</div>
+  <div class="foot">Not financial advice · Your data stays on this device. · v13.18</div>
 </div>
 
 <button class="fab" id="addBtn" aria-label="Add bill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="fabL">Add bill</span></button>
@@ -1798,8 +1798,8 @@ function planSinking(cs, t, pool, pre){ // per-row pieces so every dated bigger 
     var need=(+j.b.amount||0)-exFor(j.b,j.D)-j.saved; if (need<=0.0049) return;
     var idx=[]; ext.forEach(function(c,q){ if (c<=j.D && (j.p0==null || c>j.p0) && (j.st==null || c>=j.st)) idx.push(q); });
     if (!idx.length) idx=[0];
-    var piece=need/idx.length;
-    idx.forEach(function(q){ if (q<n) out[q].push({b:j.b, amt:piece, prio:3, p0:3, date:j.D, due:j.D, kind:'aside', sink:true, of_n:idx.length}); });
+    var NC=Math.round(need*100), K=idx.length, base=Math.floor(NC/K);   // v13.18: whole-cent shares that add up exactly; the leftover cents go on the last share before the due date
+    idx.forEach(function(q,jx){ if (q<n) out[q].push({b:j.b, amt:(jx===K-1?NC-base*(K-1):base)/100, prio:3, p0:3, date:j.D, due:j.D, kind:'aside', sink:true, of_n:K}); });
   });
   out.used=Math.round(used*100)/100; out.saved={}; jobs.forEach(function(j){ if (j.saved>0.004) out.saved[j.b.id+'|'+j.D]=j.saved; });
   return out;
@@ -1929,7 +1929,7 @@ function planCents(P){
     var fl=r.pays.map(function(x){ var k=ccKey(x), a=(cum[k]||0)+x.amt, ac=Math.round(a*100+1e-7), v=ac-(cumC[k]||0); cum[k]=a; cumC[k]=ac; keys.push(k); return v; });
     var rem=T-fl.reduce(function(a,b){ return a+b; },0);
     if (rem!==0 && fl.length){ var cand=fl.map(function(v,q){ return q; }).filter(function(q){ return lastRow[keys[q]]>i && fl[q]+rem>=0; });
-      if (!cand.length) cand=fl.map(function(v,q){ return q; }).filter(function(q){ return fl[q]+rem>=0; });
+      if (!cand.length) cand=fl.map(function(v,q){ return q; }).filter(function(q){ var x=r.pays[q]; return fl[q]+rem>=0 && (isSpend(x.b) || !(x.kind==='aside'||x.kind==='bill')); });   // v13.18: never take a cent off a bill's last piece (it would end 1–2¢ short = "late"); if nothing fits, the check's kept money absorbs it
       if (cand.length){ cand.sort(function(a,b){ return fl[b]-fl[a]; }); var q=cand[0]; fl[q]+=rem; cumC[keys[q]]+=rem; } }
     var rc=r.rolled.map(function(x){ return c(x.amt); }); left=start+inc+add-fl.reduce(function(a,b){ return a+b; },0); prevL=left;
     return {start:start, inc:inc, add:add, left:left, pays:fl, rolled:rc, paid:fl.reduce(function(a,b){ return a+b; },0), rolledSum:rc.reduce(function(a,b){ return a+b; },0)};
@@ -3585,6 +3585,10 @@ function selfTest(){ var keep={state:state, today:__today, st:__st, sx:spendX}, 
     eq('v13.16 usual check: every unlogged check uses it (forecast, break-even "your check"); (you set) beats it, logged checks are real; empty = history estimate', [e0, M16.amt, M16.usual, estWhy(M16), cr16.filter(function(r){ return r.kind==='est'; }).every(function(r){ return Math.abs(r.inc-950)<0.01; }), be16, x16, l16], [1250, 950, true, 'your usual check', true, 950, 900, 1250]);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'0'}); var o16=spendEdges(), A16=awayInfo(o16), h16=awayHTML(o16);
     eq('v13.16 "$X away from a late bill" = T2 (none when T2 is 0 or a bill is late/short)', [!!o16&&o16.kind, A16?A16.c===spendT2(o16):null, /away from a late bill|No late bill even if/.test(h16), awayInfo({kind:'late'}), awayInfo({kind:'ok', T2:0, cap:100})], ['ok', true, true, null, null]);
+    use([{id:'rt',name:'Rent',amount:100.01,freq:'monthly',due:'2026-03-27'},{id:'d1',name:'Card',amount:200,freq:'monthly',due:'2026-03-26'},{id:'d2',name:'Ins',amount:50.05,freq:'monthly',due:'2026-03-25'},{id:'gr',name:'Food',amount:33.33,freq:'weekly',due:'2026-03-05'}],{planCash:'0', checkAmt:'333.33'});
+    var P18=catchupPlan(), C18=ccModel(P18), sh18=[]; P18.rows.forEach(function(r){ r.pays.forEach(function(x){ if (x.b.id==='rt'&&x.kind==='aside'&&x.due===dayNum(2026,2,27)) sh18.push(Math.round(x.amt*100)); }); });
+    var ok18=C18.occ.filter(function(o){ return o.aside&&o.dated; }).every(function(o){ var c=Math.round(o.pieces.reduce(function(a,q){ return a+q.amt; },0)*100); return c===Math.round(((+o.b.amount)-((P18.sinkSaved||{})[o.b.id+'|'+o.due]||0))*100); });
+    eq('v13.18 set-aside shares are whole cents that add up exactly to the bill (leftover cents on the last share before the due date); the shown pieces add up too, so nothing on schedule shows late from a 1–2¢ gap', [sh18.join('+'), ok18, C18.nLate], ['2500+2500+2500+2501', true, 0]);
     var J17={bills:[{id:'constructor',name:'A',amount:5,freq:'__proto__',unit:'toString',spreadUnit:'__proto__',due:'2026-03-20'},{id:'toString',name:'B',amount:6,freq:'toString',due:'2026-03-21'},{id:'__proto__',name:'C',amount:7,freq:'constructor',due:'2026-03-22'}],settings:{payFreq:'__proto__',incomes:[{id:'hasOwnProperty',name:'i',amount:1,freq:'toString'}],checks:[{id:'valueOf',date:'2026-02-27',amount:500}]}}; sanitizeState(J17);
     var ok17=true; try{ use(J17.bills,{payFreq:'__proto__'}); statusModel(); planBehind(); basicDueModel(); catchupPlan(); }catch(e){ ok17=e.message; }
     eq('v13.17 #1 imported enums/ids are whitelisted: __proto__ / toString / constructor become monthly / months / none / new ids / weekly, and the app still works', [J17.bills.map(function(b){ return b.freq+'/'+b.unit+'/'+(b.spreadUnit||'')+'/'+(['constructor','toString','__proto__'].indexOf(b.id)<0); }).join(' '), J17.settings.payFreq, J17.settings.incomes[0].freq, ['hasOwnProperty','valueOf'].indexOf(J17.settings.incomes[0].id)+['hasOwnProperty','valueOf'].indexOf(J17.settings.checks[0].id), hasOwn(FREQ_LABEL,'toString'), hasOwn(FREQ_LABEL,'monthly'), ok17], ['monthly/months/none/true monthly/months//true monthly/months//true', 'weekly', 'monthly', -2, false, true, true]);

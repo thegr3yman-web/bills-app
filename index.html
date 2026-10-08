@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="v13.12">
+<meta name="app-version" content="v13.13">
 <title>Bills</title>
 <meta name="description" content="Recurring bills, prorated to any period.">
 <meta name="color-scheme" content="light dark">
@@ -302,7 +302,7 @@ textarea{min-height:70px;resize:vertical}
 .peSt{font-size:14px;font-weight:600;margin:4px 0 2px}.peOk{color:var(--ok)}.peLate{color:var(--danger)}.peUnk{color:var(--muted);font-weight:500}.peAmb{color:#b45309}
 .ccseg{margin:2px 0 8px}.ccsum{padding:12px 14px;margin-top:8px}.ccsum .ccst{font-size:16px}.ccsum .ccn{font-size:13px;color:var(--muted);margin-top:6px}
 .cci{display:inline-block;min-width:14px;height:14px;border-radius:7px;font-style:normal;font-size:9px;line-height:14px;font-weight:800;color:#fff;text-align:center;padding:0 3px;vertical-align:middle}
-.cci.cpd{background:var(--accent)}.cci.cok{background:var(--ok)}.cci.clt{background:#d11f26}.cci.cpl{background:transparent;color:#d11f26;box-shadow:inset 0 0 0 1.5px #d11f26}.cci.cgd{background:#d4a017}.cci.cnd{background:#d11f26;border-radius:4px}
+.cci.cpd{background:var(--accent)}.cci.cok{background:var(--ok)}.cci.cnc{background:#d97706}.ncAmb{color:#b45309;font-weight:700}.spNc{margin:4px 0 6px;padding:7px 10px;border-radius:10px;background:rgba(245,158,11,.14);color:#92400e;font-size:13px;font-weight:600;line-height:1.35}.pi.bPiNc span,.pi.rnc{color:#b45309}.schB{color:#b45309;font-weight:600}.payNudge{margin:6px 0 2px}.cci.clt{background:#d11f26}.cci.cpl{background:transparent;color:#d11f26;box-shadow:inset 0 0 0 1.5px #d11f26}.cci.cgd{background:#d4a017}.cci.cnd{background:#d11f26;border-radius:4px}
 .cell .ccm{display:flex;flex-wrap:wrap;gap:2px;margin:2px 0 1px}.cell .ccl{font-size:9.5px;line-height:12px;font-weight:800;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ccl.ccpay{color:var(--ok)}.ccl.ccla{color:#d11f26}.ccl.ccneed{color:#fff;background:#d11f26;border-radius:4px;padding:0 2px;margin-top:1px}.ccl.ccgd{color:#a87900}
 .cell.ccgold{box-shadow:inset 0 0 0 2px #d4a017;background:rgba(245,215,110,.25)}.cell.ccgold.today{box-shadow:inset 0 0 0 2px #d4a017,inset 0 0 0 4px var(--accent)}.cell.ccoff{opacity:.5}
@@ -536,7 +536,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <button type="button" class="mfLink" id="allBillsBtn">📋 All bills <span>›</span></button>
   </section>
 
-  <div class="foot">Stored on this device and browser only — Safari and the Home Screen app can keep separate copies. Use Settings → Export / Import to back up or move your data. · v13.12</div>
+  <div class="foot">Stored on this device and browser only — Safari and the Home Screen app can keep separate copies. Use Settings → Export / Import to back up or move your data. · v13.13</div>
 </div>
 
 <button class="fab" id="addBtn" aria-label="Add bill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="fabL">Add bill</span></button>
@@ -702,7 +702,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
       <button class="btn" id="impJson">⬆️ Import backup (JSON)</button>
       <button class="btn" id="expCsv">📄 Export CSV</button>
       <button class="btn" id="expChecks">💵 Export checks CSV</button>
-      <div class="toggle" style="margin:0"><span>Warn me when I’m off plan<small style="display:block;color:var(--muted);font-size:12px;font-weight:400">Strict: amber whenever a bill’s set-aside is behind schedule. Relaxed: green while no bill will be late (Payday still shows amber).</small></span><select id="planWarn" aria-label="Warn me when I’m off plan"><option value="strict">Strict</option><option value="relaxed">Relaxed</option></select></div>
+      <div class="toggle" style="margin:0"><span>Warn me when I’m behind schedule<small style="display:block;color:var(--muted);font-size:12px;font-weight:400">Strict: amber whenever a bill’s set-aside is behind schedule. Relaxed: green while no bill will be late (Payday still shows amber).</small></span><select id="planWarn" aria-label="Warn me when I’m behind schedule"><option value="strict">Strict</option><option value="relaxed">Relaxed</option></select></div>
       <div class="toggle" style="margin:0"><span>Week starts Monday</span><label class="switch"><input type="checkbox" id="weekMon" aria-label="Week starts Monday"><span></span></label></div>
       <div class="toggle" style="margin:0"><span>Show inactive bills</span><label class="switch"><input type="checkbox" id="showInactive" checked aria-label="Show inactive bills"><span></span></label></div>
       <button class="btn danger" id="wipeAll">Clear all bills &amp; income</button>
@@ -993,6 +993,7 @@ function sanitizeState(d){
   if (['cal','pay','avg','due'].indexOf(st.mode)<0) st.mode='pay';
   st.weekMon=!!st.weekMon; if (st.planWarn!=null && st.planWarn!=='relaxed') delete st.planWarn; st.showInactive=st.showInactive!==false;
   if (st.behindFrom!=null) st.behindFrom=cleanISO(st.behindFrom);
+  if (st.planCashAt!=null){ st.planCashAt=cleanISO(st.planCashAt); if (!st.planCashAt) delete st.planCashAt; }
   if (d.__ticks && st.ticksGone!==2) st.ticksGone=1; delete d.__ticks; if (st.ticksGone!=null && st.ticksGone!==1 && st.ticksGone!==2) delete st.ticksGone;
   if (st.expect!=null){ st.expect=Array.isArray(st.expect)?st.expect.filter(function(e){ return e&&parseISO(e.date)&&isFinite(parseFloat(e.amt))&&parseFloat(e.amt)>=0; }).map(function(e){ return {date:e.date, amt:Math.round(parseFloat(e.amt)*100)/100}; }).slice(0,120):[]; if (!st.expect.length) delete st.expect; }
   if (st.payFirst!=null){ st.payFirst=Array.isArray(st.payFirst)?st.payFirst.filter(function(e){ return e&&typeof e.id==='string'&&isFinite(e.n); }).map(function(e){ return {id:cleanId(e.id), n:Math.round(+e.n)}; }).slice(0,50):[]; if (!st.payFirst.length) delete st.payFirst; }
@@ -1712,7 +1713,9 @@ function isDirectB(b){ return !isOne(b) && timesPerYear(b)>=(PAY[state.settings.
 /* what's set aside for a bill's next due date vs its amount (Spending / paid-every-check bills: only the extras logged this cycle) */
 function asideSet(b){ if (b.active===false || isEnded(b)) return null; var w=exWin(b); if (!w) return null; if (w.D==null && !isDirectB(b)) return null;   /* v13.11a: no date + less often than every check → no "this week" bar */ var amt=+b.amount||0, s=(w.D==null||isDirectB(b))?exAmt(b):savedFor(b,w.D); return {D:w.D, set:Math.max(0,Math.min(amt,s)), amt:amt}; }
 function asideBarHTML(b, n){ var A=asideSet(b); if (!A||!(A.amt>0)) return ''; if (n!=null && A.D!=null && isDirectB(b) && n!==A.D) return '';   /* one bar per bill: only on the occurrence it's for */ var pct=Math.round(Math.min(1,A.set/A.amt)*1000)/10;
-  return '<div class="abar'+(pct>=100?' full':'')+'" aria-hidden="true"><i style="width:'+pct+'%"></i></div><div class="abarT">'+money(A.set)+' of '+money(A.amt)+' set aside'+(A.D!=null?' for '+fmtShort(A.D):(state.settings.payFreq||'weekly')==='weekly'?' this week':' this pay period')+'</div>'; }
+  return '<div class="abar'+(pct>=100?' full':'')+'" aria-hidden="true"><i style="width:'+pct+'%"></i></div><div class="abarT">'+money(A.set)+' of '+money(A.amt)+' set aside'+(A.D!=null?' for '+fmtShort(A.D):(state.settings.payFreq||'weekly')==='weekly'?' this week':' this pay period')+schedTxt(b,A)+'</div>'; }
+function schedTxt(b,A){ if (A.D==null || isDirectB(b) || isOne(b) || isSpend(b) || A.set>=A.amt-0.004) return ''; var B=planBehind(), x=B.list.filter(function(y){ return y.b.id===b.id && y.due===A.D; })[0];   // v13.13: a missed set-aside step is "behind schedule", never late or due
+  if (!(moneyFor().cashSet)) return ''; return x?' · <span class="schB">'+mc(x.c)+' behind schedule</span>':' · on schedule'; }
 function pfList(){ return Array.isArray(state.settings.payFirst)?state.settings.payFirst:[]; }
 function pfRank(id,D){ var L=pfList(); for (var i=0;i<L.length;i++) if (L[i].id===id && L[i].n===D) return i; return -1; }
 function prunePayFirst(){ var L=pfList(); if (!L.length) return; var K=L.filter(function(e){ var b=billById(e.id); return b && b.active!==false && !isPaidOcc(b,e.n); });
@@ -1893,7 +1896,7 @@ function planCents(P){
   _pcM={P:P, v:rows}; return rows;
 }
 function mc(n){ return money(n/100); }
-function rollSplitC(P, L, cents){ var s={late:0,gap:0,save:0}; L.forEach(function(x,k){ s[rollKind(P,x)]+=cents[k]; }); return {late:s.late/100, gap:s.gap/100, save:s.save/100}; }
+function rollSplitC(P, L, cents){ var s={late:0,gap:0,save:0,nc:0}; L.forEach(function(x,k){ s[rollKind(P,x)]+=cents[k]; }); return {late:s.late/100, gap:s.gap/100, save:s.save/100, nc:s.nc/100}; }
 /* ---- set-aside jars (display only), in cents: follows the plan's set-aside payments per bill & due date, so the running total
    of money set aside is visible until the bill it's for takes it. Opening = the ticked set-asides planSinking counted. ---- */
 function planJars(P){
@@ -1952,22 +1955,23 @@ function ccModel(P){
   P.rows.forEach(function(r,i){ pay[r.date]={i:i, r:r};
     r.pays.forEach(function(x,q){ var o=get(x), d=x.pre0?t:r.date, p={i:i, date:d, amt:PC[i].pays[q]/100, x:x, o:o}; o.pieces.push(p); o.paid+=p.amt; o.lastDate=d; (dayPieces[d]=dayPieces[d]||[]).push(p); }); });
   if (last) last.rolled.forEach(function(x,q){ get(x).open+=PC[P.rows.length-1].rolled[q]/100; });
-  var due={}, paidLate={}, need={}, nOk=0, nLate=0;
+  var due={}, paidLate={}, need={}, nOk=0, nLate=0, nNc=0;
   ord.forEach(function(o){
     o.total=o.paid+o.open;
     if (o.aside && o.dated && parseISO(o.b.due)){ var goal=(+o.b.amount||0)-((P.sinkSaved||{})[o.b.id+'|'+o.due]||0); if (goal>o.total+0.005){ o.open+=0; o.short=goal-o.total; o.total=goal; } }   // savings for a bill due after the forecast: the rest is set aside from later checks
     o.done=(o.open<=0.005&&!o.short)?o.lastDate:null;
     if (o.done!=null){ o.late=Math.max(0,o.done-o.due); o.st=o.late>0?'late':'ontime'; } else o.st=o.due<=end?'late':'saving';
+    o.spend=isSpend(o.b); if (o.spend && o.st==='late'){ o.st='nc'; var byD=o.pieces.reduce(function(a,p){ return a+(p.date<=o.due?p.amt:0); },0); o.ncC=Math.max(0,Math.round((o.total-byD)*100)); }   // v13.13: spending is never late — it is "not covered"
     var np=o.pieces.length;
     o.pieces.forEach(function(p,j){ var x=p.x, fin=j===np-1&&o.done!=null;
       p.type = x.kind==='short'?'shortfall'+(fin&&np>1?' (final part)':np>1?' (part)':'') : x.kind==='repay'?'repayment' : x.kind==='aside' ? (fin?'set aside for bills — fully set aside':'set aside for bills') :
         (np===1&&o.done!=null)?'full payment' : fin?'final payment' : 'partial payment';
       p.late=!!(x.pre||p.date>o.due); });
-    if (o.dated){ (due[o.due]=due[o.due]||[]).push(o); if (o.st==='ontime') nOk++; else if (o.st==='late') nLate++; if (o.st==='late'&&o.done!=null) (paidLate[o.done]=paidLate[o.done]||[]).push(o); }
+    if (o.dated){ (due[o.due]=due[o.due]||[]).push(o); if (o.spend){ if (o.st==='nc') nNc++; } else if (o.st==='ontime') nOk++; else if (o.st==='late') nLate++; if (o.st==='late'&&o.done!=null) (paidLate[o.done]=paidLate[o.done]||[]).push(o); }
   });
   ((P.needs&&P.needs.list)||[]).forEach(function(n){ (need[n.by]=need[n.by]||[]).push(n); });
   var gold=P.status==='caught'&&!P.caughtNow?P.caughtDate:null;
-  var m={occ:ord, byKey:O, due:due, paidLate:paidLate, need:need, pay:pay, dayPieces:dayPieces, gold:gold, end:end, start:t, nOk:nOk, nLate:nLate};
+  var m={occ:ord, byKey:O, due:due, paidLate:paidLate, need:need, pay:pay, dayPieces:dayPieces, gold:gold, end:end, start:t, nOk:nOk, nLate:nLate, nNc:nNc};
   ccMemo={P:P, m:m}; return m;
 }
 function ccStatusHTML(P){
@@ -1982,9 +1986,9 @@ function renderCatchCal(M){
   else { var N=(P.needs&&P.needs.list)||[], r0=P.rows[0], rl=P.rows[P.rows.length-1];
     $('ccSum').innerHTML='<div class="ccst" id="ccStatus">'+ccStatusHTML(P)+'</div>'+(isBasic()?infoL('catchup'):'')+
       (N.length?'<div class="needs" style="margin-top:6px">'+N.map(needLine).join('')+'</div>':'')+(function(){ var HX=headsUp(), B=HX?HX.list.filter(function(x){return x.beyond;}):[]; return B.length?'<div class="needs ccHU" id="ccHeads">'+huText(B[0])+(B.length>1?' <span class="huMore">+'+(B.length-1)+' more</span>':'')+' <small>(after this view)</small></div>':''; })()+
-      '<div class="ccn" id="ccCounts">'+(r0?(isBasic()?'Next '+P.rows.length+' paychecks ('+fmtShort(P.rows[0].date)+' – '+fmtShort(C.end)+'): ':'8-paycheck forecast '+fmtShort(t)+' – '+fmtShort(C.end)+': '):'')+'<b style="color:var(--ok)">'+C.nOk+' will be paid on time</b> · <b class="billtot">'+C.nLate+' late</b>. Tap a day for details.</div>'+
+      '<div class="ccn" id="ccCounts">'+(r0?(isBasic()?'Next '+P.rows.length+' paychecks ('+fmtShort(P.rows[0].date)+' – '+fmtShort(C.end)+'): ':'8-paycheck forecast '+fmtShort(t)+' – '+fmtShort(C.end)+': '):'')+'<b style="color:var(--ok)">'+C.nOk+' will be paid on time</b> · <b class="billtot">'+C.nLate+' late</b>'+(C.nNc?' · <b class="ncAmb" id="ccNc">'+C.nNc+' spending '+((state.settings.payFreq||'weekly')==='weekly'?'week':'item')+(C.nNc===1?'':'s')+' not covered</b>':'')+'. Tap a day for details.</div>'+
       (P.cashSet?'':'<div class="cashAsk" id="ccCashAsk">Cash on hand'+(isBasic()?infoB('cash'):'')+' not entered — assuming the '+money(P.held)+' due before your next check. Enter it '+(isBasic()?'at the top':'on the Bills due tab')+'.</div>'+(isBasic()?infoL('cash'):'')); }
-  $('ccLegend').innerHTML='<span class="lgMode"><b>By paycheck</b>&nbsp;— which check pays each bill, and whether it’s on time</span><span><i class="cci cpd">$</i>payday (tap to see what it pays)</span><span><i class="cci cok">✓</i>will be paid on time — on its due date</span><span><i class="cci ctd">!</i>due today (late from tomorrow if unpaid)</span><span><i class="cci clt">✗</i>late — on its due date</span>'+
+  $('ccLegend').innerHTML='<span class="lgMode"><b>By paycheck</b>&nbsp;— which check pays each bill, and whether it’s on time</span><span><i class="cci cpd">$</i>payday (tap to see what it pays)</span><span><i class="cci cok">✓</i>will be paid on time — on its due date</span><span><i class="cci ctd">!</i>due today (late from tomorrow if unpaid)</span><span><i class="cci clt">✗</i>late — on its due date</span><span><i class="cci cnc">○</i>spending not covered '+ncWord()+' (never counted as late)</span>'+
     '<span><i class="cci cpl">●</i>day a late bill is fully paid</span><span><i class="cci cgd">★</i>'+(isBasic()?'caught up from here':'projected catch-up')+'</span><span><i class="cci cnd">Need</i>extra money needed by that date</span><span style="color:var(--muted);font-weight:500">'+(isBasic()?'Read-only: your payday plan laid out by date. Nothing here changes your bills.':'Read-only: the Catch-up plan from the Bills due tab, laid out by date. Nothing here changes your bills or the plan.')+'</span>';
   var startDow=s.weekMon?1:0, firstDow=new Date(M.s*864e5).getUTCDay(), gs=M.s-((firstDow-startDow+7)%7), dows=[];
   for (var i=0;i<7;i++) dows.push(DOW[(startDow+i)%7]);
@@ -1995,14 +1999,14 @@ function renderCatchCal(M){
       var o=fromDayNum(d);
       if (d<M.s||d>M.e){ h+='<div class="cell out"><div class="dn">'+o.d+'</div></div>'; continue; }
       if (!C){ h+='<div class="cell ccell'+(d===t?' today':'')+'"><div class="dn">'+o.d+'</div></div>'; continue; }
-      var L=C.due[d]||[], ok=L.filter(function(x){return x.st==='ontime';}), lt=L.filter(function(x){return x.st==='late';}), pl=C.paidLate[d]||[], py=C.pay[d], nd=C.need[d]||[], gd=C.gold===d,
+      var L=C.due[d]||[], ok=L.filter(function(x){return x.st==='ontime'&&!x.spend;}), lt=L.filter(function(x){return x.st==='late';}), nc=L.filter(function(x){return x.st==='nc';}), pl=C.paidLate[d]||[], py=C.pay[d], nd=C.need[d]||[], gd=C.gold===d,
         tdu=d===t?L.filter(function(x){ return x.grp==='bill' && !isPaidOcc(x.b,d); }).length:0,
-        chips=(py?'<i class="cci cpd" title="payday">$</i>':'')+(tdu?'<i class="cci ctd" title="due today">!</i>':'')+(ok.length?'<i class="cci cok" title="will be paid on time">✓'+(ok.length>1?ok.length:'')+'</i>':'')+(lt.length?'<i class="cci clt" title="late">✗'+(lt.length>1?lt.length:'')+'</i>':'')+(pl.length?'<i class="cci cpl" title="late bill fully paid">●</i>':'')+(gd?'<i class="cci cgd" title="projected catch-up">★</i>':''),
+        chips=(py?'<i class="cci cpd" title="payday">$</i>':'')+(tdu?'<i class="cci ctd" title="due today">!</i>':'')+(ok.length?'<i class="cci cok" title="will be paid on time">✓'+(ok.length>1?ok.length:'')+'</i>':'')+(lt.length?'<i class="cci clt" title="late">✗'+(lt.length>1?lt.length:'')+'</i>':'')+(nc.length?'<i class="cci cnc" title="spending not covered">○'+(nc.length>1?nc.length:'')+'</i>':'')+(pl.length?'<i class="cci cpl" title="late bill fully paid">●</i>':'')+(gd?'<i class="cci cgd" title="projected catch-up">★</i>':''),
         lines=(py?'<div class="ccl ccpay">+'+abbr(py.r.inc)+'</div>':'')+
           (pl.length?'<div class="ccl ccla">'+(function(){ var mx=Math.max.apply(null,pl.map(function(x){return x.late;})); return mx+'d late'; })()+'</div>':'')+
           (nd.length?'<div class="ccl ccneed">Need '+abbr(Math.max.apply(null,nd.map(function(x){return x.amt;})))+'</div>':'')+
           (gd?'<div class="ccl ccgd">caught up</div>':''),
-        any=chips||lines, lbl=fmtDay(d,true)+(py?', payday':'')+(ok.length?', '+ok.length+' will be paid on time':'')+(lt.length?', '+lt.length+' late':'')+(gd?(isBasic()?', caught up from here':', projected catch-up'):'')+(tdu?', '+tdu+' due today':'');
+        any=chips||lines, lbl=fmtDay(d,true)+(py?', payday':'')+(ok.length?', '+ok.length+' will be paid on time':'')+(lt.length?', '+lt.length+' late':'')+(nc.length?', '+nc.length+' spending not covered':'')+(gd?(isBasic()?', caught up from here':', projected catch-up'):'')+(tdu?', '+tdu+' due today':'');
       h+='<button class="cell ccell'+(d===t?' today':'')+(gd?' ccgold':'')+(d>C.end||d<t&&!any?' ccoff':'')+'" data-cday="'+d+'" aria-label="'+esc(lbl)+'"><div class="dn">'+o.d+'</div>'+(chips?'<div class="ccm">'+chips+'</div>':'')+lines+'</button>';
     }
     h+='</div>';
@@ -2018,7 +2022,7 @@ function openCatchDay(d){
   var nd=C.need[d]||[]; if (nd.length) h+='<div class="needs" id="ccNeedDay">'+nd.map(needLine).join('')+'</div>';
   function pline(p){ var o=p.o, x=p.x;
     if (p.i!=null && P.rows[p.i] && !x.pre0 && pieceIsSave(P.rows[p.i], x, t)) return '<div class="dline ccdl ccSv" data-sv="'+Math.round(p.amt*100)+'"><span>'+esc(o.b.name)+' <small>'+saveTxt(Math.round(p.amt*100), x)+'</small></span></div>';
-    return '<div class="dline ccdl"><span>'+esc(o.b.name)+' <small>'+(o.dated?'due '+fmtShort(o.due)+' · ':'')+p.type+(p.late?' · <b class="billtot">late</b>':'')+(x.of?' · '+money(x.amt)+' of '+money(x.of):'')+'</small></span><b class="billtot">'+money(p.amt)+'</b></div>'; }
+    return '<div class="dline ccdl"><span>'+esc(o.b.name)+' <small>'+(o.dated?(o.spend?'for ':'due ')+fmtShort(o.due)+' · ':'')+p.type+(p.late?(o.spend?' · <b class="ncAmb">not covered by then</b>':' · <b class="billtot">late</b>'):'')+(x.of?' · '+money(x.amt)+' of '+money(x.of):'')+'</small></span><b class="billtot">'+money(p.amt)+'</b></div>'; }
   var py=C.pay[d], pre=(C.dayPieces[d]||[]).filter(function(p){return p.x.pre0;});
   if (pre.length) h+='<div class="dsec" id="ccCashDay"><h4><span>Paid from cash on hand</span><span>'+money(pre.reduce(function(a,p){return a+p.amt;},0))+'</span></h4>'+pre.map(pline).join('')+'</div>';
   if (py){ var r=py.r, ps=(C.dayPieces[d]||[]).filter(function(p){return !p.x.pre0&&p.i===py.i;});
@@ -2026,13 +2030,14 @@ function openCatchDay(d){
       (ps.length?ps.map(pline).join(''):'<div class="hint" style="margin:4px 0">Nothing to pay from this check.</div>')+
       (PC0[py.i].rolledSum>0?'<div class="dline"><span>Not covered — carried to the next check</span><b class="billtot">'+mc(PC0[py.i].rolledSum)+'</b></div>':'<div class="dline"><span>Left over — rolls to the next check</span><b class="pos-t">'+mc(PC0[py.i].left)+'</b></div>')+'</div>'; }
   var L=(C.due[d]||[]);
-  if (L.length) h+='<div class="dsec" id="ccDueDay"><h4><span>Due this day</span><span>'+money(L.reduce(function(a,o){return a+o.total;},0))+'</span></h4>'+L.map(function(o){
+  if (L.length) h+='<div class="dsec" id="ccDueDay"><h4><span>'+(L.some(function(o){ return !o.spend; })?'Due this day':'Spending for this day')+'</span><span>'+money(L.reduce(function(a,o){return a+o.total;},0))+'</span></h4>'+L.map(function(o){
       var how=o.aside?'will be fully set aside':'will be paid', by=function(n){ return n===t&&o.pieces.some(function(p){return p.x.pre0;})&&!C.pay[n]?'from cash on hand':'from the '+fmtShort(n)+' check'; };
-      var txt = o.st==='ontime' ? '<span style="color:var(--ok)">✓ on time — '+how+' '+by(o.done)+'</span>' :
+      var txt = o.spend ? (o.st==='nc' ? '<span class="ncAmb">'+money(o.ncC/100)+' not covered '+ncWord()+(o.done!=null?' — caught up '+by(o.done):'')+'</span>' : o.done!=null ? '<span style="color:var(--ok)">✓ covered '+by(o.done)+'</span>' : '<span style="color:var(--muted)">spending</span>') :
+        o.st==='ontime' ? '<span style="color:var(--ok)">✓ on time — '+how+' '+by(o.done)+'</span>' :
         o.st==='late' ? (o.done!=null ? '<span class="billtot">✗ late — fully paid '+fmtShort(o.done)+' ('+ccDays(o.late)+' late)</span>' : '<span class="billtot">✗ late — not fully paid within the forecast ('+money(o.total-o.paid)+' still owed after '+fmtShort(P.rows[P.rows.length-1].date)+')</span>') :
         '<span style="color:var(--muted)">setting aside in progress — '+money(o.paid)+' of '+money(o.total)+' set aside by '+fmtShort(P.rows[P.rows.length-1].date)+'</span>';
       var tk=(+o.b.amount||0)-o.total; 
-      return '<div class="dline ccdl"><span>'+esc(o.b.name)+(o.grp==='short'?' <small>(shortfall)</small>':o.grp==='repay'?' <small>(repay)</small>':'')+'<small>'+txt+(o.grp==='bill'&&tk>0.005&&tk<(+o.b.amount||0)?' · '+money(tk)+' already set aside':'')+'</small></span><b>'+money(o.total)+'</b></div>'; }).join('')+'</div>';
+      return '<div class="dline ccdl"><span>'+esc(o.b.name)+(o.spend?' <small>(spending)</small>':'')+(o.grp==='short'?' <small>(shortfall)</small>':o.grp==='repay'?' <small>(repay)</small>':'')+'<small>'+txt+(o.grp==='bill'&&tk>0.005&&tk<(+o.b.amount||0)?' · '+money(tk)+' already set aside':'')+'</small></span><b>'+money(o.total)+'</b></div>'; }).join('')+'</div>';
   var pl=C.paidLate[d]||[];
   if (pl.length) h+='<div class="dsec" id="ccPaidLateDay"><h4><span>● Late bills fully paid this day</span><span></span></h4>'+pl.map(function(o){ return '<div class="dline ccdl"><span>'+esc(o.b.name)+'<small>was due '+fmtShort(o.due)+' — <b class="billtot">'+ccDays(o.late)+' late</b></small></span><b class="billtot">'+money(o.total)+'</b></div>'; }).join('')+'</div>';
   if (!h) h='<div class="hint" style="margin:6px 0">'+(isBasic()?'Nothing planned on this day'+(d>C.end?' (it’s after the next '+P.rows.length+' paychecks, which end '+fmtShort(C.end)+')':''):'Nothing in the catch-up plan on this day'+(d>C.end?' (it’s after the 8-paycheck forecast, which ends '+fmtShort(C.end)+')':''))+'.</div>';
@@ -2040,9 +2045,9 @@ function openCatchDay(d){
   $('dayBody').innerHTML=h; openSheet('dayScrim');
 }
 /* rollover kinds for the check rows: late (red), funding gap before the due date (amber), setting aside in progress / on track (neutral) */
-function rollKind(P,x){ if (x.pre) return 'late'; var C=ccModel(P), o=C&&C.byKey[ccKey(x)]; return o&&o.st==='late'?'gap':'save'; }
-function rollSplit(P,L){ var s={late:0,gap:0,save:0}; L.forEach(function(x){ s[rollKind(P,x)]+=x.amt; }); return s; }
-function rollTxt(s){ var a=[]; if (s.late>0.004) a.push('<b class="billtot">'+money(s.late)+' late</b>'); if (s.gap>0.004) a.push('<b class="gapt">'+money(s.gap)+' funding gap</b>'); if (s.save>0.004) a.push('<span class="savt">'+money(s.save)+' setting aside in progress</span>'); return a.join(' + '); }
+function rollKind(P,x){ var C=ccModel(P), o=C&&C.byKey[ccKey(x)]; if (isSpend(x.b) && (x.pre || (o&&o.st==='nc'))) return 'nc'; if (x.pre) return 'late'; return o&&o.st==='late'?'gap':'save'; }   // v13.13: uncovered spending = 'nc' (amber), never late
+function rollSplit(P,L){ var s={late:0,gap:0,save:0,nc:0}; L.forEach(function(x){ s[rollKind(P,x)]+=x.amt; }); return s; }
+function rollTxt(s){ var a=[]; if (s.late>0.004) a.push('<b class="billtot">'+money(s.late)+' late</b>'); if (s.nc>0.004) a.push('<b class="ncAmb">'+money(s.nc)+' spending not covered</b>'); if (s.gap>0.004) a.push('<b class="gapt">'+money(s.gap)+' funding gap</b>'); if (s.save>0.004) a.push('<span class="savt">'+money(s.save)+' setting aside in progress</span>'); return a.join(' + '); }
 /* first row where something goes late (or, at the last check, catch-up items are still unpaid) */
 function firstLateRow(P){ for (var i=0;i<P.rows.length;i++){ if (P.rows[i].wentLate.length) return i; } return P.unfinished.length?P.rows.length-1:-1; }
 function lateAt(P,i){ return P.rows[i].wentLate.length>0 || (i===P.rows.length-1 && P.unfinished.length>0); }
@@ -2091,6 +2096,7 @@ function headsUp(){ var t=todayNum(); if (_inc.headsT===t && _inc.heads!==undefi
 function lateLeftBy(P, by){ if (!P||!P.late||!P.late.length) return 0; var t=todayNum(), LT=P.late.reduce(function(a,x){ return a+x.amt; },0), pd=0;
   P.rows.forEach(function(r){ r.pays.forEach(function(x){ if (!x.src || (x.src.k==='short'&&!x.late)) return; if (x.pre0 ? by>=t : r.date<=by) pd+=x.amt; }); });
   return Math.max(0, Math.round((LT-pd)*100)/100); }
+function ncWord(){ return (state.settings.payFreq||'weekly')==='weekly'?'this week':'this pay period'; }   /* v13.13: spending is never late, only "not covered" for its week / pay period */
 function perWord(){ return (state.settings.payFreq||'weekly')==='weekly'?'a week':'a paycheck'; }
 function huText(x){ return 'Heads up: short <b>'+money(x.own)+'</b> by '+fmtShort(x.by)+(x.perCheck!=null?' · set aside <b>'+money(x.perCheck)+'</b> more '+perWord()+' to fix it':' · add it now'); }
 /* minimum extra cash, added by each check, that keeps everything due by then from going late (cumulative) */
@@ -2131,7 +2137,7 @@ function planBreakEven(P){
   return {ongoing:a.amt, ongoingInfo:a, catchup:reach?hi/100:null, current:cur};
 }
 function planLabel(it){ var n=esc(it.b.name);
-  var base = it.kind==='aside' ? 'set aside for '+n+(it.sink?' (due '+fmtShort(it.due)+')':'')+(it.rolled?' (carried over)':'') : it.kind==='repay' ? 'repay '+n+' (borrowed set-aside money)' : it.kind==='short' ? n+' (short'+(it.late?', late — due '+fmtShort(it.due):'')+')' : it.kind==='late' ? (it.pre ? n+' (late — due '+fmtShort(it.due)+')' : n+' · due '+fmtShort(it.due)) : n+(parseISO(it.b.due)&&!it.rolled?' · due '+fmtShort(it.date):'');
+  var base = it.kind==='aside' ? 'set aside for '+n+(it.sink?' (due '+fmtShort(it.due)+')':'')+(it.rolled?' (carried over)':'') : it.kind==='repay' ? 'repay '+n+' (borrowed set-aside money)' : it.kind==='short' ? n+' (short'+(it.late?', late — due '+fmtShort(it.due):'')+')' : isSpend(it.b) ? n+' · for '+fmtShort(it.kind==='late'?it.due:it.date)+(it.pre&&!it.ncCarry?' (not covered then)':'') : it.kind==='late' ? (it.pre ? n+' (late — due '+fmtShort(it.due)+')' : n+' · due '+fmtShort(it.due)) : n+(parseISO(it.b.due)&&!it.rolled?' · due '+fmtShort(it.date):'');   /* v13.13: spending has no due date and is never late */
   return base+(it.of?' — '+money(it.amt)+' of '+money(it.of):''); }
 function diffTxt(cur, need){ var d=cur-need; return Math.abs(d)<0.005?'Your check is exactly even':(d<0?'Your check is <b class="billtot">'+money(-d)+' short</b>':'Your check is <b class="beOkT">'+money(d)+' over</b>'); }   // v13.12: green, not gold (gold = Profit only)
 function beHTML(P){ var B=P.be; if(!B) return ''; var A=B.ongoingInfo, okA=B.current>=B.ongoing-0.005, okB=beOk(P);
@@ -2158,7 +2164,7 @@ function projTxt(n){ return n<=todayNum() ? 'with today’s check' : fmtShort(n)
 function namesTxt(names){ var sp=[], bl=[]; (names||[]).forEach(function(nm){ var b=state.bills.filter(function(b){ return b.name===nm; })[0]; (b&&isSpend(b)?sp:bl).push(nm); });   // v13.10b: weekly spending is never a late bill
   return (bl.length?'keep '+esc(bl.join(', '))+' from going late':'')+(sp.length?(bl.length?'; ':'')+'cover '+esc(sp.join(', '))+' (spending)':''); }
 function needLine(x){ var P=catchupPlan(), k=P?P.rows.filter(function(r){ return r.date<=x.by; }).length:0, per=k?Math.ceil(Math.round(x.amt*100)/k)/100:null;   // v13.10: every warning ends with the fix
-  return '<div class="needL">Need <b>'+money(x.amt)+'</b> more by '+fmtShort(x.by)+' to '+(x.finish?'finish catching up on '+esc(x.names.join(', ')):namesTxt(x.names))+' · '+(per!=null?'':'needed before your next check · ')+'set aside <b>'+money(per!=null?per:x.amt)+'</b> more '+perWord()+'</div>'; }
+  return '<div class="needL">Need <b>'+money(x.amt)+'</b> more by '+fmtShort(x.by)+' to '+(x.finish?'finish catching up on '+esc(x.names.join(', ')):namesTxt(x.names))+' · '+(per!=null?'set aside <b>'+money(per)+'</b> more '+perWord():'before your next check')+'</div>'; }
 function needTotal(N, id){ return N.list.length ? '<div class="needT"'+(id?' id="'+id+'"':'')+'>Extra needed over the next 8 weeks: <b>'+money(N.total)+'</b></div>' : ''; }
 function trioHTML(P){ var d = P.status==='none'||P.caughtNow ? '<b id="trioDate" style="color:var(--ok)">Now ✓</b>' : P.status==='caught' ? '<b id="trioDate">'+projTxt(P.caughtDate)+'</b>' : '<b id="trioDate" class="billtot">Not in 8 wks</b>';
   return '<div class="planTrio"><div><small>Available now</small><b id="trioAvail">'+money(P.cash)+'</b></div><div><small>Still needed</small><b id="trioNeed" class="'+(Math.max(P.stillNeeded,(P.needs&&P.needs.total)||0)>0.005?'billtot':'')+'">'+money(Math.max(P.stillNeeded,(P.needs&&P.needs.total)||0))+'</b></div><div><small>Projected catch-up</small>'+d+'</div></div>'; }
@@ -2179,6 +2185,7 @@ function planRowHTML(P, r, i){
   } else {
     var inOwed=Cp.rolledSum/100, inCash=C.start/100;
     if (inOwed>0.004){ var RI=rollSplitC(P,prev.rolled,Cp.rolled);
+      if (RI.nc>0.004) h+='<div class="rline"><span class="ncAmb">Rolled in from last check: spending not covered</span><b>'+money(RI.nc)+'</b></div>';
       if (RI.late>0.004) h+='<div class="rline owed"><span>Rolled in from last check: late (still owed)</span><b>'+money(RI.late)+'</b></div><div class="rnote owed">owed — included in the list below</div>';
       if (RI.gap>0.004) h+='<div class="rline gap"><span>Rolled in from last check: funding gap</span><b>'+money(RI.gap)+'</b></div><div class="rnote gap">not late yet — needs funding before its due date (in the list below)</div>';
       if (RI.save>0.004) h+='<div class="rline sav"><span>Rolled in from last check: setting aside still to do</span><b>'+money(RI.save)+'</b></div><div class="rnote">not owed — setting aside in progress, on track (in the list below)</div>'; }
@@ -2191,12 +2198,12 @@ function planRowHTML(P, r, i){
   if (!r.pays.length) h+='<div class="pi"><span>nothing to pay</span><b>'+money(0)+'</b></div>';
   g.forEach(function(L,k){ if(!L.length) return; var tot=L.reduce(function(a,x){return a+x.c;},0);
     h+='<div class="rgrp"><span>'+PLAN_CATS[k]+'</span><b class="billtot">'+mc(tot)+'</b></div>'+
-      L.map(function(x){ return '<div class="pi"><span>'+planLabel(x)+(x.pre0?' <small class="pmut">(from cash on hand, before the check arrives)</small>':'')+(x.preLate?' <small class="owed">— late (due before this check)</small>':'')+'</span><b class="billtot">'+mc(x.c)+'</b></div>'; }).join(''); });
+      L.map(function(x){ return '<div class="pi"><span>'+planLabel(x)+(x.pre0?' <small class="pmut">(from cash on hand, before the check arrives)</small>':'')+(x.preLate?(isSpend(x.b)?' <small class="ncAmb">— needed before this check</small>':' <small class="owed">— late (due before this check)</small>'):'')+'</span><b class="billtot">'+mc(x.c)+'</b></div>'; }).join(''); });
   if (r.rolled.length) h+='<div class="rhead">Carried to the next check</div>'+r.rolled.map(function(x,q){ var k=rollKind(P,x);
-      return '<div class="pi '+(k==='late'?'roll':k==='gap'?'rgap':'rsav')+'"><span>'+planLabel(Object.assign({},x,{rolled:false},x.wentLate?{pre:false}:{}))+
-        (k==='late'?(x.wentLate?' — goes late':' — late, still owed'):k==='gap'?' — funding gap: won’t be fully funded by '+fmtShort(x.due):(x.kind==='aside'?' — setting aside in progress, on track':x.kind==='short'||x.kind==='repay'?' — owed, due '+fmtShort(x.due)+', on track':' — not due yet, on track'))+'</span><b>'+mc(C.rolled[q])+'</b></div>'; }).join('');
+      return '<div class="pi '+(k==='nc'?'rnc':k==='late'?'roll':k==='gap'?'rgap':'rsav')+'"><span>'+planLabel(Object.assign({},x,{rolled:false,ncCarry:k==='nc'},x.wentLate?{pre:false}:{}))+
+        (k==='nc'?' — not covered, carried to the next check':k==='late'?(x.wentLate?' — goes late':' — late, still owed'):k==='gap'?' — funding gap: won’t be fully funded by '+fmtShort(x.due):(x.kind==='aside'?' — setting aside in progress, on track':x.kind==='short'||x.kind==='repay'?' — owed, due '+fmtShort(x.due)+', on track':' — not due yet, on track'))+'</span><b>'+mc(C.rolled[q])+'</b></div>'; }).join('');
   // 3) rolls out
-  h+= owedOut ? (RO.late>0.004?'<div class="rout owed"><span>Rolls to next check: late (still owed)</span><b>'+money(RO.late)+'</b></div><div class="rnote owed">still owed — carried into the next check</div>':'')+
+  h+= owedOut ? (RO.nc>0.004?'<div class="rout"><span class="ncAmb">Rolls to next check: spending not covered</span><b>'+money(RO.nc)+'</b></div>':'')+(RO.late>0.004?'<div class="rout owed"><span>Rolls to next check: late (still owed)</span><b>'+money(RO.late)+'</b></div><div class="rnote owed">still owed — carried into the next check</div>':'')+
                 (RO.gap>0.004?'<div class="rout gap"><span>Rolls to next check: funding gap</span><b>'+money(RO.gap)+'</b></div><div class="rnote gap">not late yet — must be funded before its due date</div>':'')+
                 (RO.save>0.004?'<div class="rout sav"><span>Rolls to next check: setting aside still to do</span><b>'+money(RO.save)+'</b></div><div class="rnote">not owed — the next checks keep setting aside for it</div>':'')
               : '<div class="rout"><span>Rolls to next check: leftover cash</span><b>'+mc(C.left)+'</b></div><div class="rnote">available for the next check’s bills</div>';
@@ -2209,7 +2216,7 @@ function planHTML(P, id){
   var st = P.status==='none' ? '<b style="color:var(--ok)">Nothing behind ✓</b>' : P.caughtNow ? '<b style="color:var(--ok)" id="planCaughtNow">You’re caught up ✓</b>' : P.status==='caught' ? 'Projected catch-up: <b id="planCaught">'+projTxt(P.caughtDate)+'</b> <small style="color:var(--muted)">(if checks come in as planned)</small>' : '<b class="billtot" id="planShort">Not caught up within 8 weeks — short '+money(P.shortEnd)+'</b>';
   var r0=P.rows[0], k0=r0?(r0.kind==='logged'?'logged '+money(r0.inc):r0.kind==='est'?'estimated '+money(r0.inc)+' — '+estWhy(periodMainIncome(payPeriodAt(r0.date))):money(r0.inc)+(logMode()?'':' from your pay settings')):'';
   h+=trioHTML(P)+'<div class="planStart"><label for="planCash">Cash on hand now <small class="pmut" style="display:block;font-weight:400">all the money you have, including money set aside for bills</small></label><input id="planCash" inputmode="decimal" placeholder="$0" value="'+(P.cashSet?esc(String(P.held)):'')+'"></div>'+
-    cashPromptHTML(P,'planCashAsk')+'<div class="planStartL" id="planStartL">Starting with <b>'+money(P.cash)+'</b>'+(!P.cashSet?' <small class="pmut">(Cash on hand not entered — assuming what’s due before your next check)</small>':P.earmarked>0.004?' <small class="pmut">('+money(P.held)+' on hand − '+money(P.earmarked)+' already set aside for bills)</small>':'')+(r0?' · next check '+fmtShort(r0.date)+' ('+k0+')':'')+'</div>'+
+    cashPromptHTML(P,'planCashAsk')+(isBasic()?'':payNudgeHTML(true))+'<div class="planStartL" id="planStartL">Starting with <b>'+money(P.cash)+'</b>'+(!P.cashSet?' <small class="pmut">(Cash on hand not entered — assuming what’s due before your next check)</small>':P.earmarked>0.004?' <small class="pmut">('+money(P.held)+' on hand − '+money(P.earmarked)+' already set aside for bills)</small>':'')+(r0?' · next check '+fmtShort(r0.date)+' ('+k0+')':'')+'</div>'+
     (P.settled?'<div class="hint" style="margin:2px 2px 6px">This '+(state.settings.payFreq==='weekly'?'week':'pay period')+'’s check'+(P.received!=null?' ('+fmtShort(P.received)+')':'')+' is counted as already spent on what you’ve checked off. Enter all the cash you have now above — the app splits it across your bills by due date.</div>':'')+
     '<div class="pst">'+st+'</div>'+beHTML(P)+needsHTML(P)+
     '<div class="hint" style="margin:6px 2px 8px">Each check pays ① late items &amp; overdue shortfalls (oldest first) ② bills due before the next check ③ setting aside for bills so each bigger bill is fully set aside by its due date (Money you have now is split across your bills first), and shortfalls not due yet ④ paying back borrowed set-aside money. What a check can’t cover <b class="billtot">rolls to the next check as owed</b>; money left over rolls forward as cash.</div>';
@@ -2271,18 +2278,18 @@ function profGold(){ return !(planStrict() && planState().k==='behind'); }   // 
 function profCls(){ return profGold()?'gold':'profN'; }
 function profNote(){ return profGold()?'':'<small class="profNote">'+mc(planBehind().c)+' to fully set aside</small>'; }
 function planLineHTML(o, pay){ o=o||planState(); var id=pay?'plStatePay':'plState';
-  if (o.k==='on') return '<div class="plSt plOk" id="'+id+'">On plan · every bill set aside on schedule.</div>';
+  if (o.k==='on') return '<div class="plSt plOk" id="'+id+'">On schedule · every bill’s set-aside is up to date.</div>';
   if (o.k!=='behind') return '';
-  var t='<b>'+mc(o.B.c)+'</b> behind plan · set aside <b>'+mc(o.B.per)+'</b> more '+perWord()+' to catch up.';
+  var t='<b>'+mc(o.B.c)+'</b> behind schedule · set aside <b>'+mc(o.B.per)+'</b> more '+perWord()+' to catch up.';
   if (planStrict() || pay) return '<div class="plSt plAmb" id="'+id+'">Bills still on time · '+t+'</div>';
   return '<div class="plSt plOk" id="'+id+'">Bills still on time.</div><div class="plNote" id="'+id+'Note">'+t+'</div>'; }
 function statusHTML(o){ var P=o.P, pw=perWord();
   if (o.kind==='unknown') return 'Bills status unknown — enter money you have now';
   if (o.kind==='ok') return (o.Hm&&o.Hm.L&&o.Hm.L.length?'After paying what’s late, bills are covered through <b>':'You’re OK through <b>')+fmtShort(o.through)+'</b>';   // v13.10c: never "Late" next to "You're OK"
-  var pre=o.per==null&&o.nx!=null&&o.nx>todayNum(), fix=' · set aside <b>'+money(o.per!=null?o.per:o.amt)+'</b> more '+pw;   // v13.10c: every Short ends with the fix
-  if (!o.nc && notCoveredModel().length) return 'Short <b>'+money(o.amt)+'</b>: you choose what waits'+(pre?' · needed before your '+fmtShort(o.nx)+' check':'')+fix;
+  var pre=o.per==null&&o.nx!=null&&o.nx>todayNum(), fix=pre?' · needed by '+fmtShort(o.by)+', before your next check':' · set aside <b>'+money(o.per!=null?o.per:o.amt)+'</b> more '+pw;   // v13.13: no "more a week" when the money is needed before the next check   // v13.10c: every Short ends with the fix
+  if (!o.nc && notCoveredModel().length) return 'Short <b>'+money(o.amt)+'</b>: you choose what waits'+fix;
   if (o.kind==='nc') return ncText(P);
-  return 'Short <b>'+money(o.amt)+'</b> by '+fmtShort(o.by)+(pre?' (before your '+fmtShort(o.nx)+' check)':'')+fix; }
+  return 'Short <b>'+money(o.amt)+'</b>'+(pre?'':' by '+fmtShort(o.by))+fix; }
 function statusSub(o){ var P=o.P, s=[];
   if (o.kind==='unknown') return '';
   if (o.kind==='short' && !o.nc && o.names&&o.names.length){ var sp=[], bl=[]; o.names.forEach(function(nm){ var b=state.bills.filter(function(b){ return b.name===nm; })[0]; (b&&isSpend(b)?sp:bl).push(nm); });   // v13.10: weekly spending is never called a late bill
@@ -2290,7 +2297,7 @@ function statusSub(o){ var P=o.P, s=[];
   if (o.more) s.push('+'+o.more+' more later');
   if (o.NC) s.push(ncText(P)+(o.nc?' — that’s what still isn’t paid or set aside at the end':' even with every check as planned'));
   else if (o.kind==='ok' && P.status==='caught' && !P.caughtNow && P.caughtDate!=null) s.push('late bills paid off '+(P.caughtDate<=todayNum()?'with today’s check':'by '+fmtShort(P.caughtDate))+' if checks come in as planned');
-  var ps=o.kind==='ok'?planState():null;   // v13.12: plan state (On plan / behind plan) instead of a generic "on time"
+  var ps=o.kind==='ok'?planState():null;   // v13.12: plan state (on schedule / behind schedule) instead of a generic "on time"
   if (ps && (ps.k==='on'||ps.k==='behind')){ if (!(isBasic() && (spendEdges()||{}).kind==='ok')) s.push(planLineHTML(ps).replace(/<div /g,'<span ').replace(/<\/div>/g,'</span>').replace(/<\/span><span/g,'</span> <span')); }   // the spend box right below says it (once)
   else if (o.kind==='ok') s.push('every bill paid on time if checks come in as planned');
   return s.join(' · '); }
@@ -2308,7 +2315,7 @@ function basicHeadHTML(onDue){
     if (!P.cashSet || bCashEdit){ var ask='<div class="bAsk" id="bAsk"><label for="bCash">'+(P.cashSet?'Money you have now':'How much do you have right now?')+'</label>'+infoB('cash')+infoL('cash')+'<small>All your money right now (bank + wallet). The app splits it across your bills by due date — that’s what’s already set aside.'+(P.cashSet?'':' Until you enter it, your bills status is unknown.')+'</small><div class="bAskR"><input id="bCash" inputmode="decimal" placeholder="$0" value="'+esc(bCashErr?bCashErr.v:(P.cashSet?String(P.held):''))+'"><button type="button" id="bCashSave">OK</button></div>'+(bCashErr?'<div class="bErr" id="bCashErr" role="alert">'+esc(bCashErr.m)+'</div>':'')+'</div>';
       if (!P.cashSet) h=ask+h; else h+=ask; }   // v13.10: blank → the question stays at the top until it's filled
     if (state.settings.ticksGone===1) h='<div class="bAsk" id="ticksNote" role="status">Paid ticks are gone — the app now splits Money you have now across your bills. <div class="bAskR"><button type="button" id="ticksOk">OK</button></div></div>'+h;
-    else if (P.cashSet) h+='<div class="bS" id="bCashLine">Money you have now: '+money(P.held)+' · <button type="button" id="bCashChg">change</button></div>';
+    else if (P.cashSet) h+='<div class="bS" id="bCashLine">Money you have now: '+money(P.held)+' · <button type="button" id="bCashChg">change</button></div>'+payNudgeHTML();
     h+=exLineHTML(P);   // v13.11
     if (L.length && !onDue){ var K=bOpen.headLate?L.length:Math.min(L.length, L.length>4?3:4), rest=L.slice(K);
       h+='<div class="bLate" id="bLate"><div class="bLt">Late</div>'+L.slice(0,K).map(function(x){ return '<div class="bLr"><span>'+esc(x.b.name)+' <small>'+lateMeta(x)+'</small></span><b>'+mc(x.c)+'</b></div>'; }).join('')+
@@ -2324,7 +2331,7 @@ function basicNextHTML(){
   var KL=K.bills.filter(function(g){ return g.late&&g.due<t&&!g.repay; }), lateC=KL.reduce(function(a,g){ return a+g.c; },0); K={bills:K.bills.filter(function(g){ return KL.indexOf(g)<0; }), save:K.save};   // v13.11: late bills are listed once (in the head)
   if (lateC) h+='<div class="pi bPiLate" data-pc="'+lateC+'"><span>toward the late bills above</span><b class="billtot">'+mc(lateC)+'</b></div>';
   h+= (K.bills.length||K.save.length) ? K.bills.map(function(g){ var x=g.x;
-      return '<div class="pi'+(g.late?' bPiLate':'')+'" data-pc="'+g.c+'"><span>'+(g.repay?'repay '+esc(g.b.name)+' (borrowed set-aside money)':esc(g.b.name)+(g.late?(g.due<t?' (late — was due ':isSpend(g.b)?' (not covered — needed ':' (will be late — due ')+fmtShort(g.due)+')':' · due '+fmtShort(g.due)))+(g.pre0?' <small class="pmut">(from money you have now)</small>'+infoB('cash'):'')+'</span><b class="'+(g.late?'billtot':'')+'">'+mc(g.c)+'</b></div>'; }).join('')+
+      return '<div class="pi'+(g.late?(isSpend(g.b)?' bPiNc':' bPiLate'):'')+'" data-pc="'+g.c+'"><span>'+(g.repay?'repay '+esc(g.b.name)+' (borrowed set-aside money)':esc(g.b.name)+(g.late?(isSpend(g.b)?' (not covered '+ncWord()+' — for ':g.due<t?' (late — was due ':' (will be late — due ')+fmtShort(g.due)+')':' · due '+fmtShort(g.due)))+(g.pre0?' <small class="pmut">(from money you have now)</small>'+infoB('cash'):'')+'</span><b class="'+(g.late?'billtot':'')+'">'+mc(g.c)+'</b></div>'; }).join('')+
       K.save.map(function(g){ return '<div class="pi bPiSav" data-sv="'+g.c+'"><span>'+esc(g.b.name)+' <small>'+saveTxt(g.c,g)+'</small></span></div>'; }).join('') : '<div class="pi"><span>nothing to pay</span></div>';
   var HU=headsUp(), HL=(HU&&HU.list)||[], nl=HL.filter(function(x){return x.row===0;})[0]||HL.filter(function(x){return !x.beyond;})[0]||null;
   if (nl) h+='<div class="needs" id="bNeed">'+needLine(Object.assign({},nl,{amt:nl.own}))+(nl.checks?'<div class="needL">Set aside <b>'+money(nl.perCheck)+'</b> more '+perWord()+' to fix it'+(nl.lateIn>0.004?' (after paying what’s late)':'')+'</div>':'')+'</div>';
@@ -2463,7 +2470,7 @@ function ckCardHTML(){ var R=ckRows(); if (!R) return '';
   return h; }
 function ckItems(x){ var K=x.K, t=todayNum();
   var b=function(g){ var sk=!g.late&&!g.repay&&!isOne(g.b)&&g.due>=t;
-    return '<div class="fcLi" data-pc="'+g.c+'"><span>'+esc(g.b.name)+' <small>'+(g.repay?'repay borrowed set-aside money':g.late?(g.due<t?'late — was due ':isSpend(g.b)?'not covered — needed ':'will be late — due ')+fmtShort(g.due):'due '+fmtShort(g.due))+(g.pre0?' · from money you have now':'')+'</small></span><b>'+mc(g.c)+'</b>'+(sk?'<button type="button" class="skipB" data-skip="'+esc(g.b.id)+'" data-skn="'+g.due+'" aria-label="Skip this one ($0): '+esc(g.b.name)+'">Skip</button>':'')+'</div>'; };
+    return '<div class="fcLi" data-pc="'+g.c+'"><span>'+esc(g.b.name)+' <small>'+(g.repay?'repay borrowed set-aside money':g.late?(isSpend(g.b)?'<span class="ncAmb">not covered '+ncWord()+'</span> — for ':g.due<t?'late — was due ':'will be late — due ')+fmtShort(g.due):'due '+fmtShort(g.due))+(g.pre0?' · from money you have now':'')+'</small></span><b>'+mc(g.c)+'</b>'+(sk?'<button type="button" class="skipB" data-skip="'+esc(g.b.id)+'" data-skn="'+g.due+'" aria-label="Skip this one ($0): '+esc(g.b.name)+'">Skip</button>':'')+'</div>'; };
   var r=x.r, SK=[]; enabledBills().forEach(function(bb){ (bb.skipped||[]).forEach(function(iso){ var n=parseISO(iso)?dueNum({due:iso}):null; if (n!=null&&n>=r.ws&&n<=r.we) SK.push({b:bb, n:n}); }); });
   var s=function(g){ return '<div class="fcLi fcSv" data-sv="'+g.c+'"><span>'+esc(g.b.name)+' <small>'+saveTxt(g.c,g)+'</small></span></div>'; };
   return (K.bills.length?'<div class="fcLh">Bills · '+mc(K.billsC)+'</div>'+K.bills.map(b).join(''):'')+(SK.length?SK.map(skipRowHTML).join(''):'')+(K.save.length?'<div class="fcLh">Set aside this payday · '+mc(K.saveC)+'</div>'+K.save.map(s).join(''):''); }
@@ -2531,7 +2538,10 @@ function tcpRowHTML(o, T, t){ var b=o.b, open=o.due.filter(function(d){ return !
   var x={b:b, n:pick?pick.n:null, done:!!(pick&&!open)};
   if (pick) return bRow(x,{kind:'b-tcp', data:'data-bp="'+esc(b.id)+'" data-n="'+pick.n+'"', meta:parts.join(' · '), amt:one&&!o.c?null:mc(o.c)});
   return bRow(x,{kind:'b-tcp b-sav', noChk:true, meta:parts.join(' · '), amt:one?null:mc(o.c)}); }
-function spendLineHTML(D){ if (!D.spend.length) return ''; var h='', st=D.spend.reduce(function(a,x){ return a+(x.done||x.skipped?0:Math.round(x.amt*100)); },0), names=D.spend.map(function(x){ return esc(x.b.name); }).filter(function(v,i,a){ return a.indexOf(v)===i; });
+function spendNcHTML(){ var P=catchupPlan(), C=P&&P.cashSet?ccModel(P):null; if (!C) return ''; var W=payPeriodAt(todayNum()), m={}, L=[];
+  C.occ.forEach(function(o){ if (o.st!=='nc' || !(o.ncC>0) || o.due<W.s || o.due>W.e) return; if (!m[o.b.id]){ m[o.b.id]={nm:o.b.name, c:0}; L.push(m[o.b.id]); } m[o.b.id].c+=o.ncC; });
+  return L.length?'<div class="spNc" id="spNc" role="status">'+L.map(function(x){ return esc(x.nm)+': '+mc(x.c)+' not covered '+ncWord(); }).join(' · ')+'</div>':''; }   // v13.13: amber, never red, never in the late count
+function spendLineHTML(D){ if (!D.spend.length) return ''; var h=spendNcHTML(), st=D.spend.reduce(function(a,x){ return a+(x.done||x.skipped?0:Math.round(x.amt*100)); },0), names=D.spend.map(function(x){ return esc(x.b.name); }).filter(function(v,i,a){ return a.indexOf(v)===i; });
   if (!state.settings.spendNoticeSeen) h+='<div class="spNote" id="spNote" role="status">Weekly items ('+names.join(', ')+') are Spending: no Paid button, never late or Short — bills get your money first, spending gets what’s left · <button type="button" id="spNoteBtn">tap to change</button></div>';
   if (!bOpen.spend) return h+'<button type="button" class="bFoldRow" data-bopen="spend" id="spFold">Spending this week · '+plural(D.spend.length,'item')+' · '+mc(st)+' <span>show ›</span></button>';
   return h+'<div class="dsec2 bSec"><h2>Spending this week</h2><span>'+mc(st)+' · '+plural(D.spend.length,'item')+'</span></div>'+D.spend.map(function(x){ return spRowHTML(x, x.skipped?'':bRow(x,{kind:'b-spend', noChk:true, meta:(x.n!=null?'for '+fmtDay(x.n):'every week'), amt:money(x.amt)})); }).join('')+'<button type="button" class="bFoldRow" data-bopen="spend" id="spFold">hide</button>'; }
@@ -2662,8 +2672,8 @@ function mfGroups(){ var M=moneyFor(), O=mfCover(), LP=longPlan(), PC=LP?planCen
   var LI={}; basicLate(catchupPlan()).forEach(function(x){ LI[x.b.id]=1; });
   return {lateIds:LI, M:M, LP:LP, PC:PC, groups:ord.map(function(k){ return G[k]; }), T:T, S:S, X:X, Y:Y}; }
 function mfRowHTML(it, D){ var x=it.x, t=todayNum(), r=it.last&&!it.last.pre0&&D.LP?D.LP.rows[it.last.i]:null;
-  var sm=(D.lateIds[x.b.id]?'<b>Next '+esc(x.b.name)+'</b> · ':'')+'due '+fmtShort(x.due)+(x.need>0.004 ? (x.saved>0.004?' · set aside '+money(x.saved):' · nothing set aside yet') : ' · fully set aside ✓');
-  var right = !it.need ? '<b class="pos-t">✓</b>' : it.unc>0 ? '<b class="billtot">'+mc(it.need)+'<small class="mfNd">not covered by '+fmtShort(x.due)+(it.unc<it.need?' ('+mc(it.unc)+' short)':'')+'</small></b>'
+  var sm=(D.lateIds[x.b.id]?'<b>Next '+esc(x.b.name)+'</b> · ':'')+(isSpend(x.b)?'spending · for ':'due ')+fmtShort(x.due)+(x.need>0.004 ? (x.saved>0.004?' · set aside '+money(x.saved):' · nothing set aside yet') : ' · fully set aside ✓');   /* v13.13: spending has no due date */
+  var sp=isSpend(x.b), right = !it.need ? '<b class="pos-t">✓</b>' : it.unc>0 ? '<b class="'+(sp?'ncAmb':'billtot')+'">'+mc(it.need)+'<small class="mfNd">'+(sp?'not covered '+ncWord():'not covered by '+fmtShort(x.due))+(it.unc<it.need?' ('+mc(it.unc)+' short)':'')+'</small></b>'
     : '<b class="mfGrey">'+mc(it.need)+'<small class="mfNd">'+(it.last&&it.last.pre0?(isBasic()?'from money you have now':'from cash on hand'):r?'from '+fmtShort(r.date)+' check':'from later checks')+'</small></b>';
   return '<div class="mfR'+(it.unc>0?' mfUnc':'')+'" data-bill="'+esc(x.b.id)+'"><div><b>'+esc(x.b.name)+'</b><small>'+sm+'</small></div>'+right+'</div>'; }
 function moneyForHTML(){ var D=mfGroups(), M=D.M, bs=isBasic(), late=lateTotC(basicLate(catchupPlan()))/100;
@@ -2774,7 +2784,7 @@ function peStatusHTML(S){ S=S||peStatusModel(); if (S.k==='none') return '';
   if (S.k==='ok'){ var ps=planState(); return '<div id="peStatus">'+(planLineHTML(ps,true)||'<div class="peSt peOk">Bills still on time.</div>')+'</div>'; }   // v13.12: Payday always shows amber when behind
   if (S.none) return '<div class="peSt peLate" id="peStatus">'+(S.ncTxt?esc(S.ncTxt)+': not every bill is paid by the end of the plan':'Late bill ahead: not every bill gets paid by its due date in this plan')+'</div>';
   if (S.nc) return '<div class="peSt peLate" id="peStatus">Not caught up: '+esc(S.name)+' <b>'+mc(S.c)+'</b> (due '+fmtShort(S.due)+') still unpaid at the end of the plan</div>';
-  if (S.spend) return '<div class="peSt peLate" id="peStatus">Not covered: '+esc(S.name)+' <b>'+mc(S.c)+'</b> (spending) needed '+fmtShort(S.due)+'</div>';
+  if (S.spend) return '<div class="peSt peAmb" id="peStatus">'+esc(S.name)+': <b>'+mc(S.c)+'</b> not covered '+ncWord()+' (spending)</div>';
   return '<div class="peSt peLate" id="peStatus">'+(S.past?'Late bill: ':'Late bill ahead: ')+esc(S.name)+' <b>'+mc(S.c)+'</b> '+(S.past?'was due ':'due ')+fmtShort(S.due)+'</div>'; }
 function payEachHTML(){ var M=payEachModel(), w=perWord()==='a week'?'week':'check';
   return '<div class="peH">Set aside for bills each payday</div>'+peStatusHTML()+'<div class="peL" id="payEachLine">Set aside from your next check: <b id="peTotal">'+mc(M.saved)+'</b>'+(M.short>0?' · <b class="peAmb" id="peShort">Behind on set-aside: '+mc(M.short)+'</b>':'')+'</div>'+
@@ -3041,7 +3051,7 @@ document.addEventListener('click',function(e){
   toast(ncMsg); var mine=ncMsg; setTimeout(function(){ if (ncMsg===mine){ ncMsg=''; var m=$('ncMsg'); if (m) m.remove(); } },8000); });
 $('ckScrim').addEventListener('click',function(e){ if(e.target===this) closeSheet('ckScrim'); });
 $('logCheckBtn').addEventListener('click',function(){ openCheck(null); });
-document.addEventListener('change',function(e){ if(e.target&&e.target.id==='planCash'){ var v=parseAmt(e.target.value); if (String(e.target.value).trim()!=='' && !(isFinite(v)&&v>=0)){ toast(amtMsg(e.target.value,true)); return; } state.settings.planCash=String(e.target.value).trim()!==''&&isFinite(v)&&v>=0?String(Math.round(v*100)/100):''; save(); render(); } });
+document.addEventListener('change',function(e){ if(e.target&&e.target.id==='planCash'){ var v=parseAmt(e.target.value); if (String(e.target.value).trim()!=='' && !(isFinite(v)&&v>=0)){ toast(amtMsg(e.target.value,true)); return; } state.settings.planCash=String(e.target.value).trim()!==''&&isFinite(v)&&v>=0?String(Math.round(v*100)/100):''; cashStamp(); save(); render(); } });
 $('payPlan').addEventListener('click',function(e){ if(e.target.closest('#goPlan')){ state.settings.mode='due'; winOffset=0; save(); render(); setTimeout(function(){ var c=$('planCard'); if(c) c.scrollIntoView({block:'start'}); },30); } });
 $('payView').addEventListener('click',function(e){ if(e.target.closest('.logCk')){ openCheck(null); return; } var r=e.target.closest('[data-ck]'); if(r) openCheck(r.dataset.ck); });
 $('expChecks').addEventListener('click',function(){
@@ -3237,9 +3247,13 @@ var bCashEdit=false;
 document.addEventListener('keydown',function(e){ var ib=e.target.closest&&e.target.closest('span.infoB'); if (ib&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); ib.click(); } });
 document.addEventListener('click',function(e){ var ib=e.target.closest('.infoB'); if(!ib) return; e.preventDefault(); e.stopPropagation(); var k=ib.dataset.info; infoOpen[k]=!infoOpen[k];
   document.querySelectorAll('[data-infol="'+k+'"]').forEach(function(el){ el.classList.toggle('hidden', !infoOpen[k]); }); document.querySelectorAll('.infoB[data-info="'+k+'"]').forEach(function(el){ el.setAttribute('aria-expanded', String(!!infoOpen[k])); }); }, true);
+function payNudge(){ var P=catchupPlan(), t=todayNum(); if (!P || !P.cashSet || !P.settled || P.received==null || P.received>t || P.received<t-3 || cashAsk) return false;   // v13.13: a check landed (logged for today or the last 3 days) and Money you have now is older than it
+  if (!mainLogs().some(function(c){ return ckNum(c)===P.received; })) return false; var a=parseISO(state.settings.planCashAt||''), at=a?dayNum(a.y,a.m,a.d):null; return at==null || at<P.received; }
+function payNudgeHTML(adv){ return payNudge()?'<div class="bS payNudge" id="payNudge" role="status"><span class="ncAmb">Payday — update Money you have now?</span> <button type="button" id="payNudgeChg">change</button> · <button type="button" id="payNudgeOk">it’s right</button></div>':''; }
+function cashStamp(){ state.settings.planCashAt=isoOf(todayNum()); }
 function bCashCommit(){ var el=$('bCash'); if(!el) return; var raw=String(el.value).trim(), v=parseAmt(raw);
   var em=amtMsg(raw,true); if (em){ bCashErr={v:raw, m:em}; bCashEdit=true; render(); return; }
-  bCashErr=''; state.settings.planCash=raw!==''?String(Math.round(v*100)/100):''; bCashEdit=false; save(); render(); }
+  bCashErr=''; state.settings.planCash=raw!==''?String(Math.round(v*100)/100):''; cashStamp(); bCashEdit=false; save(); render(); }
 function amtMsg(raw, allowBlank){ raw=String(raw==null?'':raw).trim(); if (raw==='') return allowBlank?'':'Enter an amount';
   var v=parseAmt(raw); if (!isFinite(v)) return /^\s*-/.test(raw)&&isFinite(parseAmt(raw.replace(/^\s*-/,'')))?'Can’t be negative':'Numbers only'; return v<0?'Can’t be negative':''; }
 function bToggle(k){ bOpen[k]=!bOpen[k]; render(); }
@@ -3263,7 +3277,7 @@ document.addEventListener('click',function(e){ var k=e.target.closest('[data-ski
 $('allBillsBtn').addEventListener('click',function(){ $('abList').innerHTML=allBillsHTML(); openSheet('abScrim'); });
 document.addEventListener('click',function(e){ if (e.target.closest('.abOpen')){ $('abList').innerHTML=allBillsHTML(); openSheet('abScrim'); return; }
   if (e.target.closest('#nxLog')){ openCheck(null); return; }
-  if (e.target.closest('#cashAskYes')){ var ca=cashAsk; cashAsk=null; if (ca){ if (ca.key) cashPaidLog[ca.key]=ca.d; if (ca.ck){ var ck0=checksAll().find(function(x){ return x.id===ca.ck.id; }); if (ck0) ck0.cashAdded=ca.ck.amt; } if (ca.unkey) delete cashPaidLog[ca.unkey]; state.settings.planCash=String(Math.max(0,Math.round(ca.v*100)/100)); save(); toast('Money you have now: '+money(ca.v)); } render(); return; }
+  if (e.target.closest('#cashAskYes')){ var ca=cashAsk; cashAsk=null; if (ca){ if (ca.key) cashPaidLog[ca.key]=ca.d; if (ca.ck){ var ck0=checksAll().find(function(x){ return x.id===ca.ck.id; }); if (ck0) ck0.cashAdded=ca.ck.amt; } if (ca.unkey) delete cashPaidLog[ca.unkey]; state.settings.planCash=String(Math.max(0,Math.round(ca.v*100)/100)); cashStamp(); save(); toast('Money you have now: '+money(ca.v)); } render(); return; }
   if (e.target.closest('#cashAskNo')){ cashAsk=null; render(); } });
 /* v13.10: after paying a bill or logging a check near today, offer to update "money you have now" (only when it was entered) */
 var cashPaidLog={};   // bill|date → money taken off Money you have now when it was marked Paid (so Undo can offer it back)
@@ -3273,10 +3287,11 @@ $('abList').addEventListener('click',function(e){ var b=e.target.closest('.bill[
 $('abAdd').addEventListener('click',function(){ closeSheet('abScrim'); openEdit(null); });
 $('abClose').addEventListener('click',function(){ closeSheet('abScrim'); });
 $('abScrim').addEventListener('click',function(e){ if(e.target===this) closeSheet('abScrim'); });
+document.addEventListener('click',function(e){ if (!e.target.closest) return; if (e.target.closest('#payNudgeOk')){ cashStamp(); save(); render(); toast('OK — Money you have now stays '+money(planCash())); } else if (e.target.closest('#payNudgeChg')){ if (isBasic()){ bCashEdit=true; render(); var el=$('bCash'); if (el) el.focus(); } else { var pc=$('planCash'); if (pc){ pc.scrollIntoView({block:'center'}); pc.focus(); } } } });   // v13.13
 $('bHead').addEventListener('click',function(e){ if (e.target.closest('#bCashSave')) bCashCommit(); else if (e.target.closest('#bCashChg')){ bCashEdit=true; render(); var el=$('bCash'); if(el) el.focus(); } });
 $('bHead').addEventListener('keydown',function(e){ if (e.key==='Enter' && e.target.id==='bCash'){ e.preventDefault(); bCashCommit(); } });
 $('weekMon').addEventListener('change',function(){state.settings.weekMon=this.checked;save();render();});
-$('planWarn').addEventListener('change',function(){ if (this.value==='relaxed') state.settings.planWarn='relaxed'; else delete state.settings.planWarn; save(); render(); toast(this.value==='relaxed'?'Relaxed: green while no bill will be late':'Strict: amber whenever you’re behind plan'); });
+$('planWarn').addEventListener('change',function(){ if (this.value==='relaxed') state.settings.planWarn='relaxed'; else delete state.settings.planWarn; save(); render(); toast(this.value==='relaxed'?'Relaxed: green while no bill will be late':'Strict: amber whenever you’re behind schedule'); });
 $('showInactive').addEventListener('change',function(){state.settings.showInactive=this.checked;save();render();});
 function clearExamples(){
   var n=state.bills.filter(function(b){return b.example;}).length;
@@ -3446,10 +3461,17 @@ function selfTest(){ var keep={state:state, today:__today, st:__st, sx:spendX}, 
     restoreCheck(gone, 1); eq('…Undo (restore) brings the deleted check back and the forecast with it', [ckSnap()===d1, state.settings.checks.map(function(c){ return c.id; })], [true, ['o1','n1']]);
     var pl=function(cash, set){ use([{id:'rt',name:'Rent',amount:cash==='late'?5000:800,freq:'monthly',due:'2026-03-20'}], Object.assign({planCash:cash==='late'?'0':cash}, set||{})); var o=planState(), B=planBehind();
       return [o.k, r2(B.c/100), r2(B.per/100), profGold(), /plAmb/.test(planLineHTML()), /plNote/.test(planLineHTML()), /plAmb/.test(planLineHTML(null,true)), /to fully set aside/.test(profNote())]; };
-    eq('plan states: on plan (Rent has more than its prorated share) → green "On plan", Profit gold', pl('500'), ['on', 0, 0, true, false, false, false, false]);
-    eq('…behind plan, no bill late, Strict (default) → amber "Bills still on time · $X behind plan · set aside $Y more a week", Profit not gold + "$X to fully set aside"', pl('100'), ['behind', 100, 50, false, true, false, true, true]);
+    eq('plan states: on schedule (Rent has more than its prorated share) → green "On schedule", Profit gold', pl('500'), ['on', 0, 0, true, false, false, false, false]);
+    eq('…behind schedule, no bill late, Strict (default) → amber "Bills still on time · $X behind schedule · set aside $Y more a week", Profit not gold + "$X to fully set aside"', pl('100'), ['behind', 100, 50, false, true, false, true, true]);
     eq('…same, Relaxed → green with a grey note, Profit gold; Payday still amber', pl('100',{planWarn:'relaxed'}), ['behind', 100, 50, true, false, true, true, false]);
     eq('…a bill that will be late → "late" (red line comes from the late-bill status), never green', pl('late').slice(0,1), ['late']);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'100'}); var sb1=asideBarHTML(billById('rt')); state.settings.planCash='500'; _inc={}; var sb2=asideBarHTML(billById('rt'));
+    eq('set-aside progress says behind schedule / on schedule (never late or due)', [/\$100\.00 behind schedule/.test(sb1), /on schedule/.test(sb2), /late|behind plan/.test(sb1+sb2)], [true, true, false]);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-04'},{id:'sn',name:'Snacks',amount:40,freq:'weekly',due:'2026-03-03'}],{planCash:'0'}); var C13=ccModel(catchupPlan()), SM13=statusModel(), SH13=statusHTML(SM13);
+    eq('late count = bills that miss their real due date only; uncovered spending is counted apart (amber), never late', [C13.nLate, C13.nNc>0, C13.occ.filter(function(o){ return o.spend && o.st==='late'; }).length], [1, true, 0]);
+    eq('need before the next check: "needed by Mar 4, before your next check", never "more a week"', [/needed by Mar 4, before your next check/.test(SH13), /more a week/.test(SH13)], [true, false]);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'500', checks:[{id:'k1',date:'2026-03-02',amount:1000}]}); var nz1=payNudge(); state.settings.planCashAt='2026-03-02'; _inc={}; var nz2=payNudge(), J6=JSON.parse(JSON.stringify(state)); sanitizeState(J6);
+    eq('payday nudge: a check logged today and Money you have now older than it → nudge; updating it (or "it’s right") clears it; nothing changes by itself', [nz1, nz2, J6.settings.planCashAt, state.settings.planCash], [true, false, '2026-03-02', '500']);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'100'}); var bh=beHTML(catchupPlan());
     eq('Paycheck needed: weekly cost of all bills first, bare minimum second with its note, no gold', [bh.indexOf('Weekly cost of all bills (prorated)')>0 && bh.indexOf('Weekly cost')<bh.indexOf('Bare minimum to stay on time'), /doesn’t fully set aside for bigger bills/.test(bh), /gold/.test(bh)], [true, true, false]);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'0', expect:[{date:'2026-03-13',amt:400}]});

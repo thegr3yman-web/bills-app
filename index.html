@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="v13.14">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; manifest-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="app-version" content="v13.15">
 <title>Bills</title>
 <meta name="description" content="Recurring bills, prorated to any period.">
 <meta name="color-scheme" content="light dark">
@@ -302,7 +303,7 @@ textarea{min-height:70px;resize:vertical}
 .peSt{font-size:14px;font-weight:600;margin:4px 0 2px}.peOk{color:var(--ok)}.peLate{color:var(--danger)}.peUnk{color:var(--muted);font-weight:500}.peAmb{color:#b45309}
 .ccseg{margin:2px 0 8px}.ccsum{padding:12px 14px;margin-top:8px}.ccsum .ccst{font-size:16px}.ccsum .ccn{font-size:13px;color:var(--muted);margin-top:6px}
 .cci{display:inline-block;min-width:14px;height:14px;border-radius:7px;font-style:normal;font-size:9px;line-height:14px;font-weight:800;color:#fff;text-align:center;padding:0 3px;vertical-align:middle}
-.cci.cpd{background:var(--accent)}.cci.cok{background:var(--ok)}.cci.cnc{background:#d97706}.ncAmb{color:#b45309;font-weight:700}.spNc{margin:4px 0 6px;padding:7px 10px;border-radius:10px;background:rgba(245,158,11,.14);color:#92400e;font-size:13px;font-weight:600;line-height:1.35}.pi.bPiNc span,.pi.rnc{color:#b45309}.schB{color:#b45309;font-weight:600}.payNudge{margin:6px 0 2px}.ckPend{margin:6px 0 2px}.ckPend .ckInB{margin-left:6px;padding:5px 10px;border-radius:999px;background:var(--accent);color:#fff!important;font-weight:700;font-size:13px;border:0;min-height:30px}.ckPend.amb{color:#b45309;font-weight:600}.covT{color:var(--muted)}.meta:has(.covT){white-space:normal}.amt small.amtN,.mfNd.amtN{display:block;font-size:11px;font-weight:600;color:var(--muted)}.cci.clt{background:#d11f26}.cci.cpl{background:transparent;color:#d11f26;box-shadow:inset 0 0 0 1.5px #d11f26}.cci.cgd{background:#d4a017}.cci.cnd{background:#d11f26;border-radius:4px}
+.cci.cpd{background:var(--accent)}.cci.cok{background:var(--ok)}.cci.cnc{background:#d97706}.ncAmb{color:#b45309;font-weight:700}.spNc{margin:4px 0 6px;padding:7px 10px;border-radius:10px;background:rgba(245,158,11,.14);color:#92400e;font-size:13px;font-weight:600;line-height:1.35}.pi.bPiNc span,.pi.rnc{color:#b45309}.schB{color:#b45309;font-weight:600}.payNudge{margin:6px 0 2px}.ckPend{margin:6px 0 2px}.ckPend .ckInB{margin-left:6px;padding:5px 10px;border-radius:999px;background:var(--accent);color:#fff!important;font-weight:700;font-size:13px;border:0;min-height:30px}.ckPend.amb{color:#b45309;font-weight:600}.covT{color:var(--muted)}.bkL{margin:4px 2px 8px;font-size:13px;color:var(--muted)}.bkL button{background:none;border:0;color:var(--accent);font-weight:600;font-size:13px;padding:6px 2px;min-height:32px;cursor:pointer}#bkSet .bkL{margin:0 0 6px}.meta:has(.covT){white-space:normal}.amt small.amtN,.mfNd.amtN{display:block;font-size:11px;font-weight:600;color:var(--muted)}.cci.clt{background:#d11f26}.cci.cpl{background:transparent;color:#d11f26;box-shadow:inset 0 0 0 1.5px #d11f26}.cci.cgd{background:#d4a017}.cci.cnd{background:#d11f26;border-radius:4px}
 .cell .ccm{display:flex;flex-wrap:wrap;gap:2px;margin:2px 0 1px}.cell .ccl{font-size:9.5px;line-height:12px;font-weight:800;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ccl.ccpay{color:var(--ok)}.ccl.ccla{color:#d11f26}.ccl.ccneed{color:#fff;background:#d11f26;border-radius:4px;padding:0 2px;margin-top:1px}.ccl.ccgd{color:#a87900}
 .cell.ccgold{box-shadow:inset 0 0 0 2px #d4a017;background:rgba(245,215,110,.25)}.cell.ccgold.today{box-shadow:inset 0 0 0 2px #d4a017,inset 0 0 0 4px var(--accent)}.cell.ccoff{opacity:.5}
@@ -421,6 +422,9 @@ details.more[open]>summary::after{transform:rotate(180deg)}
   <div class="setupbar hidden" id="paySetup"><span>Add your take-home pay to see the income left after bills.</span><button type="button" class="goIncome" id="paySetupBtn">Set up my pay</button></div>
 
   <!-- CALENDAR MODE -->
+  <!-- v13.15: Get started + keep-your-data tips sit above the tabs' content (Payday and Home) -->
+  <div class="guide hidden" id="guide"><button class="x" id="guideX" aria-label="Dismiss guide">✕</button><h3>Get started</h3><ol id="guideSteps"></ol></div>
+  <div id="keepTips"></div>
   <section id="calView">
     <div class="seg ccseg" id="calModeSeg" role="group" aria-label="Calendar mode"><button type="button" data-cm="normal" aria-pressed="true">Spread out</button><button type="button" data-cm="catch" aria-pressed="false">By paycheck</button><button type="button" class="infoB" data-info="bypay" aria-label="What do Spread out and By paycheck mean?">ⓘ</button></div>
     <div class="infoL hidden" data-infol="bypay">By paycheck = which check pays each bill and whether it’s on time. Spread out = each bill’s cost spread over the days it covers.</div>
@@ -443,7 +447,6 @@ details.more[open]>summary::after{transform:rotate(180deg)}
 
   <!-- PAYDAY MODE -->
   <section id="payView" class="hidden">
-    <div class="guide hidden" id="guide"><button class="x" id="guideX" aria-label="Dismiss guide">✕</button><h3>Get started</h3><ol id="guideSteps"></ol></div>
     <button type="button" class="paySched" id="paySched" aria-label="Pay schedule — tap to change"></button>
     <div class="card bNext" id="bNext"></div>
     <div class="card total">
@@ -536,7 +539,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <button type="button" class="mfLink" id="allBillsBtn">📋 All bills <span>›</span></button>
   </section>
 
-  <div class="foot">Stored on this device and browser only — Safari and the Home Screen app can keep separate copies. Use Settings → Export / Import to back up or move your data. · v13.14</div>
+  <div class="foot">Not financial advice · Your data stays on this device. · v13.15</div>
 </div>
 
 <button class="fab" id="addBtn" aria-label="Add bill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="fabL">Add bill</span></button>
@@ -697,6 +700,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <div class="grab"></div>
     <h3><span>Settings</span><button type="button" class="iconbtn" id="menuClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></h3>
     <div class="btns">
+      <div id="bkSet"></div>
       <div class="toggle viewTop" style="margin:0"><span><b>View: <span id="viewName">Basic</span></b><small style="display:block;color:var(--muted);font-size:12px;font-weight:400">Basic = the essentials. Advanced (switch on) adds shortfall choices, Week/Month, Average costs and plan details. Numbers are the same either way.</small></span><label class="switch"><input type="checkbox" id="advView" aria-label="Advanced view"><span></span></label></div>
       <button class="btn" id="expJson">⬇️ Export backup (JSON)</button>
       <button class="btn" id="impJson">⬆️ Import backup (JSON)</button>
@@ -919,7 +923,7 @@ function colorFor(cat, cats){ var i=cats.indexOf(cat); return i<0?'#94a3b8':PALE
 
 /* ---------- state ---------- */
 var KEY='bills.app.v1';
-var state = load(), safeModeOn=/[?&]safe(=|&|$)/.test(location.search);
+var NEW_VISIT=(function(){ try{ return localStorage.getItem(KEY)===null; }catch(e){ return false; } })(), state = load(), safeModeOn=/[?&]safe(=|&|$)/.test(location.search);
 function showSafeMode(err){ safeModeOn=true; var d=document.getElementById('safeMode'); if(!d){ d=document.createElement('div'); d.id='safeMode'; document.body.appendChild(d); }
   d.setAttribute('style','position:fixed;inset:0;z-index:99;background:var(--bg,#fff);color:var(--text,#111);padding:24px 18px;overflow:auto;font:16px -apple-system,system-ui,sans-serif');
   d.innerHTML='<h2 style="margin:0 0 8px">Safe mode</h2><p>'+(err?'The app hit a problem showing your data (<code>'+esc(String(err&&err.message||err)).slice(0,160)+'</code>). ':'Recovery tools for the data stored on this device. ')+'Your data is still stored.</p>'+
@@ -994,6 +998,7 @@ function sanitizeState(d){
   st.weekMon=!!st.weekMon; if (st.planWarn!=null && st.planWarn!=='relaxed') delete st.planWarn; st.showInactive=st.showInactive!==false;
   if (st.behindFrom!=null) st.behindFrom=cleanISO(st.behindFrom);
   if (st.planCashAt!=null){ var pca=String(st.planCashAt); st.planCashAt=/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/.test(pca)&&parseISO(pca.slice(0,10))?pca:''; if (!st.planCashAt) delete st.planCashAt; }
+  ['lastExportAt','bkSnoozeTo'].forEach(function(k){ if (st[k]!=null){ st[k]=cleanISO(st[k]); if (!st[k]) delete st[k]; } }); if (st.tipA2HS!=null && st.tipA2HS!==true) delete st.tipA2HS; if (st.payExample!=null && st.payExample!==true) delete st.payExample;
   if (st.cashInc!=null){ st.cashInc=(st.cashInc&&typeof st.cashInc==='object'&&parseISO(st.cashInc.date))?{date:st.cashInc.date, yes:st.cashInc.yes===true}:null; if (!st.cashInc) delete st.cashInc; }
   if (d.__ticks && st.ticksGone!==2) st.ticksGone=1; delete d.__ticks; if (st.ticksGone!=null && st.ticksGone!==1 && st.ticksGone!==2) delete st.ticksGone;
   if (st.expect!=null){ st.expect=Array.isArray(st.expect)?st.expect.filter(function(e){ return e&&parseISO(e.date)&&isFinite(parseFloat(e.amt))&&parseFloat(e.amt)>=0; }).map(function(e){ return {date:e.date, amt:Math.round(parseFloat(e.amt)*100)/100}; }).slice(0,120):[]; if (!st.expect.length) delete st.expect; }
@@ -1019,11 +1024,12 @@ function seedExamples(){
   ];
   state.bills=g.map(function(r){ return {id:uid(), name:r[0], amount:r[1], freq:r[2], n:1, unit:'months', category:r[3], due:r[4], notes:'Example bill', active:true, example:true}; });
   var st=state.settings, tn=todayNum(), dw=new Date(tn*864e5).getUTCDay();   // v13.11: example pay too ($1,000 every Friday) so the first visit shows a working plan; "Use my own bills" clears it
-  if (!st.checkAmt && !window.__billsNoExamplePay){ st.checkAmt='1000'; st.payFreq='weekly'; st.payFreqSet=true; st.nextPay=isoOf(tn+((5-dw+7)%7||7)); }
+  if (!st.checkAmt && !window.__billsNoExamplePay){ st.checkAmt='1000'; st.payFreq='weekly'; st.payFreqSet=true; st.payExample=true; st.nextPay=isoOf(tn+((5-dw+7)%7||7)); }
   save();
 }
 if (FIRST_VISIT) seedExamples();
-state.settings.mode='pay'; // Payday is the start screen on launch
+if (NEW_VISIT) state.settings.mode='due';
+keepStorage();   // v13.15: a brand-new visitor starts on Home; everyone else keeps their last tab
 /* one-time migration (v9): everything before the current week counts as done, so unchecked history isn't shown as Behind */
 if (!state.settings.behindMigrated){ (function(){ var t=todayNum(), dw=new Date(t*864e5).getUTCDay();
   state.settings.behindFrom=isoOf(t-((dw-(state.settings.weekMon?1:0)+7)%7)); state.settings.behindMigrated=true; save(); })(); }
@@ -1064,8 +1070,10 @@ function renderInner(){
   $('exBanner').classList.toggle('hidden', !state.bills.some(function(b){return b.example;}));
   $('sortSel').value=s.sort; $('weekMon').checked=!!s.weekMon; $('planWarn').value=s.planWarn==='relaxed'?'relaxed':'strict'; $('showInactive').checked=s.showInactive!==false;
   $('paySetup').classList.toggle('hidden', hasIncome() || s.mode==='pay');
-  var own=state.bills.some(function(b){return !b.example;}), inc=hasIncome();
-  $('guide').classList.toggle('hidden', !!s.guideDismissed || s.mode!=='pay' || (isBasic() && state.bills.some(function(b){return !b.example;}) && hasIncome()));
+  var own=state.bills.some(function(b){return !b.example;}), inc=payEntered();
+  $('guide').classList.toggle('hidden', !!s.guideDismissed || (s.mode!=='pay'&&s.mode!=='due') || (isBasic() && state.bills.some(function(b){return !b.example;}) && payEntered()));
+  $('keepTips').innerHTML=s.mode==='due'?(a2hsTip()?'<div class="bkL" id="a2hsTip" role="note">Tip: Add to Home Screen so Safari keeps your data. <button type="button" id="a2hsX">Got it</button></div>':'')+(bkDue()?bkLineHTML('Home'):''):'';
+  $('bkSet').innerHTML=bkDue()?bkLineHTML('Set'):'';
   var hasEx=state.bills.some(function(b){return b.example;});
   $('guideSteps').innerHTML=[[own,'Add your bills','<button type="button" class="addBillBtn">Add</button>'],[inc,'Enter your pay','<button type="button" class="goIncome">Enter</button>'],[own&&inc,'See your payday plan','']]
     .map(function(x,i){ return '<li class="'+(x[0]?'done':'')+'"><i>'+(x[0]?'✓':(i+1))+'</i><span>'+x[1]+'</span>'+(x[0]?'':x[2])+'</li>'; }).join('');
@@ -1140,6 +1148,16 @@ function incomeYearly(){
   (st.incomes||[]).forEach(function(i){ if(i.active!==false) y+=(+i.amount||0)*timesPerYear({freq:i.freq}); });
   return y;
 }
+/* v13.15: example pay (public first visit) doesn't count as "pay entered" until you set it yourself */
+function payEntered(){ var s=state.settings; return hasIncome() && (!s.payExample || mainLogs().length>0 || (s.incomes||[]).length>0); }
+/* v13.15 keep your data: backup nudge after 14 days without an Export (Not now = 14 more days), one-time Safari tip, ask the browser to keep storage */
+function isoDayNum(v){ var a=parseISO(String(v||'').slice(0,10)); return a?dayNum(a.y,a.m,a.d):null; }
+function bkDue(){ var s=state.settings, t=todayNum(), le=isoDayNum(s.lastExportAt), sn=isoDayNum(s.bkSnoozeTo); if (!state.bills.some(function(b){ return !b.example; })) return false;
+  if (sn!=null && sn>t) return false; return le==null || t-le>=14; }
+function bkLineHTML(w){ return '<div class="bkL" id="bk'+w+'Line" role="status">Back up your bills? <button type="button" class="bkExp">Export</button> · <button type="button" class="bkX">Not now</button></div>'; }
+function a2hsTip(){ if (state.settings.tipA2HS) return false; var ua=navigator.userAgent||'', ios=/iP(hone|ad|od)/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+  var sa=navigator.standalone===true||(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches); return ios && !sa && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua); }
+function keepStorage(){ try{ if (navigator.storage && navigator.storage.persist && state.bills.some(function(b){ return !b.example; })) navigator.storage.persisted().then(function(y){ if (!y) return navigator.storage.persist(); }).catch(function(){}); }catch(e){} }
 function hasIncome(){ return incomeYearly()>0 || logMode(); }
 /* ---- paycheck log: settings.checks = [{id, date:'YYYY-MM-DD', amount, note, src}] (src '' = main paycheck, else an income id).
    Once any check is logged, income is computed per PAY PERIOD (by pay frequency): a period with logged checks uses their actual sum;
@@ -3211,7 +3229,7 @@ $('paySched').addEventListener('click',function(){ var s=state.settings, n=nextP
   $('psAmtLogged').classList.toggle('hidden', !ml.length); if (ml.length) $('psAmtLogged').textContent='Your check estimate comes from your logged checks (typical of the last 4) — log each check with “＋ Log a check”.';
   openSheet('psScrim'); });
 $('psFreq').addEventListener('change',function(){ var o=state.settings.payFreq; state.settings.payFreq=this.value; _inc={}; var n=isoOf(planChecks()[0]); state.settings.payFreq=o; _inc={}; if ($('psNext').value===psShown) { $('psNext').value=n; psShown=n; } });
-$('psSave').addEventListener('click',function(){ var s=state.settings, v=$('psNext').value, pf=$('psFreq').value; s.payFreqSet=true;
+$('psSave').addEventListener('click',function(){ var s=state.settings, v=$('psNext').value, pf=$('psFreq').value; s.payFreqSet=true; delete s.payExample;
   if (PAY[pf]) s.payFreq=pf;
   if (!mainLogs().length){ var ca=String($('checkAmt').value).trim(), cv=parseAmt(ca); if (ca!==''&&!(isFinite(cv)&&cv>0)){ toast(amtMsg(ca)); $('checkAmt').focus(); return; } s.checkAmt=ca===''?'':String(Math.round(cv*100)/100); }
   if (!v) delete s.nextPay; else if (v!==psShown || s.nextPay || !mainLogs().length) s.nextPay=v;   // only pin a date the user chose (otherwise logged checks keep setting it); with no checks logged, the shown default is pinned (v13.8c)
@@ -3358,7 +3376,10 @@ function download(name, text, type){
   a.href=url; a.download=name; document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1500);
 }
-$('expJson').addEventListener('click',function(){
+document.addEventListener('click',function(e){ if (!e.target.closest) return; if (e.target.closest('.bkExp')){ $('expJson').click(); return; }
+  if (e.target.closest('.bkX')){ state.settings.bkSnoozeTo=isoOf(todayNum()+14); save(); render(); toast('OK — I’ll remind you in 2 weeks'); return; }
+  if (e.target.closest('#a2hsX')){ state.settings.tipA2HS=true; save(); render(); } });   // v13.15
+$('expJson').addEventListener('click',function(){ state.settings.lastExportAt=isoOf(todayNum()); delete state.settings.bkSnoozeTo; keepStorage(); setTimeout(function(){ save(); render(); },0);
   download('bills-backup-'+stamp()+'.json', JSON.stringify({app:'bills',version:1,exported:new Date().toISOString(),bills:state.bills,settings:state.settings},null,2),'application/json');
   toast('Backup exported');
 });
@@ -3393,7 +3414,7 @@ $('fileIn').addEventListener('change',function(){
       if (p.settings && Array.isArray(p.settings.checks)){ var ckSeen={}; p.settings.checks=p.settings.checks.filter(function(c){ var v=c&&(typeof c.amount==='number'?c.amount:parseAmt(c.amount)); if (!(c&&parseISO(c.date)&&isFinite(v)&&v>=0)) return false; var k=c.date+'|'+(c.src||'')+'|'+Math.round(v*100); if (ckSeen[k]) return false; ckSeen[k]=1; c.__amt=v; return true; }).map(function(c){ return {id:c.id||uid(), date:c.date, amount:c.__amt, note:c.note?String(c.note):'', src:c.src?String(c.src):''}; }); }
       else if (p.settings) delete p.settings.checks;
       var ps=(p.settings&&typeof p.settings==='object'&&!Array.isArray(p.settings))?p.settings:{};
-      ['period','sort','weekMon','showInactive','dueSpan','payFreq','checkAmt','incomes','wfPeriod','behindFrom','behindKeys','behindMigrated','checks','planCash','nextPay','view','payFreqSet','fcWin','spendNoticeSeen','payFirst','expect'].forEach(function(k){ if(k in ps) state.settings[k]=ps[k]; else if (k==='checks'||k==='incomes'||k==='behindKeys') state.settings[k]=[]; else if (k==='planCash') state.settings[k]=''; else if (k==='nextPay') delete state.settings.nextPay; });
+      ['period','sort','weekMon','showInactive','dueSpan','payFreq','checkAmt','incomes','wfPeriod','behindFrom','behindKeys','behindMigrated','checks','planCash','nextPay','view','payFreqSet','fcWin','spendNoticeSeen','payFirst','expect','planCashAt','cashInc'].forEach(function(k){ if(k in ps) state.settings[k]=ps[k]; else if (k==='planCashAt'||k==='cashInc') delete state.settings[k]; else if (k==='checks'||k==='incomes'||k==='behindKeys') state.settings[k]=[]; else if (k==='planCash') state.settings[k]=''; else if (k==='nextPay') delete state.settings.nextPay; });
       sanitizeState(state);
       save(); closeSheet('menuScrim'); render(); toast('Imported '+bills.length+' bills'); });
     }catch(err){ appConfirm('Import failed', String(err&&err.message||err)+' — nothing was changed.', 'OK', null); $('cfCancel').classList.add('hidden'); }
@@ -3511,6 +3532,11 @@ function selfTest(){ var keep={state:state, today:__today, st:__st, sx:spendX}, 
     eq('"It’s in: add $X": Money you have now = current + check, stamped, confirmed for today, check dropped from the forecast (no double count), cashAdded kept for delete; round-trips', [state.settings.planCash, !!pendingCk(), q6.settled, q6[0]>dayNum(2026,2,2), checksAll()[0].cashAdded, J6.settings.cashInc, /^2026-03-02T\d\d:\d\d$/.test(J6.settings.planCashAt), r2(a0.cash+1000)===r2(a1.cash)||r2(a1.held+a1.cash)>=r2(a0.held+a0.cash+1000)-0.01, pv.cash], ['1500', false, true, true, 1000, {date:'2026-03-02', yes:true}, true, true, '500']);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'500', checks:[{id:'k1',date:'2026-03-01',amount:1000}]}); var q7=planChecks(); state.settings.planCashAt='2026-02-28'; _inc={}; var k8=pendingCk(), q8=planChecks(); var J8=JSON.parse(JSON.stringify(state)); J8.settings.planCashAt='garbage'; J8.settings.cashInc={date:'x', yes:1}; sanitizeState(J8);
     eq('past-dated check: old data (no planCashAt) counts it as in; with an older edit it is "not in yet?" and pays on its date; bad values dropped on import', [q7.settled, q7.pend, !!k8, k8&&k8.today, q8[0]===dayNum(2026,2,1), 'planCashAt' in J8.settings, 'cashInc' in J8.settings], [true, null, true, false, true, false, false]);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{}); var bk1=bkDue(); state.settings.lastExportAt='2026-02-25'; var bk2=bkDue(); state.settings.lastExportAt='2026-02-10'; var bk3=bkDue(); state.settings.bkSnoozeTo='2026-03-10'; var bk4=bkDue(); state.bills[0].example=true; var bk5=bkDue();
+    var J15=JSON.parse(JSON.stringify(state)); J15.settings.lastExportAt='nope'; J15.settings.tipA2HS='x'; sanitizeState(J15);
+    eq('v13.15 backup nudge: never exported → nudge; Export within 14 days → none; 14+ days → nudge; Not now snoozes; examples only → none; bad values dropped', [bk1, bk2, bk3, bk4, bk5, 'lastExportAt' in J15.settings, 'tipA2HS' in J15.settings, J15.settings.bkSnoozeTo], [true, false, true, false, false, false, false, '2026-03-10']);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{checkAmt:'1000', payExample:true}); var pe1=payEntered(); delete state.settings.payExample; var pe2=payEntered(); var csp=(document.querySelector('meta[http-equiv="Content-Security-Policy"]')||{}).content||'';
+    eq('v13.15 "Enter your pay" ticks only for pay you entered; CSP blocks other sites', [pe1, pe2, /default-src 'self'/.test(csp), /connect-src 'self'/.test(csp), /https?:|\*/.test(csp)], [false, true, true, true, false]);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-04'}],{planCash:'300'}); var rb=state.bills[0], pbR=planBehind().list.filter(function(y){ return y.b.id==='rt'; })[0], A14=asideSet(rb), sT=schedTxt(rb,A14), lbt=lateBillTxt('Rent', 50000, dayNum(2026,2,4), false);
     eq('v13.14 remaining amount says so: "$500.00 more needed (of $800.00)"; Late line shows full + set aside + more needed; behind schedule = what is still needed when no payday is left before the due date', [moreTxt(rb,50000), isRemC(rb,80000), isRemC(rb,50000), /Rent \$800\.00 due Mar 4 · \$300\.00 set aside · <b>\$500\.00 more needed<\/b>/.test(lbt), pbR&&pbR.c, /\$500\.00 more needed by Mar 4/.test(sT), /behind schedule/.test(sT)], ['$500.00 more needed (of $800.00)', false, true, true, 50000, true, false]);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'100'}); var bh=beHTML(catchupPlan());

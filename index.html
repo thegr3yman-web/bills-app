@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; manifest-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="app-version" content="v13.22">
+<meta name="app-version" content="v13.23">
 <title>Bills</title>
 <meta name="description" content="Recurring bills, prorated to any period.">
 <meta name="color-scheme" content="light dark">
@@ -543,7 +543,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <button type="button" class="mfLink" id="allBillsBtn">📋 All bills <span>›</span></button>
   </section>
 
-  <div class="foot">Not financial advice · Your data is only on this device. Export a backup often; browsers can erase it (Safari after 7 days unused).<br>v13.22</div>
+  <div class="foot">Not financial advice · Your data is only on this device. Export a backup often; browsers can erase it (Safari after 7 days unused).<br>v13.23</div>
 </div>
 
 <button class="fab" id="addBtn" aria-label="Add bill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="fabL">Add bill</span></button>
@@ -1351,7 +1351,7 @@ function renderCal(){
   }
   $('calGrid').innerHTML=h;
   // month total
-  var calBehind=behindModel(planKind()).total;
+  var calBehind=behindOwed({s:todayNum()+1}).total;   // v13.23: every late bill, however old
   mtdInc+=0; // (covered shortfalls already taken out of the daily income)
   var nDays=M.e-M.s+1, dueTot=dues.reduce(function(a,x){return a+(+x.b.amount||0);},0);
   var CY={s:M.s,e:addMonthsNum(M.s,12)-1}, yr=act.filter(function(b){return !isOne(b);}).reduce(function(a,b){return a+prorateIn(b,'year',CY);},0);
@@ -1610,8 +1610,11 @@ function dueModel(w){
   var cash=direct.concat(infos).reduce(function(a,x){return a+x.amt;},0);
   return {key:key, direct:direct, shares:shares, infos:infos, still:still, cash:cash, aside:aside, implied:imp, w:w};
 }
-function behindOwed(w){ var B=behindModel(planKind()), SC=shortCoverDues(), items=B.items.filter(function(it){ return it.x.n<w.s && !(SC[it.x.b.id]&&SC[it.x.b.id][it.x.n]); });   // v13.22: exactly what the forecast counts late (earlier than this window)
+function behindOwed(w){ var B=behindModel(planKind()), P=catchupPlan(), SC=shortCoverDues(), items;   // v13.22/v13.23: exactly what the forecast counts late (earlier than this window), however old
+  if (P) items=(P.late||[]).filter(function(x){ return x.src&&x.src.k==='direct'&&x.show!=null&&x.show<w.s; }).map(function(x){ return {x:{b:x.b, n:x.show, amt:x.amt, done:false}, kind:'direct', P:(x.src.P&&x.src.P.kind)?x.src.P:periodOfN(planKind(),x.show)}; }).sort(function(a,c){ return a.x.n-c.x.n || c.x.amt-a.x.amt; });
+  else items=B.items.filter(function(it){ return it.x.n<w.s && !(SC[it.x.b.id]&&SC[it.x.b.id][it.x.n]); });
   return {items:items, total:items.reduce(function(a,it){ return a+it.x.amt; },0)+B.shorts.reduce(function(a,x){ return a+(x.done?0:x.amt); },0), shorts:B.shorts}; }
+function periodOfN(kind, n){ if (kind==='week'){ var ws=weekStartOf(n); return {s:ws, e:ws+6, kind:'week'}; } var d=fromDayNum(n); return {s:dayNum(d.y,d.m,1), e:dayNum(d.y,d.m,dim(d.y,d.m)), kind:'month'}; }   // v13.23
 function planKind(){ var pf=state.settings.payFreq||'weekly'; return (pf==='weekly'||pf==='biweekly')?'week':'month'; }   // v13.22: the forecast's period kind (Behind list + calendar use it too)
 function behindModel(kind){
   var items=[], tot=0;
@@ -1866,6 +1869,13 @@ function catchupPlan(_unused, opts){
         var sink=isOne(x.b)||timesPerYear(x.b)<perY-1e-6, owe=sink?Math.round(((+x.b.amount||0)-savedFor(x.b,x.n)-(cntd[x.b.id+'|'+x.n]||0))*100)/100:x.amt;
         if (owe>0.004){ have[x.b.id+'|'+x.n]=1; init.push({b:x.b, amt:owe, prio:2, p0:2, date:x.n, due:x.n, pre:true, kind:'bill', cur:true, show:x.n, src:{k:'direct',P:CMo,n:x.n}}); } }); }
   }
+  { // v13.23 (owner decision, overrides TRIAGE M1): an unpaid, unskipped bill stays late until it's paid or skipped, however old — not only the last 8 weeks / this month.
+    // Same owed rules as before: never before the bill's start / added date or behindFrom (unless marked), never spending, never a covered shortfall.
+    var hv={}, lo=Math.max(t-3*366, cutNum()), perY0=(PAY[pf]||PAY.weekly).per; init.forEach(function(x){ if (x.show!=null) hv[x.b.id+'|'+x.show]=1; });
+    enabledBills().forEach(function(b){ if (isSpend(b)) return; occurrences(b, lo, t-1).forEach(function(n){
+      if (hv[b.id+'|'+n] || isPaidOcc(b,n) || notOwed(b,n) || (SC[b.id]&&SC[b.id][n])) return;
+      var sink=isOne(b)||timesPerYear(b)<perY0-1e-6, owe=sink?Math.round(((+b.amount||0)-(cntd[b.id+'|'+n]||0))*100)/100:(+b.amount||0);
+      if (owe>0.004){ hv[b.id+'|'+n]=1; init.push({b:b, amt:owe, prio:1, p0:1, date:n, due:n, pre:true, kind:'late', show:n, src:{k:'direct',P:periodOfN(kind,n),n:n}, old:true}); } }); }); }
   var PRE=init.filter(function(x){ return x.p0!==4; }).concat(planDemands(t, cs[cs.length-1]-1, cs[Math.min(cs.length-1, PLAN_N[pf]||8)]).filter(function(x){ return !x.undated; }));
   var exT=cashSet?Math.min(exTotal(),Math.max(0,cash0)):0, SK=planSinking(cs,t,cashSet?Math.max(0,cash0-exT):null,PRE), held=cashSet?cash0:SK.pool, earmarked=(SK.used||0)+exT;   /* v13.11: "Set aside extra" money is held for its bill */   /* v13.10: blank = unknown → assume what's due before the next check is on hand (no ticks any more) */ cash0=Math.max(0,Math.round((held-earmarked)*100)/100);
   STc=_inc.cpS[skey]={cs:cs, pf:pf, init:init, SK:SK, held:held, earmarked:earmarked, cash0:cash0, cashSet:cashSet, rs:[]}; }
@@ -3290,7 +3300,7 @@ $('dueList').addEventListener('click',function(e){
       toast(was?'Unchecked — back in Money to set aside for bills':'Set aside ✓ '+bill.name+' (due date unchanged)'); save(); render(); return; }
     togglePaid(bill,n); return; }   // v13.22: same path as Basic
   var kind=state.settings.dueSpan==='week'?'week':'month', word=kind;
-  if (e.target.closest('#caughtUp')){ var B=behindModel(planKind()), paidT=0; B.items.forEach(function(it){ if (it.kind==='direct'&&!isPaidOcc(it.x.b,it.x.n)) paidT+=it.x.amt; setItem(it.x.b,it.kind,it.P,it.x.n,true); });
+  if (e.target.closest('#caughtUp')){ var B=behindOwed(windowRange()), paidT=0; B.items.forEach(function(it){ if (it.kind==='direct'&&!isPaidOcc(it.x.b,it.x.n)) paidT+=it.x.amt; setItem(it.x.b,it.kind,it.P,it.x.n,true); });
     cashAsk=null; if (paidT>0.004){ askCash(-paidT, 'You paid '+money(paidT)+' for the late bills.'); if (cashAsk){ cashAsk.paid=true; cashAsk.d=Math.round(paidT*100)/100; } }   // v13.22: same money question as Mark paid
     save(); render(); toast('Caught up ✓ — '+B.items.length+' item'+(B.items.length===1?'':'s')+' checked off'); return; }
   if (e.target.closest('#markLast')){ markPeriod(periodAt(kind,-1),false); save(); render(); toast('Last '+word+' marked not paid — see Behind'); return; }
@@ -3633,10 +3643,10 @@ function selfTest(){ var keep={state:state, today:__today, st:__st, sx:spendX, c
     // v13.22 parity: the same fixture in Basic and Advanced gives the same totals, late list, Profit, away line, card — and the same Mark paid / Undo / early-pay / Delete check steps
     var kR=render, kC=appConfirm, kT=toast, kU=toastUndo, cfT=[]; render=function(){}; appConfirm=function(t){ cfT.push(t); }; toast=function(){}; toastUndo=function(){};
     try{
-      var PX=function(v){ cashAsk=null; use([{id:'ph',name:'Phone',amount:80,freq:'monthly',due:'2026-03-04'},{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'},{id:'car',name:'Car',amount:300,freq:'monthly',due:'2026-03-01',created:'2026-01-01'},{id:'gr',name:'Groceries',amount:150,freq:'weekly',due:'2026-03-05'}],
-            {view:v, planCash:'500', nextPay:'2026-03-02', trackFrom:'2026-01-01', behindFrom:'2026-01-01', checks:[{id:'k0',date:'2026-03-02',amount:1000}]}); };
+      var PX=function(v){ cashAsk=null; use([{id:'ph',name:'Phone',amount:80,freq:'monthly',due:'2026-03-04',created:'2026-02-21'},{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20',created:'2026-02-21'},{id:'car',name:'Car',amount:300,freq:'monthly',due:'2026-03-01',created:'2026-02-15'},{id:'gr',name:'Groceries',amount:150,freq:'weekly',due:'2026-03-05'}],
+            {view:v, planCash:'500', nextPay:'2026-03-02', trackFrom:'2026-01-01', behindFrom:'2026-02-15', checks:[{id:'k0',date:'2026-03-02',amount:1000}]}); };
       var txt=function(h){ return String(h).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(); };
-      var SN=function(){ _inc={}; var o=spendEdges()||{}, P=catchupPlan(); return {money:planCash(), late:basicLate(P).map(function(x){ return x.b.id+':'+x.c; }), status:statusModel().kind, T1:o.T1, away:o.kind==='ok'?txt(awayTxt(o)):'', card:txt(moneyCardHTML('due')), head:txt(basicHeadHTML(true,'due')), mf:r2(moneyFor().total), late2:behindOwed({s:dayNum(2026,2,8)}).items.map(function(it){ return it.x.b.id+'@'+isoOf(it.x.n); }), plan:P.rows.map(function(r){ return r2(r.left); }).join(',')}; };
+      var SN=function(){ _inc={}; var o=spendEdges()||{}, P=catchupPlan(); return {money:planCash(), late:basicLate(P).map(function(x){ return x.b.id+':'+x.c; }), status:statusModel().kind, T1:o.T1, away:o.kind==='ok'?txt(awayTxt(o)):'', card:txt(moneyCardHTML('due')), head:txt(basicHeadHTML(true,'due')), mf:r2(moneyFor().total), late2:behindOwed({s:weekStartOf(todayNum())}).items.map(function(it){ return it.x.b.id+'@'+isoOf(it.x.n); }), plan:P.rows.map(function(r){ return r2(r.left); }).join(',')}; };
       var RUN=function(v){ var out={}; PX(v); out.a=SN();
         var ph=billById('ph'), n4=dayNum(2026,2,4); togglePaid(ph,n4); out.ask1=cashAsk?txt(cashAskHTML()):''; cashAskYes(); out.b=SN(); out.cp=cpLog()['ph|'+n4];
         var J=JSON.parse(JSON.stringify(state)); sanitizeState(J); state=J; _inc={};   // a reload in between: Undo still offers the money back
@@ -3652,6 +3662,14 @@ function selfTest(){ var keep={state:state, today:__today, st:__st, sx:spendX, c
         [true, true, 420, 80, true, true, 500, true, 1, false, false, false, 1500, true, true, 500, true]);
       eq('v13.22 parity: Car (late, due Mar 1) is in the forecast late list once and the Behind list has no phantom rows; while it’s late the card shows no Profit (W4)', [PA.a.late.length, PB.a.late.length, PA.a.late2.join(), PA.a.status, PB.a.status, /^Late: \$300\.00 Car/.test(PA.a.head), /Profit/.test(PA.a.head)], [1, 1, '', 'ok', 'ok', true, false]);
     } finally { render=kR; appConfirm=kC; toast=kT; toastUndo=kU; cashAsk=null; }
+    use([{id:'rt',name:'Rent',amount:900,freq:'monthly',due:'2025-11-20',created:'2025-11-01'},{id:'dc',name:'Daycare',amount:100,freq:'weekly',due:'2025-12-01',created:'2025-11-01',notSpend:true},{id:'rp',name:'Repair',amount:250,freq:'onetime',due:'2025-11-25',created:'2025-11-01'},
+         {id:'gy',name:'Gym',amount:40,freq:'monthly',due:'2025-11-05',created:'2025-11-01',paid:['2025-11-05','2025-12-05','2026-01-05','2026-02-05']},{id:'cl',name:'Club',amount:30,freq:'monthly',due:'2025-11-06',created:'2025-11-01',skipped:['2025-11-06','2025-12-06','2026-01-06','2026-02-06']},{id:'gr',name:'Groceries',amount:150,freq:'weekly',due:'2025-12-01',created:'2025-11-01'}],
+        {planCash:'0', behindFrom:'2025-11-01', trackFrom:'2025-11-01'}); var L23=basicLate(catchupPlan()), c23=function(id){ return L23.filter(function(x){ return x.b.id===id; }).length; };
+    eq('v13.23 old unpaid bills never drop off: monthly Rent Nov 20 … Feb 20 (4, the oldest 15 weeks ago), weekly Daycare every week since it was added, Nov 3 … Feb 23 (17), one-time Repair Nov 25; paid / skipped / spending never late; total counts them all; Advanced Behind list shows the same',
+      [c23('rt'), L23.some(function(x){ return x.b.id==='rt'&&isoOf(x.due)==='2025-11-20'; }), c23('dc'), c23('rp'), c23('gy'), c23('cl'), c23('gr'), lateTotC(L23)/100, behindOwed({s:dayNum(2026,2,1)}).items.length, statusModel().Hm.LT/100],
+      [4, true, 17, 1, 0, 0, 0, 3600+1700+250, 22, 5550]);
+    state.bills[0].paid=['2025-11-20']; _inc={}; var L23b=basicLate(catchupPlan());
+    eq('v13.23 …until it’s paid (or skipped): paying the oldest Rent removes just that one', [L23b.filter(function(x){ return x.b.id==='rt'; }).length, lateTotC(L23b)/100], [3, 4650]);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{mode:'due', planCash:'100', trackFrom:'2026-03-02', checks:[{id:'k1',date:'2026-02-27',amount:900}]}); cashAsk=null; var hd22=basicHeadHTML(true,'due'), sb22=statusSub(statusModel());
     eq('v13.22 Home: the reason line sits under the headline ("Bills still on time · $X behind schedule · set aside $Y more a week"); the spend box is the same fold in both modes; no "Not safe to spend"', [planState().k, statusModel().kind, /Bills still on time · .*behind schedule · set aside .* more a week/.test(sb22.replace(/<[^>]+>/g,'')), spendCardHTML()!=='' , /Not safe to spend/.test(moneyForHTML())], ['behind', 'ok', true, true, false]);
   }catch(err){ R.push('FAIL exception: '+(err&&err.message)+' '+(err&&err.stack||'').split('\n')[1]); }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; manifest-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="app-version" content="v13.18">
+<meta name="app-version" content="v13.19">
 <title>Bills</title>
 <meta name="description" content="Recurring bills, prorated to any period.">
 <meta name="color-scheme" content="light dark">
@@ -303,7 +303,9 @@ textarea{min-height:70px;resize:vertical}
 .peSt{font-size:14px;font-weight:600;margin:4px 0 2px}.peOk{color:var(--ok)}.peLate{color:var(--danger)}.peUnk{color:var(--muted);font-weight:500}.peAmb{color:#b45309}
 .ccseg{margin:2px 0 8px}.ccsum{padding:12px 14px;margin-top:8px}.ccsum .ccst{font-size:16px}.ccsum .ccn{font-size:13px;color:var(--muted);margin-top:6px}
 .cci{display:inline-block;min-width:14px;height:14px;border-radius:7px;font-style:normal;font-size:9px;line-height:14px;font-weight:800;color:#fff;text-align:center;padding:0 3px;vertical-align:middle}
-.cci.cpd{background:var(--accent)}.cci.cok{background:var(--ok)}.cci.cnc{background:#d97706}.ncAmb{color:#b45309;font-weight:700}.spNc{margin:4px 0 6px;padding:7px 10px;border-radius:10px;background:rgba(245,158,11,.14);color:#92400e;font-size:13px;font-weight:600;line-height:1.35}.pi.bPiNc span,.pi.rnc{color:#b45309}.schB{color:#b45309;font-weight:600}.payNudge{margin:6px 0 2px}.ckPend{margin:6px 0 2px}.ckPend .ckInB{margin-left:6px;padding:5px 10px;border-radius:999px;background:var(--accent);color:#fff!important;font-weight:700;font-size:13px;border:0;min-height:30px}.ckPend.amb{color:#b45309;font-weight:600}.covT{color:var(--muted)}.paySched{display:block}.paySched .psE{float:right;margin-left:10px}.usualBar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:14px;color:var(--muted);margin:6px 2px 8px}.usualBar b{color:var(--text)}.usualBar button{color:var(--accent);font-weight:700;font-size:14px;background:none;border:0;padding:6px 4px;min-height:36px}.usualBar input{width:120px;min-height:40px;font-size:16px;padding:6px 10px;border:1px solid var(--line,#d0d5dd);border-radius:10px}.usualBar #usualOk{background:var(--accent);color:#fff;border-radius:10px;padding:6px 14px}.usualBar small{flex-basis:100%;font-size:12px}.spAway{margin:4px 0 0;font-size:13px;color:var(--text);font-weight:600}.spAway small{color:var(--muted);font-weight:500}.bkL{margin:4px 2px 8px;font-size:13px;color:var(--muted)}.bkL button{background:none;border:0;color:var(--accent);font-weight:600;font-size:13px;padding:6px 2px;min-height:32px;cursor:pointer}#bkSet .bkL{margin:0 0 6px}.meta:has(.covT){white-space:normal}.amt small.amtN,.mfNd.amtN{display:block;font-size:11px;font-weight:600;color:var(--muted)}.cci.clt{background:#d11f26}.cci.cpl{background:transparent;color:#d11f26;box-shadow:inset 0 0 0 1.5px #d11f26}.cci.cgd{background:#d4a017}.cci.cnd{background:#d11f26;border-radius:4px}
+.cci.cpd{background:var(--accent)}.cci.cok{background:var(--ok)}.cci.cnc{background:#d97706}.ncAmb{color:#b45309;font-weight:700}.spNc{margin:4px 0 6px;padding:7px 10px;border-radius:10px;background:rgba(245,158,11,.14);color:#92400e;font-size:13px;font-weight:600;line-height:1.35}.pi.bPiNc span,.pi.rnc{color:#b45309}.schB{color:#b45309;font-weight:600}.payNudge{margin:6px 0 2px}.ckPend{margin:6px 0 2px}.ckPend .ckInB{margin-left:6px;padding:5px 10px;border-radius:999px;background:var(--accent);color:#fff!important;font-weight:700;font-size:13px;border:0;min-height:30px}.ckPend.amb{color:#b45309;font-weight:600}.covT{color:var(--muted)}.paySched{display:block}.paySched .psE{float:right;margin-left:10px}.usualBar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:14px;color:var(--muted);margin:6px 2px 8px}.usualBar b{color:var(--text)}.usualBar button{color:var(--accent);font-weight:700;font-size:14px;background:none;border:0;padding:6px 4px;min-height:36px}.usualBar input{width:120px;min-height:40px;font-size:16px;padding:6px 10px;border:1px solid var(--line,#d0d5dd);border-radius:10px}.usualBar #usualOk{background:var(--accent);color:#fff;border-radius:10px;padding:6px 14px}.usualBar small{flex-basis:100%;font-size:12px}.spAway{margin:4px 0 0;font-size:13px;color:var(--text);font-weight:600}
+.mCard{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0 2px}.mCard>.bS:first-child,.mCard>.bAsk:first-child{margin-top:0}.mcAway{margin-top:6px;font-size:14px;font-weight:700;color:var(--text)}.mcProf{margin-top:6px;font-size:15px;font-weight:800}
+.mCardAdv{padding:12px 14px}.mCardAdv .mCard{border:0;padding:0;margin:0}.whatIf{display:block;margin:12px 0 0;padding:10px 2px;min-height:44px;background:none;border:0;color:var(--accent);font-weight:700;font-size:15px;text-align:left;cursor:pointer}.spAway small{color:var(--muted);font-weight:500}.bkL{margin:4px 2px 8px;font-size:13px;color:var(--muted)}.bkL button{background:none;border:0;color:var(--accent);font-weight:600;font-size:13px;padding:6px 2px;min-height:32px;cursor:pointer}#bkSet .bkL{margin:0 0 6px}.meta:has(.covT){white-space:normal}.amt small.amtN,.mfNd.amtN{display:block;font-size:11px;font-weight:600;color:var(--muted)}.cci.clt{background:#d11f26}.cci.cpl{background:transparent;color:#d11f26;box-shadow:inset 0 0 0 1.5px #d11f26}.cci.cgd{background:#d4a017}.cci.cnd{background:#d11f26;border-radius:4px}
 .cell .ccm{display:flex;flex-wrap:wrap;gap:2px;margin:2px 0 1px}.cell .ccl{font-size:9.5px;line-height:12px;font-weight:800;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ccl.ccpay{color:var(--ok)}.ccl.ccla{color:#d11f26}.ccl.ccneed{color:#fff;background:#d11f26;border-radius:4px;padding:0 2px;margin-top:1px}.ccl.ccgd{color:#a87900}
 .cell.ccgold{box-shadow:inset 0 0 0 2px #d4a017;background:rgba(245,215,110,.25)}.cell.ccgold.today{box-shadow:inset 0 0 0 2px #d4a017,inset 0 0 0 4px var(--accent)}.cell.ccoff{opacity:.5}
@@ -447,6 +449,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
 
   <!-- PAYDAY MODE -->
   <section id="payView" class="hidden">
+    <div class="card mCardAdv hidden" id="mCardAdv"></div>
     <button type="button" class="paySched" id="paySched" aria-label="Pay schedule — tap to change"></button>
     <div class="usualBar" id="usualBar"></div>
     <div class="card bNext" id="bNext"></div>
@@ -540,7 +543,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <button type="button" class="mfLink" id="allBillsBtn">📋 All bills <span>›</span></button>
   </section>
 
-  <div class="foot">Not financial advice · Your data stays on this device. · v13.18</div>
+  <div class="foot">Not financial advice · Your data stays on this device. · v13.19</div>
 </div>
 
 <button class="fab" id="addBtn" aria-label="Add bill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="fabL">Add bill</span></button>
@@ -1083,7 +1086,8 @@ function renderInner(){
   $('guideSteps').innerHTML=[[own,'Add your bills','<button type="button" class="addBillBtn">Add</button>'],[inc,'Enter your pay','<button type="button" class="goIncome">Enter</button>'],[own&&inc,'See your payday plan','']]
     .map(function(x,i){ return '<li class="'+(x[0]?'done':'')+'"><i>'+(x[0]?'✓':(i+1))+'</i><span>'+x[1]+'</span>'+(x[0]?'':x[2])+'</li>'; }).join('');
   if (s.mode==='cal') renderCal(); else if (s.mode==='pay') renderPay(); else if (s.mode==='avg') renderAvg(); else renderDue();
-  if (isBasic()){ $('bHead').innerHTML=basicHeadHTML(s.mode==='due'); $('bNext').innerHTML=s.mode==='pay'?basicNextHTML():''; } else { $('bHead').innerHTML=''; $('bNext').innerHTML=''; }
+  if (isBasic()){ $('bHead').innerHTML=basicHeadHTML(s.mode==='due', s.mode); $('bNext').innerHTML=s.mode==='pay'?basicNextHTML():''; } else { $('bHead').innerHTML=''; $('bNext').innerHTML=''; }
+  var mca=$('mCardAdv'), mch=(!isBasic() && s.mode==='pay')?moneyCardHTML('pay'):''; mca.innerHTML=mch; mca.classList.toggle('hidden', !mch);   // v13.19: Advanced Payday gets the same money card at the top
 }
 
 function renderAvg(){
@@ -2355,8 +2359,8 @@ function statusSub(o){ var P=o.P, s=[];
   if (ps && (ps.k==='on'||ps.k==='behind')){ if (!(isBasic() && (spendEdges()||{}).kind==='ok')) s.push(planLineHTML(ps).replace(/<div /g,'<span ').replace(/<\/div>/g,'</span>').replace(/<\/span><span/g,'</span> <span')); }   // the spend box right below says it (once)
   else if (o.kind==='ok') s.push('every bill paid on time if checks come in as planned');
   return s.join(' · '); }
-function basicHeadHTML(onDue){
-  var S=statusModel(), Hm=S.Hm, P=Hm.P, h='', L=Hm.L, LT=Hm.LT;
+function basicHeadHTML(onDue, md){
+  var S=statusModel(), Hm=S.Hm, P=Hm.P, h='', L=Hm.L, LT=Hm.LT, card=(md==='due'||md==='pay')&&P?moneyCardHTML(md):'';
   var TDn=Hm.TD.map(function(b){ return esc(b.name); }).join(', ');
   if (!P) h='<div class="bH" id="bHeadline">Add your pay to see what you need</div><button type="button" class="goIncome bLink">Set up my pay ›</button>';
   else { var cls=S.kind==='ok'?(planStrict()&&planState().k==='behind'?'amb':'ok'):S.kind==='unknown'?'unk':'need', sub=statusSub(S);
@@ -2365,12 +2369,13 @@ function basicHeadHTML(onDue){
       if (la && la.none){ var ne1=notCoveredModel().filter(function(e){ return !e.spend; })[0]; if (ne1) la={k:'late', name:ne1.b.name, c:ne1.c, due:ne1.due, past:ne1.due<todayNum()}; }   // v13.11: NC with no unfinished row still names the first uncovered bill
       h=(la&&la.k==='late'&&!la.past&&!la.spend&&!la.none&&la.name?'<div class="bLA" id="bLateAhead">Late bill ahead: '+lateBillTxt(la.name, la.c, la.due)+'</div>':'')+'<div class="bH '+cls+'" id="bHeadline"><span id="bStatus">'+statusHTML(S)+'</span></div>'+(sub?'<div class="bS" id="bStatusSub">'+sub+'</div>':''); }
     if (Hm.TD.length) h+='<div class="bToday" id="bToday"><span class="tag today">Due today</span> '+TDn+'</div>'; }
-  if (P){ if (cashAsk) h+='<div class="bAsk cashAsk2" id="cashAsk" role="status">'+esc(cashAsk.msg)+(cashAsk.paid?' Take <b>'+money(cashAsk.d)+'</b> off Money you have now (→ <b>'+money(cashAsk.v)+'</b>)? <div class="bAskR"><button type="button" id="cashAskYes">Yes</button><button type="button" id="cashAskNo" class="ghost">No, it’s already updated</button></div></div>':' Make money you have now <b>'+money(cashAsk.v)+'</b>? <div class="bAskR"><button type="button" id="cashAskYes">Yes, update</button><button type="button" id="cashAskNo" class="ghost">No</button></div></div>');
-    if (!P.cashSet || bCashEdit){ var ask='<div class="bAsk" id="bAsk"><label for="bCash">'+(P.cashSet?'Money you have now':'How much do you have right now?')+'</label>'+infoB('cash')+infoL('cash')+'<small>All your money right now (bank + wallet). The app splits it across your bills by due date — that’s what’s already set aside.'+(P.cashSet?'':' Until you enter it, your bills status is unknown.')+'</small><div class="bAskR"><input id="bCash" inputmode="decimal" placeholder="$0" value="'+esc(bCashErr?bCashErr.v:(P.cashSet?String(P.held):''))+'"><button type="button" id="bCashSave">OK</button></div>'+(bCashErr?'<div class="bErr" id="bCashErr" role="alert">'+esc(bCashErr.m)+'</div>':'')+'</div>';
+  if (card){ if (md==='due') h+=card; else h=card+h; }   // v13.19: one money card (Home: right under the headline; Payday: at the very top)
+  if (P){ if (card){} else if (cashAsk) h+='<div class="bAsk cashAsk2" id="cashAsk" role="status">'+esc(cashAsk.msg)+(cashAsk.paid?' Take <b>'+money(cashAsk.d)+'</b> off Money you have now (→ <b>'+money(cashAsk.v)+'</b>)? <div class="bAskR"><button type="button" id="cashAskYes">Yes</button><button type="button" id="cashAskNo" class="ghost">No, it’s already updated</button></div></div>':' Make money you have now <b>'+money(cashAsk.v)+'</b>? <div class="bAskR"><button type="button" id="cashAskYes">Yes, update</button><button type="button" id="cashAskNo" class="ghost">No</button></div></div>');
+    if (!card && (!P.cashSet || bCashEdit)){ var ask='<div class="bAsk" id="bAsk"><label for="bCash">'+(P.cashSet?'Money you have now':'How much do you have right now?')+'</label>'+infoB('cash')+infoL('cash')+'<small>All your money right now (bank + wallet). The app splits it across your bills by due date — that’s what’s already set aside.'+(P.cashSet?'':' Until you enter it, your bills status is unknown.')+'</small><div class="bAskR"><input id="bCash" inputmode="decimal" placeholder="$0" value="'+esc(bCashErr?bCashErr.v:(P.cashSet?String(P.held):''))+'"><button type="button" id="bCashSave">OK</button></div>'+(bCashErr?'<div class="bErr" id="bCashErr" role="alert">'+esc(bCashErr.m)+'</div>':'')+'</div>';
       if (!P.cashSet) h=ask+h; else h+=ask; }   // v13.10: blank → the question stays at the top until it's filled
     if (state.settings.ticksGone===1) h='<div class="bAsk" id="ticksNote" role="status">Paid ticks are gone — the app now splits Money you have now across your bills. <div class="bAskR"><button type="button" id="ticksOk">OK</button></div></div>'+h;
-    else if (P.cashSet) h+='<div class="bS" id="bCashLine">Money you have now: '+money(P.held)+' · <button type="button" id="bCashChg">change</button></div>'+payNudgeHTML();
-    h+=exLineHTML(P);   // v13.11
+    else if (P.cashSet && !card) h+='<div class="bS" id="bCashLine">Money you have now: '+money(P.held)+' · <button type="button" id="bCashChg">change</button></div>'+payNudgeHTML();
+    if (!card) h+=exLineHTML(P);   // v13.11
     if (L.length && !onDue){ var K=bOpen.headLate?L.length:Math.min(L.length, L.length>4?3:4), rest=L.slice(K);
       h+='<div class="bLate" id="bLate"><div class="bLt">Late</div>'+L.slice(0,K).map(function(x){ return '<div class="bLr"><span>'+esc(x.b.name)+' <small>'+lateMeta(x)+'</small></span><b>'+mc(x.c)+'</b></div>'; }).join('')+
         (rest.length?'<button type="button" class="bLr bFold" data-bopen="headLate"><span>+ '+rest.length+' more late</span><b>'+mc(lateTotC(rest))+'</b></button>':'')+'</div>'; }
@@ -2632,7 +2637,7 @@ var ncMsg='';
 function ncCardHTML(){ var S=statusModel(); if (S.kind!=='short' && S.kind!=='nc' && !S.NC) return ''; var L=notCoveredModel(); if (!L.length) return '';
   return '<div class="card ncCard" id="ncCard"><h2>Not covered yet</h2>'+L.map(function(x,i){ return '<div class="ncR"><span class="ncN">'+(i+1)+'.</span><span class="ncT">'+esc(x.b.name)+(x.spend?' <small>(spending)</small>':'')+' <b>'+(isRemC(x.b,x.c)?moreTxt(x.b,x.c):mc(x.c))+'</b> · '+(x.spend?'for ':'due ')+fmtShort(x.due)+'</span>'+'<button type="button" data-payfirst="'+esc(x.b.id)+'|'+x.due+'">Pay first</button>'+'</div>'+'<div class="ncLv">'+lvlBtnHTML(x.b)+'</div>'; }).join('')+
     (ncMsg?'<div class="ncMsg" id="ncMsg" role="status">'+esc(ncMsg)+'</div>':'<div class="bS">Tap Pay first to choose which one gets covered this time — the others wait. “If short” sets the usual order for every check.</div>')+'</div>'; }
-function homeHTML(){ var P=catchupPlan(), D=payWeekModel(), h=spendCardHTML(), T=null;
+function homeHTML(){ var P=catchupPlan(), D=payWeekModel(), h=spendFoldHTML(), T=null;
   _inc.bdue=Object.assign({}, _inc.bdue||{}, {late:D.late});
   if (P&&P.rows.length){ T=tcpModel(); var ls=D.late.length?lateSecHTML(D, T.sav):''; if (ls) h+='<div class="card pwCard bLateCard" id="pwCard">'+ls+'</div>'; h+=ncCardHTML();
     h+='<div class="card nxCard" id="nxCard">'+nextCardHTML(T, dollarsIn(basicHeadHTML(true))+dollarsIn(ls)+1)+'</div><div class="card ckCard" id="ckCard">'+ckCardHTML()+'</div>'; }
@@ -2694,12 +2699,25 @@ function spendBodyHTML(){ var o=spendEdges(); if (!o) return '';
   else if (S.zone==='gold') line='<span class="'+profCls()+'">Profit this check: '+mc(S.left)+'</span>'+profNote();
   else if (S.zone==='amber') line=S.fromSet>0 ? 'Takes '+mc(S.fromSet)+' from set-aside'+(S.fromExtra>0?' (after '+mc(S.fromExtra)+' of extra money on hand)':'')+'. Bills still on time. Set aside '+mc(Math.ceil(S.fromSet/Math.max(1,o.n)))+' more '+perWord()+' to catch up.' : 'Uses '+mc(S.fromExtra)+' of your extra money on hand. Bills still on time.';
   else { var nl=X>T2&&X<=o.cap?spendNewLate(o,X):null; line=nl ? 'Makes '+esc(nl.b?nl.b.name:'a bill')+' '+mc(nl.amt)+' late on '+fmtShort(nl.due)+'.' : 'That’s more than this check plus money you have now.'; }
-  line+=awayHTML(o);
   return '<div class="spBar spZ-'+S.zone+(S.zone==='gold'&&!profGold()?' spProfN':'')+'"><i style="width:'+pct+'%"></i>'+(S.mid?'<b class="spMid"></b>':'')+'</div><div class="spL '+(S.noProfit?'unk':S.zone==='amber'?'amb':S.zone==='gold'&&!profGold()?'':S.zone)+'" role="status">'+line+'</div>'+(effMode()==='pay'?'':planLineHTML()); }   // Payday: the "Set aside for bills each payday" card says it
 /* v13.16: T2 without typing — the most this check can spend with no new late bill (same plan, so today's check not in yet counts the same way) */
 function awayInfo(o){ if (!o || o.kind!=='ok') return null; var T2=spendT2(o); if (!(T2>0)) return null; if (T2>=o.cap) return {all:true, c:T2}; return {c:T2, nl:spendNewLate(o,T2+1)}; }
-function awayHTML(o){ var A=awayInfo(o); if (!A) return ''; if (A.all) return '<div class="spAway" id="spAway">No late bill even if all '+mc(A.c)+' goes to spending.</div>';
-  return '<div class="spAway" id="spAway">'+mc(A.c)+' away from a late bill'+(A.nl&&A.nl.b?' <small>('+esc(A.nl.b.name)+', '+fmtShort(A.nl.due)+')</small>':'')+'</div>'; }
+function awayTxt(o){ var A=awayInfo(o); if (!A) return ''; return A.all?'No late bills ahead':mc(A.c)+' away from a late bill'+(A.nl&&A.nl.due!=null?' ('+fmtShort(A.nl.due)+')':''); }   // v13.19: short, date only
+function awayHTML(o){ var t=awayTxt(o); return t?'<div class="spAway" id="spAway">'+t+'</div>':''; }
+/* v13.19: ONE money card, shown at the top of Payday (Basic + Advanced) and under the Home headline: Money you have now [change],
+   today's check not in yet / It's in, "$X away from a late bill (date)" or "No late bills ahead", Profit this check. Both edit the same
+   value (render() redraws everything at once). Late / Short states stay in the headline: then the card has no away / Profit line. */
+function cashEditHTML(P){ return '<div class="bAsk" id="bAsk"><label for="bCash">'+(P.cashSet?'Money you have now':'How much do you have right now?')+'</label>'+infoB('cash')+infoL('cash')+'<small>All your money right now (bank + wallet). The app splits it across your bills by due date — that’s what’s already set aside.'+(P.cashSet?'':' Until you enter it, your bills status is unknown.')+'</small><div class="bAskR"><input id="bCash" inputmode="decimal" placeholder="$0" value="'+esc(bCashErr?bCashErr.v:(P.cashSet?String(P.held):''))+'"><button type="button" id="bCashSave">OK</button></div>'+(bCashErr?'<div class="bErr" id="bCashErr" role="alert">'+esc(bCashErr.m)+'</div>':'')+'</div>'; }
+function cashAskHTML(){ return cashAsk?'<div class="bAsk cashAsk2" id="cashAsk" role="status">'+esc(cashAsk.msg)+(cashAsk.paid?' Take <b>'+money(cashAsk.d)+'</b> off Money you have now (→ <b>'+money(cashAsk.v)+'</b>)? <div class="bAskR"><button type="button" id="cashAskYes">Yes</button><button type="button" id="cashAskNo" class="ghost">No, it’s already updated</button></div></div>':' Make money you have now <b>'+money(cashAsk.v)+'</b>? <div class="bAskR"><button type="button" id="cashAskYes">Yes, update</button><button type="button" id="cashAskNo" class="ghost">No</button></div></div>'):''; }
+function moneyCardHTML(where){ var P=catchupPlan(); if (!P) return ''; var o=P.cashSet?spendEdges():null, h='';
+  h+=(!P.cashSet || bCashEdit) ? cashEditHTML(P) : '<div class="bS" id="bCashLine">Money you have now: <b>'+money(P.held)+'</b> · <button type="button" id="bCashChg">change</button></div>';
+  h+=cashAskHTML()+ckPendHTML()+exLineHTML(P);
+  if (o && o.kind==='ok'){ var at=awayTxt(o); if (at) h+='<div class="mcAway" id="mcAway">'+at+'</div>';
+    h+='<div class="mcProf" id="mcProf"><span class="'+(o.T1>0?profCls():'profN')+'">Profit this check: '+mc(Math.max(0,o.T1))+'</span>'+profNote()+'</div>'; }
+  return '<div class="mCard" id="mCard" data-where="'+where+'">'+h+'</div>'; }
+/* v13.19: Home folds the spend box under "What if I spend…" (closed by default); Payday keeps it as is */
+var spHomeOpen=false;
+function spendFoldHTML(){ var c=spendCardHTML(); if (!c) return ''; return '<button type="button" class="whatIf" id="whatIf" aria-expanded="'+spHomeOpen+'">What if I spend…'+(spHomeOpen?' ▾':' ›')+'</button>'+(spHomeOpen?c:''); }
 function spendCardHTML(){ var o=spendEdges(); if (!o || !isBasic()) return ''; var v=spendX!=null?String(spendX/100):'';
   return '<div class="card spCard"><label class="spLbl">Plan to spend this check'+(o.est?' <small class="pmut">(estimate)</small>':o.youSet?' <small class="pmut">(you set)</small>':'')+'</label>'+(o.kind==='ok'?'<div class="spRow"><span>$</span><input class="spIn" inputmode="decimal" placeholder="0" value="'+esc(v)+'" aria-label="Plan to spend this check"></div>':'')+'<div class="spBody">'+spendBodyHTML()+'</div></div>'; }
 document.addEventListener('input',function(e){ var el=e.target; if (!el||!el.classList||!el.classList.contains('spIn')) return; var raw=el.value.trim(), v=parseAmt(raw);
@@ -3379,8 +3397,8 @@ $('abAdd').addEventListener('click',function(){ closeSheet('abScrim'); openEdit(
 $('abClose').addEventListener('click',function(){ closeSheet('abScrim'); });
 $('abScrim').addEventListener('click',function(e){ if(e.target===this) closeSheet('abScrim'); });
 document.addEventListener('click',function(e){ if (!e.target.closest) return; if (e.target.closest('#ckIn')){ ckItsIn(); return; } if (e.target.closest('#payNudgeOk')){ cashStamp(); save(); render(); toast('OK — Money you have now stays '+money(planCash())); } else if (e.target.closest('#payNudgeChg')){ if (isBasic()){ bCashEdit=true; render(); var el=$('bCash'); if (el) el.focus(); } else { var pc=$('planCash'); if (pc){ pc.scrollIntoView({block:'center'}); pc.focus(); } } } });   // v13.13
-$('bHead').addEventListener('click',function(e){ if (e.target.closest('#bCashSave')) bCashCommit(); else if (e.target.closest('#bCashChg')){ bCashEdit=true; render(); var el=$('bCash'); if(el) el.focus(); } });
-$('bHead').addEventListener('keydown',function(e){ if (e.key==='Enter' && e.target.id==='bCash'){ e.preventDefault(); bCashCommit(); } });
+document.addEventListener('click',function(e){ if (!e.target.closest) return; if (e.target.closest('#bCashSave')) bCashCommit(); else if (e.target.closest('#bCashChg')){ bCashEdit=true; render(); var el=$('bCash'); if(el) el.focus(); } else if (e.target.closest('#whatIf')){ spHomeOpen=!spHomeOpen; render(); var si=spHomeOpen&&document.querySelector('.spIn'); if (si) si.focus(); } });   // v13.19: both money cards + the What if fold
+document.addEventListener('keydown',function(e){ if (e.key==='Enter' && e.target.id==='bCash'){ e.preventDefault(); bCashCommit(); } });
 $('weekMon').addEventListener('change',function(){state.settings.weekMon=this.checked;save();render();});
 $('planWarn').addEventListener('change',function(){ if (this.value==='relaxed') state.settings.planWarn='relaxed'; else delete state.settings.planWarn; save(); render(); toast(this.value==='relaxed'?'Relaxed: green while no bill will be late':'Strict: amber whenever you’re behind schedule'); });
 $('showInactive').addEventListener('change',function(){state.settings.showInactive=this.checked;save();render();});
@@ -3584,7 +3602,13 @@ function selfTest(){ var keep={state:state, today:__today, st:__st, sx:spendX}, 
     state.settings.expect=[{date:'2026-03-13',amt:900}]; _inc={}; var x16=periodMainIncome(payPeriodAt(dayNum(2026,2,13))).amt, l16=periodMainIncome(payPeriodAt(dayNum(2026,1,23))).amt;
     eq('v13.16 usual check: every unlogged check uses it (forecast, break-even "your check"); (you set) beats it, logged checks are real; empty = history estimate', [e0, M16.amt, M16.usual, estWhy(M16), cr16.filter(function(r){ return r.kind==='est'; }).every(function(r){ return Math.abs(r.inc-950)<0.01; }), be16, x16, l16], [1250, 950, true, 'your usual check', true, 950, 900, 1250]);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'0'}); var o16=spendEdges(), A16=awayInfo(o16), h16=awayHTML(o16);
-    eq('v13.16 "$X away from a late bill" = T2 (none when T2 is 0 or a bill is late/short)', [!!o16&&o16.kind, A16?A16.c===spendT2(o16):null, /away from a late bill|No late bill even if/.test(h16), awayInfo({kind:'late'}), awayInfo({kind:'ok', T2:0, cap:100})], ['ok', true, true, null, null]);
+    eq('v13.16 "$X away from a late bill" = T2 (none when T2 is 0 or a bill is late/short)', [!!o16&&o16.kind, A16?A16.c===spendT2(o16):null, /away from a late bill|No late bills ahead/.test(h16), awayInfo({kind:'late'}), awayInfo({kind:'ok', T2:0, cap:100})], ['ok', true, true, null, null]);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'300'}); var o19=spendEdges(), c19h=moneyCardHTML('due'), c19p=moneyCardHTML('pay'), sb19=spendBodyHTML(), a19=awayTxt(o19), f19a=spendFoldHTML(); spHomeOpen=true; var f19b=spendFoldHTML(); spHomeOpen=false;
+    var bh19=basicHeadHTML(true,'due'), bp19=basicHeadHTML(false,'pay');
+    eq('v13.19 one money card on Home and Payday (same text, same value): Money you have now, "$X away from a late bill (date)" with no bill name, Profit this check; not in the spend box; Home folds the spend box under "What if I spend…"', [c19h.replace('data-where="due"','')===c19p.replace('data-where="pay"',''), /Money you have now: <b>\$300\.00<\/b>/.test(c19h), /^\$[\d,.]+ away from a late bill \(Mar \d+\)$|^No late bills ahead$/.test(a19), /Rent/.test(a19), /Profit this check: /.test(c19h), /away from a late bill|No late bills ahead/.test(sb19), /What if I spend/.test(f19a), /spIn/.test(f19a), /spIn/.test(f19b), bh19.indexOf('id="mCard"')>bh19.indexOf('bHeadline'), bp19.indexOf('mCard')>=0&&bp19.indexOf('mCard')<bp19.indexOf('bHeadline'), (bh19.match(/id="bCashLine"/g)||[]).length], [true, true, true, false, true, false, true, false, true, true, true, 1]);
+    use([{id:'rt',name:'Rent',amount:80,freq:'monthly',due:'2026-03-20'}],{planCash:'5000'}); var c19n=moneyCardHTML('due');
+    use([{id:'rt',name:'Rent',amount:5000,freq:'monthly',due:'2026-03-20'}],{planCash:'0'}); var c19l=moneyCardHTML('due'), k19=[statusModel().kind, (spendEdges()||{}).kind];
+    eq('v13.19 nothing would go late even spending everything → "No late bills ahead"; a late bill keeps the late state (no away / Profit line in the card)', [/No late bills ahead/.test(c19n), /away from a late bill|No late bills ahead|Profit this check/.test(c19l), /Money you have now/.test(c19l), k19[1]!=='ok'], [true, false, true, true]);
     use([{id:'rt',name:'Rent',amount:100.01,freq:'monthly',due:'2026-03-27'},{id:'d1',name:'Card',amount:200,freq:'monthly',due:'2026-03-26'},{id:'d2',name:'Ins',amount:50.05,freq:'monthly',due:'2026-03-25'},{id:'gr',name:'Food',amount:33.33,freq:'weekly',due:'2026-03-05'}],{planCash:'0', checkAmt:'333.33'});
     var P18=catchupPlan(), C18=ccModel(P18), sh18=[]; P18.rows.forEach(function(r){ r.pays.forEach(function(x){ if (x.b.id==='rt'&&x.kind==='aside'&&x.due===dayNum(2026,2,27)) sh18.push(Math.round(x.amt*100)); }); });
     var ok18=C18.occ.filter(function(o){ return o.aside&&o.dated; }).every(function(o){ var c=Math.round(o.pieces.reduce(function(a,q){ return a+q.amt; },0)*100); return c===Math.round(((+o.b.amount)-((P18.sinkSaved||{})[o.b.id+'|'+o.due]||0))*100); });

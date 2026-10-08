@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; manifest-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="app-version" content="v13.23">
+<meta name="app-version" content="v13.24">
 <title>Bills</title>
 <meta name="description" content="Recurring bills, prorated to any period.">
 <meta name="color-scheme" content="light dark">
@@ -382,7 +382,11 @@ details.more[open]>summary::after{transform:rotate(180deg)}
 /* v13.11 spend box + per-bill set-aside bar */
 .spCard{padding:12px 14px}.spLbl{display:block;font-weight:800;font-size:15px}.spRow{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:18px;font-weight:700}.spRow input{flex:1;min-height:44px;font-size:17px}
 .spBar{position:relative;height:14px;border-radius:7px;background:var(--line);margin:10px 0 6px;overflow:hidden}.spBar i{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,#c08f0c,#f7d774)}.spBar.spZ-amber i{background:#d97706}.spBar.spZ-red{background:rgba(209,31,38,.25)}
-.spMid{position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--card)}.spL{font-size:14px;font-weight:700;line-height:1.35}.spL.amb{color:#b45309}.spL.red{color:#d11f26}.spL.unk{color:var(--muted);font-weight:600}
+.spMid{position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--card)}.spL{font-size:14px;font-weight:700;line-height:1.35}.spL.amb{color:#b45309}.spL.red{color:#d11f26}
+.fitLine{margin:14px 2px 0;padding:10px 12px;border-radius:10px;background:#f2f3f5;color:#4b5563;font-size:14px;font-weight:700;line-height:1.4}
+.fitLine:empty{display:none}
+.fitLine.amb{background:#fff4e0;color:#b45309}
+.fitLine.red{background:#fdecec;color:#d11f26}.spL.unk{color:var(--muted);font-weight:600}
 .abar{height:5px;border-radius:3px;background:var(--line);margin-top:5px;overflow:hidden;max-width:220px}.abar i{display:block;height:100%;background:var(--accent)}.abar.full i{background:#15803d}.abarT{font-size:12px;color:var(--muted);margin-top:2px}
 .lvlB{color:var(--muted)!important;font-weight:600!important}.lvlB.wait{color:#b45309!important}.exQ{display:flex;gap:14px;flex-wrap:wrap}.ncLv{margin:-4px 0 6px 26px;font-size:12px}.ncLv button{padding:2px 0;font-size:12px}
 .expRow{display:flex;gap:8px;margin:6px 0 2px}.expRow input{flex:1;min-width:0;min-height:40px}.expRow button{min-height:40px;padding:0 12px;border-radius:10px;background:var(--chip);font-weight:700}
@@ -543,7 +547,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <button type="button" class="mfLink" id="allBillsBtn">📋 All bills <span>›</span></button>
   </section>
 
-  <div class="foot">Not financial advice · Your data is only on this device. Export a backup often; browsers can erase it (Safari after 7 days unused).<br>v13.23</div>
+  <div class="foot">Not financial advice · Your data is only on this device. Export a backup often; browsers can erase it (Safari after 7 days unused).<br>v13.24</div>
 </div>
 
 <button class="fab" id="addBtn" aria-label="Add bill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="fabL">Add bill</span></button>
@@ -598,6 +602,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <div class="field"><label for="fNotes">Notes (optional)</label><textarea id="fNotes" maxlength="500"></textarea></div>
     <div class="hidden" id="fShortWrap" style="margin-top:12px"><button type="button" class="btn" id="fShortBtn" style="color:#d11f26;min-height:44px">Didn’t set aside for this</button><div class="hint" id="fShortHint" style="margin:4px 2px 0"></div></div>
     <div class="toggle"><span>Active</span><label class="switch"><input type="checkbox" id="fActive" checked aria-label="Active"><span></span></label></div>
+    <div class="fitLine" id="fitLine" role="status" aria-live="polite"></div>
     <div class="btns">
       <button type="submit" class="btn primary" id="saveBtn">Done</button>
       <button type="button" class="btn danger hidden" id="delBtn">Delete bill</button>
@@ -2986,9 +2991,53 @@ function openEdit(id){
   $('fEnds').value=b&&parseISO(b.ends)?'date':'never'; $('fEndDate').value=b&&parseISO(b.ends)?b.ends:''; $('fEndN').value='';
   $('delBtn').classList.toggle('hidden',!b);
   $('catList').innerHTML=categories().filter(function(c){return c!=='Uncategorized';}).map(function(c){return '<option value="'+esc(c)+'">';}).join('');
-  updateFreqUI(); updateEndsUI(); updateShortBtn(); exRender(); openSheet('editScrim');
+  updateFreqUI(); updateEndsUI(); updateShortBtn(); exRender(); fitRender(); openSheet('editScrim');
   if (!b && window.matchMedia('(min-width:700px)').matches) setTimeout(function(){$('fName').focus();},50);
 }
+/* v13.24: the bill the form describes right now (no checks shown) — Done and the fit check both use it */
+function formDraft(){ var name=$('fName').value.trim(), amt=parseAmt($('fAmt').value), fb=formBill(), ends=endFromForm();
+  if (amtMsg($('fAmt').value) || !(amt>0)) return {err:'amt'}; if (fb.freq==='custom' && !(fb.n>=1)) return {err:'n'}; if (ends===null) return {err:'ends'};
+  var data={name:name, amount:Math.round(amt*100)/100, freq:fb.freq, n:fb.n, unit:fb.unit, category:$('fCat').value.trim(),
+    due:$('fDue').value||'', notes:$('fNotes').value.trim(), active:$('fActive').checked, ends:ends};
+  if (fb.freq==='onetime'){
+    if (!data.due) data.due=isoOf(todayNum());
+    var su=$('fSpreadUnit').value, sn=parseInt($('fSpreadN').value,10)||0;
+    data.spreadUnit=su!=='none'&&sn>0?su:'none'; data.spreadN=data.spreadUnit==='none'?0:sn;
+  } else { data.spreadUnit='none'; data.spreadN=0; }
+  if (fb.freq!=='onetime' && data.due) data.start=data.due;   // v13.10: the date typed is the next one owed; nothing before it is late
+  return {data:data, lv:$('fLvl').value}; }
+function applyDraft(bills, data, lv, id){ var b;
+  if (id){ b=bills.find(function(x){return x.id===id;}); if (!b) return null; if (b.due!==data.due) delete b.dom; else if (b.start) data.start=b.start; else delete data.start; Object.assign(b,keepStart(data)); if (lv!==(billLvl(b)?'wait':'first')) b.prio=lv; if(b.example && !/\(example\)/i.test(b.name)) delete b.example; }
+  else { b=data; if (!data.id) data.id=uid(); data.created=stamp(); if (lv!==(billLvl(data)?'wait':'first')) data.prio=lv; bills.push(data); }
+  return b; }
+/* v13.24: run the app's own forecast on a COPY of state (headline, Profit, late list — same code). Storage writes are blocked and every cache is put back. */
+function withState(S, fn){ var k={s:state, i:_inc, st:__st, ck:_ckM, pc:_pcM, ca:cashAsk, sx:spendX}; state=S; _inc={}; __st=true; _ckM={k:null,v:null}; _pcM={P:null,v:null}; spendX=null;
+  try{ return fn(); } finally{ state=k.s; _inc=k.i; __st=k.st; _ckM=k.ck; _pcM=k.pc; cashAsk=k.ca; spendX=k.sx; } }
+function fitSnap(fid){ var P=catchupPlan(); if (!P) return {none:true}; if (!P.cashSet) return {unk:true};
+  var m={}, put=function(b,due,c){ if (!b || isSpend(b) || !(c>0)) return; var k=b.id+'|'+due; if (!m[k]) m[k]={name:b.name||'This bill', due:due, c:0}; m[k].c+=c; };
+  basicLate(P).forEach(function(x){ put(x.b, x.due!=null?x.due:x.wk, x.c); });   // late now
+  var LP=longPlan(), LM=LP?lateMap(LP):{}; Object.keys(LM).forEach(function(k){ if (m[k]) return; var i=k.lastIndexOf('|'); put(billById(k.slice(0,i)), +k.slice(i+1), Math.round(LM[k]*100)); });   // would go late (same as "Makes … late")
+  var o=spendEdges(), K=LP&&LP.rows.length?rowBreak(LP,0):null, own=0; if (K) K.bills.concat(K.save).forEach(function(g){ if (g.b.id===fid) own+=g.c; });   // this bill's own part of this payday (same as its Payday row)
+  return {late:m, ok:!!o&&o.kind==='ok', T1:o&&o.kind==='ok'?Math.max(0,o.T1):null, gold:profGold(), aside:K?K.billsC+K.saveC:0, own:own, beh:planBehind().c}; }
+var fitBase={k:null,v:null};
+function fitCheck(D, id){ var key=JSON.stringify(state), fid=id||'__fit';
+  if (fitBase.k!==key+'|'+fid) fitBase={k:key+'|'+fid, v:withState(JSON.parse(key), function(){ return fitSnap(fid); })}; var A=fitBase.v;
+  var Z=withState(JSON.parse(key), function(){ var d=JSON.parse(JSON.stringify(D.data)); if (!id) d.id=fid; applyDraft(state.bills, d, D.lv, id); pinDefaultPay(); _inc={}; return fitSnap(fid); });
+  if (Z.none) return {k:'grey', t:'Set up your pay to see how this bill fits.'};
+  if (Z.unk) return {k:'grey', t:'Enter money you have now to see how this bill fits.'};
+  var nl=null; Object.keys(Z.late).forEach(function(k){ var z=Z.late[k], a=A.late&&A.late[k], d=z.c-(a?a.c:0); if (d>50 && (!nl || z.due<nl.due)) nl=z; });
+  if (nl) return {k:'red', t:nl.name+' '+mc(nl.c)+' would be late '+fmtShort(nl.due)};   // red only for a real late bill
+  var X=Z.aside-(A.aside||0), O=Z.own-(A.own||0), pc=Z.gold?'gold':'profN',
+    t=Math.abs(X)>=1?'Set aside '+mc(Math.abs(X))+(X>0?' more':' less')+' this payday':O>=1?'Takes '+mc(O)+' of this payday from other set-asides':'No change this payday';   // the check is already all going to bills: say what it moves
+  if (A.ok && Z.ok) t+=' · <span class="'+pc+'">Profit this check '+mc(A.T1)+' then '+mc(Z.T1)+'</span>';
+  else if (Z.ok) t+=' · <span class="'+pc+'">Profit this check would be '+mc(Z.T1)+'</span>';
+  var amb=Z.beh>(A.beh||0)+50; if (amb) t+=' · you’d be '+mc(Z.beh)+' behind schedule';
+  return {k:amb?'amber':'grey', t:t}; }
+function fitRender(){ var el=$('fitLine'); if (!el) return; var D=formDraft(), r=null;
+  if (!D.err){ try{ r=fitCheck(D, editingId); }catch(e){ r=null; } }
+  el.className='fitLine'+(r&&r.k==='red'?' red':r&&r.k==='amber'?' amb':''); el.innerHTML=r?r.t:''; }
+var fitT=null; function fitSoon(){ clearTimeout(fitT); fitT=setTimeout(fitRender,120); }
+['input','change','click'].forEach(function(ev){ $('editForm').addEventListener(ev, function(e){ if (e.target && e.target.id==='saveBtn') return; fitSoon(); }); });
 function formBill(){
   return {freq:$('fFreq').value, n:parseInt($('fN').value,10)||1, unit:$('fUnit').value, amount:parseAmt($('fAmt').value)};
 }
@@ -3039,17 +3088,8 @@ $('editForm').addEventListener('submit',function(e){
   var fb=formBill();
   if (fb.freq==='custom' && !(fb.n>=1)){ toast('Custom interval must be 1 or more'); return; }
   var ends=endFromForm(); if (ends===null){ toast($('fEnds').value==='date'?'Pick an end date':'Enter how many payments are left'); return; }
-  var data={name:name, amount:Math.round(amt*100)/100, freq:fb.freq, n:fb.n, unit:fb.unit, category:$('fCat').value.trim(),
-    due:$('fDue').value||'', notes:$('fNotes').value.trim(), active:$('fActive').checked, ends:ends};
-  var lv=$('fLvl').value, ob=editingId?state.bills.find(function(x){return x.id===editingId;}):null;
-  if (fb.freq==='onetime'){
-    if (!data.due) data.due=isoOf(todayNum());
-    var su=$('fSpreadUnit').value, sn=parseInt($('fSpreadN').value,10)||0;
-    data.spreadUnit=su!=='none'&&sn>0?su:'none'; data.spreadN=data.spreadUnit==='none'?0:sn;
-  } else { data.spreadUnit='none'; data.spreadN=0; }
-  if (fb.freq!=='onetime' && data.due) data.start=data.due;   // v13.10: the date typed is the next one owed; nothing before it is late
-  if (editingId){ var b=state.bills.find(function(x){return x.id===editingId;}); if (b.due!==data.due) delete b.dom; else if (b.start) data.start=b.start; else delete data.start; Object.assign(b,keepStart(data)); if (lv!==(billLvl(b)?'wait':'first')) b.prio=lv; if(b.example && !/\(example\)/i.test(b.name)) delete b.example; toast('Bill updated'); }
-  else { data.id=uid(); data.created=stamp(); if (lv!==(billLvl(data)?'wait':'first')) data.prio=lv; state.bills.push(data); toast('Added '+name); }
+  var D=formDraft(); if (D.err) return;
+  applyDraft(state.bills, D.data, D.lv, editingId); toast(editingId?'Bill updated':'Added '+name);
   pinDefaultPay();
   save(); closeSheet('editScrim'); render();
 });
@@ -3672,10 +3712,17 @@ function selfTest(){ var keep={state:state, today:__today, st:__st, sx:spendX, c
     eq('v13.23 …until it’s paid (or skipped): paying the oldest Rent removes just that one', [L23b.filter(function(x){ return x.b.id==='rt'; }).length, lateTotC(L23b)/100], [3, 4650]);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{mode:'due', planCash:'100', trackFrom:'2026-03-02', checks:[{id:'k1',date:'2026-02-27',amount:900}]}); cashAsk=null; var hd22=basicHeadHTML(true,'due'), sb22=statusSub(statusModel());
     eq('v13.22 Home: the reason line sits under the headline ("Bills still on time · $X behind schedule · set aside $Y more a week"); the spend box is the same fold in both modes; no "Not safe to spend"', [planState().k, statusModel().kind, /Bills still on time · .*behind schedule · set aside .* more a week/.test(sb22.replace(/<[^>]+>/g,'')), spendCardHTML()!=='' , /Not safe to spend/.test(moneyForHTML())], ['behind', 'ok', true, true, false]);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'}],{planCash:'500'}); var J24=JSON.stringify(state), fd=function(o){ return {data:Object.assign({name:'Phone', amount:60, freq:'monthly', n:1, unit:'months', category:'', due:'2026-03-14', notes:'', active:true, ends:'', spreadUnit:'none', spreadN:0},o), lv:'first'}; };
+    var f1=fitCheck(fd({}), null), f2=fitCheck(fd({name:'Car', amount:5000, freq:'onetime', due:'2026-03-10'}), null), f3=fitCheck(fd({name:'Rent', amount:800, due:'2026-03-20'}), 'rt'), P24=catchupPlan(), T24=spendEdges().T1;
+    eq('v13.24 fit check: adding Phone $60 — grey "Set aside $X more this payday · Profit this check $A then $B" (A = the Profit shown now); a bill that can’t be paid — red, naming it and its date; editing with no change — "No change"; real data untouched',
+      [f1.k, /^Set aside \$[\d.,]+ more this payday · <span class="gold">Profit this check \$[\d.,]+ then \$[\d.,]+<\/span>$/.test(f1.t), f1.t.indexOf('Profit this check '+mc(T24)+' then')>=0, f2.k, /^Car \$[\d.,]+ would be late Mar 10$/.test(f2.t), f3.k, /^No change this payday · /.test(f3.t), JSON.stringify(state)===J24, state.bills.length, catchupPlan()===P24],
+      ['grey', true, true, 'red', true, 'grey', true, true, 1, true]);
+    use([{id:'rt',name:'Rent',amount:600,freq:'monthly',due:'2026-03-20',created:'2026-01-01'}],{planCash:'300', trackFrom:'2026-01-01', checks:[{id:'k1',date:'2026-02-20',amount:1000},{id:'k2',date:'2026-02-27',amount:1000}]}); var b24=planBehind().c, f4=fitCheck(fd({name:'Rent', amount:1200, due:'2026-03-20'}), 'rt');
+    eq('v13.24 fit check: raising a bill you’ve been setting aside for — amber "…you’d be $X behind schedule" (no bill late)', [b24, f4.k, /you’d be \$[\d.,]+ behind schedule$/.test(f4.t), /would be late/.test(f4.t), state.bills[0].amount], [0, 'amber', true, false, 600]);
   }catch(err){ R.push('FAIL exception: '+(err&&err.message)+' '+(err&&err.stack||'').split('\n')[1]); }
   finally{ state=keep.state; __today=keep.today; __st=keep.st; _inc={}; spendX=keep.sx; cashAsk=keep.ca; }
   return {pass:ok, fail:R.length-ok, results:R}; }
-window.BillsApp={selfTest:selfTest, togglePaid:togglePaid, behindOwed:behindOwed, planKind:planKind, spendBar:spendBar, spendEdges:spendEdges, spendT2:spendT2, spendNewLate:spendNewLate, notCoveredModel:notCoveredModel, asideSet:asideSet, exAmt:exAmt, exTotal:exTotal, statusModel:statusModel, peStatusModel:peStatusModel, tcpModel:tcpModel, lateLeftBy:lateLeftBy, isSpend:isSpend, preStart:preStart, notOwed:notOwed, behindModel:behindModel, payWeekModel:payWeekModel, payEachModel:payEachModel, catchC:catchC, rowBreak:rowBreak, pieceIsSave:pieceIsSave, setUsualPay:function(v){ state.settings.checkAmt=(function(x){ x=parseAmt(x); return isFinite(x)&&x>0?String(Math.round(x*100)/100):''; })(v); if (state.settings.checkAmt) pinDefaultPay(); save(); render(); }, ckRows:ckRows, ckWindow:ckWindow, longPlan:longPlan, payWeekModel:payWeekModel, mfGroups:mfGroups, mfCover:mfCover, headsUp:headsUp, headModel:headModel, steadyShare:steadyShare, thisCheckShare:thisCheckShare, planCents:planCents, catchupPlanH:function(h){ return catchupPlan(null,{horizon:h}); }, fcModel:fcModel, fcRange:fcRange, fcRowC:fcRowC, fcGroups:fcGroups, fcWin:fcWin, setSkip:setSkip, isSkipped:isSkipped, basicDueModel:basicDueModel, lateTotC:lateTotC, allBillsHTML:allBillsHTML, isBasic:isBasic, basicLate:basicLate, moneyFor:moneyFor, planCents:planCents, ccModel:ccModel, rollKind:rollKind, planJars:planJars, setTick:setTick, tickedIn:tickedIn, setItem:setItem, estWhy:estWhy, planCash:planCash, planDemands:planDemands, planNeeds:planNeeds, planBreakEven:planBreakEven, ongoingPerCheck:ongoingPerCheck, prorateIn:prorateIn, avgRange:avgRange, catchupPlan:catchupPlan, planChecks:planChecks, nextPayday:nextPayday, pinDefaultPay:pinDefaultPay, save:save, render:render, coversIn:coversIn, applyChoice:applyChoice, shortOpenAmt:shortOpenAmt, incomeDay:incomeDay, incomeRange:incomeRange, periodMainIncome:periodMainIncome, payPeriodAt:payPeriodAt, checkTotals:checkTotals, logMode:logMode, allShorts:allShorts, setShort:setShort, lastDay:lastDay, isEnded:isEnded, behindModel:behindModel, periodAt:periodAt, endFromForm:endFromForm, dueModel:dueModel, windowRange:windowRange, periodKey:periodKey, markPaid:markPaid, unmarkPaid:unmarkPaid, isPaid:isPaid, oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
+window.BillsApp={selfTest:selfTest, fitCheck:fitCheck, formDraft:formDraft, togglePaid:togglePaid, behindOwed:behindOwed, planKind:planKind, spendBar:spendBar, spendEdges:spendEdges, spendT2:spendT2, spendNewLate:spendNewLate, notCoveredModel:notCoveredModel, asideSet:asideSet, exAmt:exAmt, exTotal:exTotal, statusModel:statusModel, peStatusModel:peStatusModel, tcpModel:tcpModel, lateLeftBy:lateLeftBy, isSpend:isSpend, preStart:preStart, notOwed:notOwed, behindModel:behindModel, payWeekModel:payWeekModel, payEachModel:payEachModel, catchC:catchC, rowBreak:rowBreak, pieceIsSave:pieceIsSave, setUsualPay:function(v){ state.settings.checkAmt=(function(x){ x=parseAmt(x); return isFinite(x)&&x>0?String(Math.round(x*100)/100):''; })(v); if (state.settings.checkAmt) pinDefaultPay(); save(); render(); }, ckRows:ckRows, ckWindow:ckWindow, longPlan:longPlan, payWeekModel:payWeekModel, mfGroups:mfGroups, mfCover:mfCover, headsUp:headsUp, headModel:headModel, steadyShare:steadyShare, thisCheckShare:thisCheckShare, planCents:planCents, catchupPlanH:function(h){ return catchupPlan(null,{horizon:h}); }, fcModel:fcModel, fcRange:fcRange, fcRowC:fcRowC, fcGroups:fcGroups, fcWin:fcWin, setSkip:setSkip, isSkipped:isSkipped, basicDueModel:basicDueModel, lateTotC:lateTotC, allBillsHTML:allBillsHTML, isBasic:isBasic, basicLate:basicLate, moneyFor:moneyFor, planCents:planCents, ccModel:ccModel, rollKind:rollKind, planJars:planJars, setTick:setTick, tickedIn:tickedIn, setItem:setItem, estWhy:estWhy, planCash:planCash, planDemands:planDemands, planNeeds:planNeeds, planBreakEven:planBreakEven, ongoingPerCheck:ongoingPerCheck, prorateIn:prorateIn, avgRange:avgRange, catchupPlan:catchupPlan, planChecks:planChecks, nextPayday:nextPayday, pinDefaultPay:pinDefaultPay, save:save, render:render, coversIn:coversIn, applyChoice:applyChoice, shortOpenAmt:shortOpenAmt, incomeDay:incomeDay, incomeRange:incomeRange, periodMainIncome:periodMainIncome, payPeriodAt:payPeriodAt, checkTotals:checkTotals, logMode:logMode, allShorts:allShorts, setShort:setShort, lastDay:lastDay, isEnded:isEnded, behindModel:behindModel, periodAt:periodAt, endFromForm:endFromForm, dueModel:dueModel, windowRange:windowRange, periodKey:periodKey, markPaid:markPaid, unmarkPaid:unmarkPaid, isPaid:isPaid, oneTimeShare:oneTimeShare, spreadStart:spreadStart, waterfall:waterfall, incomeYearly:incomeYearly, outlook:function(){return outlookCache;}, dayShares:dayShares, calCache:function(){return calCache;}, annualCost:annualCost, timesPerYear:timesPerYear, prorate:prorate, occurrences:occurrences, dayNum:dayNum, isoOf:isoOf, state:function(){return state;}};
 render();
 if (loadNote) setTimeout(function(){ appConfirm('Stored data problem', loadNote, 'OK', null); },50);
 })();

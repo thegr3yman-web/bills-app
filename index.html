@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="app-version" content="v13.11a">
+<meta name="app-version" content="v13.11b">
 <title>Bills</title>
 <meta name="description" content="Recurring bills, prorated to any period.">
 <meta name="color-scheme" content="light dark">
@@ -536,7 +536,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <button type="button" class="mfLink" id="allBillsBtn">📋 All bills <span>›</span></button>
   </section>
 
-  <div class="foot">Stored on this device and browser only — Safari and the Home Screen app can keep separate copies. Use Settings → Export / Import to back up or move your data. · v13.11a</div>
+  <div class="foot">Stored on this device and browser only — Safari and the Home Screen app can keep separate copies. Use Settings → Export / Import to back up or move your data. · v13.11b</div>
 </div>
 
 <button class="fab" id="addBtn" aria-label="Add bill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="fabL">Add bill</span></button>
@@ -1763,6 +1763,7 @@ function planDemands(ws, we, bnd){ // direct bills due in [ws,we] (in full) + pe
     var dated=!!parseISO(b.due), direct=isOne(b) ? spreadStart(b)==null : timesPerYear(b)>=per-1e-6;
     if (direct && dated){ occurrences(b,ws,we).forEach(function(n){ var am=Math.max(0,(+b.amount||0)-exFor(b,n)); if(!isPaidOcc(b,n) && !sc[n] && !(isOne(b) && bnd!=null && n>=bnd) && am>0.004) out.push({b:b,amt:am,prio:2,p0:2,date:n,due:n,kind:'bill'}); }); return; }
     if (dated || isOne(b)) return;                             // dated bigger bills: sinking fund (planSinking)
+    if (direct && Array.isArray(b.skipped) && b.skipped.some(function(iso){ var a=parseISO(iso), n=a?dayNum(a.y,a.m,a.d):null; return n!=null && n>=ws && n<=we; })) return;   // v13.11b: undated weekly item skipped this week
     var share = annualCost(b)/per*liveDays(b,ws,we)/(we-ws+1), tn=todayNum(); if (ws<=tn && tn<=we) share=Math.max(0, share-exFor(b,null));   // v13.11: set-aside extras this pay period
     var du=direct?we:planDue(b,ws,we);
     if (share>0.0049) out.push({b:b,amt:share,prio:direct?2:3,p0:direct?2:3,date:we,due:du,kind:direct?'bill':'aside',undated:true});
@@ -2435,11 +2436,17 @@ function ckItems(x){ var K=x.K, t=todayNum();
   var s=function(g){ return '<div class="fcLi fcSv" data-sv="'+g.c+'"><span>'+esc(g.b.name)+' <small>'+saveTxt(g.c,g)+'</small></span></div>'; };
   return (K.bills.length?'<div class="fcLh">Bills · '+mc(K.billsC)+'</div>'+K.bills.map(b).join(''):'')+(SK.length?SK.map(skipRowHTML).join(''):'')+(K.save.length?'<div class="fcLh">Set aside this payday · '+mc(K.saveC)+'</div>'+K.save.map(s).join(''):''); }
 /* ---- Pay this week: late + due before the next check; weekly-or-more-often items fold into "Spending this week" ---- */
+/* v13.11b "Skip this week" for spending: dated items skip that occurrence (b.skipped, as bills already do); undated weekly items skip this pay period (key = its last day) */
+function spSkipKey(){ return payPeriodAt(todayNum()).e; }
+function spRowHTML(x, row){ var b=x.b;
+  if (x.skipped) return '<div class="duerow skipped" data-kind="skipped"><button class="bill" data-id="'+esc(b.id)+'"><span class="dot" style="background:var(--line)"></span><span class="mid"><div class="nm">'+esc(b.name)+'<span class="skipTag">Skipped</span></div><div class="meta">'+(x.n!=null?'for '+fmtDay(x.n)+' · ':'this week · ')+'$0 this time</div></span></button><button type="button" class="skipB" data-unskip="'+esc(b.id)+'" data-skn="'+x.skn+'">Undo</button></div>';
+  return row+'<div class="spMv exQ"><button type="button" data-skip="'+esc(b.id)+'" data-skn="'+x.skn+'" aria-label="Skip '+esc(b.name)+' this week ($0)">Skip this week</button><button type="button" data-nospend="'+esc(b.id)+'">Move '+esc(b.name)+' to bills</button></div>'; }
 function payWeekModel(){ var P=catchupPlan(), t=todayNum(), L=basicLate(P), nx=t+7;
   if (P&&P.rows.length){ nx=P.rows[0].date>t?P.rows[0].date:(P.rows[1]?P.rows[1].date:t+7); }
   var due=[], spend=[], per=(PAY[state.settings.payFreq||'weekly']||PAY.weekly).per;
-  enabledBills().forEach(function(b){ if (isSpend(b)){ var oc=parseISO(b.due)?occurrences(b,t,Math.max(nx-1,t+6)):[]; if (!parseISO(b.due)) spend.push({b:b, n:null, amt:+b.amount||0, done:false});
-      oc.forEach(function(n){ spend.push({b:b, n:n, amt:+b.amount||0, done:false}); }); return; }
+  enabledBills().forEach(function(b){ if (isSpend(b)){ var oc=parseISO(b.due)?occurrences(b,t,Math.max(nx-1,t+6)):[], sk=spSkipKey(); if (!parseISO(b.due)) spend.push({b:b, n:null, amt:+b.amount||0, done:false, skn:sk, skipped:isSkipped(b,sk)});
+      oc.forEach(function(n){ spend.push({b:b, n:n, amt:+b.amount||0, done:false, skn:n}); });
+      if (parseISO(b.due)) skippedIn(b,t,Math.max(nx-1,t+6)).forEach(function(n){ spend.push({b:b, n:n, amt:+b.amount||0, done:false, skn:n, skipped:true}); }); return; }
     occurrences(b,t,nx-1).forEach(function(n){ if (preStart(b,n)) return; due.push({b:b, n:n, amt:+b.amount||0, done:!!isPaidOcc(b,n)}); }); });
   var by=function(a,b){ return (a.done?1:0)-(b.done?1:0) || (a.n==null?1e9:a.n)-(b.n==null?1e9:b.n) || b.amt-a.amt; }; due.sort(by); spend.sort(by);
   return {late:L, due:due, spend:spend, nx:nx, t:t}; }
@@ -2458,9 +2465,9 @@ function payWeekHTML(){ var D=payWeekModel(), t=D.t, h='<div class="pwHd"><h2>Pa
   h+=D.due.slice(0,KD).map(dr).join('');
   if (restD.length) h+='<button type="button" class="bFoldRow" data-bopen="pwDue" id="pwDueFold">+ '+restD.length+' more before your next check, <b>'+mc(restD.reduce(function(a,x){ return a+(x.done?0:Math.round(x.amt*100)); },0))+'</b> still to pay <span>show ›</span></button>';
   if (!D.late.length && !D.due.some(function(x){ return !x.done; })) h+='<div class="empty" style="padding:8px 0">Nothing else due before your next check ✓</div>';
-  if (D.spend.length){ var st=D.spend.reduce(function(a,x){ return a+(x.done?0:Math.round(x.amt*100)); },0);
+  if (D.spend.length){ var st=D.spend.reduce(function(a,x){ return a+(x.done||x.skipped?0:Math.round(x.amt*100)); },0);
     if (!state.settings.spendNoticeSeen) h+='<div class="spNote" id="spNote" role="status">Moved '+plural(D.spend.length,'weekly item')+' to Spending this week: '+D.spend.map(function(x){ return esc(x.b.name); }).filter(function(v,i,a){ return a.indexOf(v)===i; }).join(', ')+' · <button type="button" id="spNoteBtn">tap to change</button></div>';
-    h+= bOpen.spend ? '<div class="dsec2 bSec"><h2>Spending this week</h2><span>'+mc(st)+' · '+plural(D.spend.length,'item')+'</span></div>'+D.spend.map(function(x){ return dr(x)+'<div class="spMv"><button type="button" data-nospend="'+esc(x.b.id)+'">Move '+esc(x.b.name)+' to bills</button></div>'; }).join('')+'<button type="button" class="bFoldRow" data-bopen="spend">hide</button>'
+    h+= bOpen.spend ? '<div class="dsec2 bSec"><h2>Spending this week</h2><span>'+mc(st)+' · '+plural(D.spend.length,'item')+'</span></div>'+D.spend.map(function(x){ return spRowHTML(x, x.skipped?'':dr(x)); }).join('')+'<button type="button" class="bFoldRow" data-bopen="spend">hide</button>'
       : '<button type="button" class="bFoldRow" data-bopen="spend" id="spFold">Spending this week · '+plural(D.spend.length,'item')+' · '+mc(st)+' <span>show ›</span></button>'; }
   return h; }
 /* ---- v13.10 Basic Home, top to bottom: (status line + Late in the head) · Late (red) · Next check: what this check pays, Spending this week,
@@ -2492,10 +2499,10 @@ function tcpRowHTML(o, T, t){ var b=o.b, open=o.due.filter(function(d){ return !
   var x={b:b, n:pick?pick.n:null, done:!!(pick&&!open)};
   if (pick) return bRow(x,{kind:'b-tcp', data:'data-bp="'+esc(b.id)+'" data-n="'+pick.n+'"', meta:parts.join(' · '), amt:one&&!o.c?null:mc(o.c)});
   return bRow(x,{kind:'b-tcp b-sav', noChk:true, meta:parts.join(' · '), amt:one?null:mc(o.c)}); }
-function spendLineHTML(D){ if (!D.spend.length) return ''; var h='', st=D.spend.reduce(function(a,x){ return a+(x.done?0:Math.round(x.amt*100)); },0), names=D.spend.map(function(x){ return esc(x.b.name); }).filter(function(v,i,a){ return a.indexOf(v)===i; });
+function spendLineHTML(D){ if (!D.spend.length) return ''; var h='', st=D.spend.reduce(function(a,x){ return a+(x.done||x.skipped?0:Math.round(x.amt*100)); },0), names=D.spend.map(function(x){ return esc(x.b.name); }).filter(function(v,i,a){ return a.indexOf(v)===i; });
   if (!state.settings.spendNoticeSeen) h+='<div class="spNote" id="spNote" role="status">Weekly items ('+names.join(', ')+') are Spending: no Paid button, never late or Short — bills get your money first, spending gets what’s left · <button type="button" id="spNoteBtn">tap to change</button></div>';
   if (!bOpen.spend) return h+'<button type="button" class="bFoldRow" data-bopen="spend" id="spFold">Spending this week · '+plural(D.spend.length,'item')+' · '+mc(st)+' <span>show ›</span></button>';
-  return h+'<div class="dsec2 bSec"><h2>Spending this week</h2><span>'+mc(st)+' · '+plural(D.spend.length,'item')+'</span></div>'+D.spend.map(function(x){ return bRow(x,{kind:'b-spend', noChk:true, meta:(x.n!=null?'for '+fmtDay(x.n):'every week'), amt:money(x.amt)})+'<div class="spMv"><button type="button" data-nospend="'+esc(x.b.id)+'">Move '+esc(x.b.name)+' to bills</button></div>'; }).join('')+'<button type="button" class="bFoldRow" data-bopen="spend" id="spFold">hide</button>'; }
+  return h+'<div class="dsec2 bSec"><h2>Spending this week</h2><span>'+mc(st)+' · '+plural(D.spend.length,'item')+'</span></div>'+D.spend.map(function(x){ return spRowHTML(x, x.skipped?'':bRow(x,{kind:'b-spend', noChk:true, meta:(x.n!=null?'for '+fmtDay(x.n):'every week'), amt:money(x.amt)})); }).join('')+'<button type="button" class="bFoldRow" data-bopen="spend" id="spFold">hide</button>'; }
 function nextCardHTML(M, used){ M=M||tcpModel(); var R=M.R, t=todayNum(); if (!R||!R.length) return '';
   var x=R[0], h='<div class="nxHd"><div><div class="bNt">Next check</div><b class="nxD" id="nxDate">'+(x.r.date===t?'Today, ':'')+fmtDay(x.r.date)+'</b><div class="nxA" id="nxAmt">'+ckPay(x)+'</div></div><button type="button" class="nxLog" id="nxLog">Log a check</button></div>';
   // ≤ 15 dollar figures on Home outside the check math: rows fill what the status line, Late, the check amount, Spending and the folds leave
@@ -2553,6 +2560,7 @@ var spendX=null;   // cents
    Full bar = Profit untouched; half = Profit used up (T1); empty = T2. T2 ≤ T1: no amber zone. */
 function spendBar(X, T1, T2, E, cap){ X=Math.max(0,+X||0); T1=Math.max(0,+T1||0); T2=Math.max(0,+T2||0); E=Math.max(0,+E||0);
   var amber=T2>T1, z, f;
+  if (T1<=0 && X<=0) return amber ? {zone:'amber', fill:0.5, mid:true, left:0, fromExtra:0, fromSet:0, noProfit:true} : {zone:'none', fill:0, mid:false, left:0, fromExtra:0, fromSet:0, noProfit:true};   // v13.11b: full gold only when there is Profit to spend
   if (X>T2 || (cap!=null && X>cap)){ z='red'; f=0; }
   else if (!amber || X<=T1){ z='gold'; f=amber ? (T1>0 ? 1-0.5*X/T1 : 0.5) : (T2>0 ? 1-X/T2 : 1); }
   else { z='amber'; f=0.5-0.5*(X-T1)/(T2-T1); }
@@ -2582,11 +2590,13 @@ function spendBodyHTML(){ var o=spendEdges(); if (!o) return '';
   if (o.kind==='late') return '<div class="spL red">Already late: pay '+esc(o.late.b.name)+' first</div>';
   if (o.kind==='short') return '<div class="spL red">'+(o.nm?'Short: pay '+esc(o.nm)+' first':'Short: bills come first this check')+'</div>';
   var X=spendX||0, T2=X>0?spendT2(o):Infinity, S=spendBar(X,o.T1,T2===Infinity?o.cap:T2,o.E,o.cap), pct=X>0?Math.round(S.fill*1000)/10:100, line;
-  if (X<=0) S={zone:'gold', mid:false, left:o.T1};
-  if (S.zone==='gold') line='<span class="gold">Profit this check: '+mc(S.left)+'</span>';
+  if (X<=0 && o.T1>0) S={zone:'gold', mid:false, left:o.T1};
+  else if (X<=0){ var T2z=spendT2(o); S=spendBar(0,0,T2z,o.E,o.cap); pct=Math.round(S.fill*1000)/10; }
+  if (S.noProfit) line=S.zone==='amber'?'No Profit this check. Spending would come from '+(o.E>0?'extra money on hand, then ':'')+'set-aside.':'No Profit this check — any spending makes a bill late.';
+  else if (S.zone==='gold') line='<span class="gold">Profit this check: '+mc(S.left)+'</span>';
   else if (S.zone==='amber') line=S.fromSet>0 ? 'Takes '+mc(S.fromSet)+' from set-aside'+(S.fromExtra>0?' (after '+mc(S.fromExtra)+' of extra money on hand)':'')+'. Bills still on time. Set aside '+mc(Math.ceil(S.fromSet/Math.max(1,o.n)))+' more '+perWord()+' to catch up.' : 'Uses '+mc(S.fromExtra)+' of your extra money on hand. Bills still on time.';
   else { var nl=X>T2&&X<=o.cap?spendNewLate(o,X):null; line=nl ? 'Makes '+esc(nl.b?nl.b.name:'a bill')+' '+mc(nl.amt)+' late on '+fmtShort(nl.due)+'.' : 'That’s more than this check plus money you have now.'; }
-  return '<div class="spBar spZ-'+S.zone+'"><i style="width:'+pct+'%"></i>'+(S.mid?'<b class="spMid"></b>':'')+'</div><div class="spL '+(S.zone==='amber'?'amb':S.zone)+'" role="status">'+line+'</div>'; }
+  return '<div class="spBar spZ-'+S.zone+'"><i style="width:'+pct+'%"></i>'+(S.mid?'<b class="spMid"></b>':'')+'</div><div class="spL '+(S.noProfit?'unk':S.zone==='amber'?'amb':S.zone)+'" role="status">'+line+'</div>'; }
 function spendCardHTML(){ var o=spendEdges(); if (!o || !isBasic()) return ''; var v=spendX!=null?String(spendX/100):'';
   return '<div class="card spCard"><label class="spLbl">Plan to spend this check'+(o.est?' <small class="pmut">(estimate)</small>':o.youSet?' <small class="pmut">(you set)</small>':'')+'</label>'+(o.kind==='ok'?'<div class="spRow"><span>$</span><input class="spIn" inputmode="decimal" placeholder="0" value="'+esc(v)+'" aria-label="Plan to spend this check"></div>':'')+'<div class="spBody">'+spendBodyHTML()+'</div></div>'; }
 document.addEventListener('input',function(e){ var el=e.target; if (!el||!el.classList||!el.classList.contains('spIn')) return; var raw=el.value.trim(), v=parseAmt(raw);
@@ -2692,7 +2702,7 @@ function basicDueHTML(){
     : '<button type="button" class="bFoldRow" data-bopen="paid" id="bPaidFold">✓ '+plural(D.paid.length,'bill')+' paid <span>show ›</span></button>';
   if (D.later.length) h+= bOpen.later ? '<div class="dsec2 bSec"><h2>Later this month</h2><span>'+plural(D.later.length,'bill')+'</span></div>'+wkDivs(D.later,function(x){ return bRow(x,{kind:'b-later', data:'data-bp="'+esc(x.b.id)+'" data-n="'+x.n+'"', meta:nextTag(D,x)+'due '+fmtDay(x.n)+(x.sink?' · '+payByTxt(x.b,x.n):''), amt:money(x.amt), skip:!isOne(x.b)}); })+'<button type="button" class="bFoldRow" data-bopen="later">hide</button>'
     : '<button type="button" class="bFoldRow" data-bopen="later" id="bLaterFold">Later this month: '+plural(D.later.length,'bill')+' <span>show ›</span></button>';
-  var SK=[]; enabledBills().forEach(function(b){ skippedIn(b, t-7, Math.max(t+13, (function(){ var d=fromDayNum(t); return dayNum(d.y,d.m,dim(d.y,d.m)); })())).forEach(function(n){ SK.push({b:b,n:n}); }); }); SK.sort(function(a,b){ return a.n-b.n; });
+  var SK=[]; enabledBills().forEach(function(b){ if (isSpend(b)) return; skippedIn(b, t-7, Math.max(t+13, (function(){ var d=fromDayNum(t); return dayNum(d.y,d.m,dim(d.y,d.m)); })())).forEach(function(n){ SK.push({b:b,n:n}); }); }); SK.sort(function(a,b){ return a.n-b.n; });
   if (SK.length) h+='<div class="dsec2 bSec"><h2>Skipped — $0 this time</h2><span>'+plural(SK.length,'bill')+'</span></div>'+SK.map(skipRowHTML).join('');
   var AR=avgRange('month'), cats=categories(), sums={}; activeBills().forEach(function(b){ var c=(b.category||'').trim()||'Uncategorized'; sums[c]=(sums[c]||0)+prorateIn(b,'month',AR); });
   var rows=Object.keys(sums).filter(function(c){return sums[c]>0;}).map(function(c){return {c:c,v:sums[c]};}).sort(function(a,b){return b.v-a.v;}), tot=rows.reduce(function(a,r){return a+r.v;},0);
@@ -3213,7 +3223,7 @@ $('dueBasic').addEventListener('click',function(e){ if (e.target.closest('[data-
   var b=e.target.closest('.bill[data-id]'); if(b) openEdit(b.dataset.id); });
 document.addEventListener('click',function(e){ var k=e.target.closest('[data-skip],[data-unskip]'); if(!k) return; e.stopPropagation();
   var b=billById(k.dataset.skip||k.dataset.unskip), n=+k.dataset.skn; if(!b||!isFinite(n)) return; var on=!!k.dataset.skip; setSkip(b,n,on); save(); render();
-  toast(on?'Skipped '+b.name+' ('+fmtShort(n)+') — $0 this time':'Back on: '+b.name+' due '+fmtShort(n)); }, true);
+  toast(on?'Skipped '+b.name+(parseISO(b.due)?' ('+fmtShort(n)+')':' this week')+' — $0 this time':'Back on: '+b.name+(parseISO(b.due)?' due '+fmtShort(n):' this week')); }, true);
 $('allBillsBtn').addEventListener('click',function(){ $('abList').innerHTML=allBillsHTML(); openSheet('abScrim'); });
 document.addEventListener('click',function(e){ if (e.target.closest('.abOpen')){ $('abList').innerHTML=allBillsHTML(); openSheet('abScrim'); return; }
   if (e.target.closest('#nxLog')){ openCheck(null); return; }
@@ -3350,7 +3360,9 @@ function selfTest(){ var keep={state:state, today:__today, st:__st, sx:spendX}, 
     var E1=spendBar(300,500,300,0,2000), E2=spendBar(301,500,300,0,2000);
     eq('spend bar: T2 below T1 skips the amber zone', [E1.zone, E1.mid, E2.zone], ['gold', false, 'red']);
     var Z1=spendBar(0,0,0,0,0), Z2=spendBar(1,0,0,0,0);
-    eq('spend bar: $0 check, nothing to spend — no divide by zero', [isFinite(Z1.fill), Z1.fill, Z2.zone], [true, 1, 'red']);
+    eq('spend bar: $0 check, nothing to spend — no divide by zero', [isFinite(Z1.fill), Z1.fill, Z2.zone], [true, 0, 'red']);
+    var N1=spendBar(0,0,400,0,2000), N2=spendBar(0,0,0,0,2000), N3=spendBar(0,300,400,0,2000);
+    eq('spend bar: full gold only when there is Profit — Profit $0 starts amber at half (T2>0) or empty (T2=0)', [N1.zone,N1.fill,N2.zone,N2.fill,N3.zone,N3.fill], ['amber',0.5,'none',0,'gold',1]);
     use([{id:'car',name:'Car payment',amount:900,freq:'monthly',due:'2026-03-09'},SA[1],SA[2]],{planCash:'500'});
     var o=spendEdges(), T2=spendT2(o);
     eq('spend edge: at T2 every bill is on time, T2 + $0.01 makes one late', [T2>0 && T2<o.cap, spendNewLate(o,T2), !!spendNewLate(o,T2+1)], [true, null, true]);
@@ -3381,6 +3393,14 @@ function selfTest(){ var keep={state:state, today:__today, st:__st, sx:spendX}, 
     state.settings.checks=[{id:'k1',date:'2026-03-13',amount:900}]; _inc={}; LPx=catchupPlan(null,{horizon:10});
     var J3=JSON.parse(JSON.stringify(state)); sanitizeState(J3);
     eq('…a logged check for that payday replaces your expected amount; expected amounts survive export / import', [rk(1), J3.settings.expect], [['logged',900], [{date:'2026-03-13',amt:400},{date:'2026-04-24',amt:250}]]);
+    var spAt=function(id){ var v=0, P=catchupPlan(), r=P.rows[0], seen=[]; r.pays.concat(r.spendMiss||[], r.rolled||[]).forEach(function(x){ if (x.b.id!==id) return; if (id==='sn'){ if (x.due===dayNum(2026,2,5) && seen.indexOf(x.due)<0){ seen.push(x.due); v+=1; } } else v+=x.amt; }); return r2(v); };   /* sn: is the Mar 5 occurrence in the forecast at all; cf: this week's share */
+    use([{id:'sn',name:'Snacks',amount:40,freq:'weekly',due:'2026-03-05'},{id:'cf',name:'Coffee',amount:20,freq:'weekly'}],{planCash:'0'});
+    var a0=[spAt('sn'), spAt('cf')], wk=payWeekModel().spend.filter(function(x){ return !x.skipped; }).length;
+    setSkip(billById('sn'), dayNum(2026,2,5), true); billById('cf').skipped=[isoOf(spSkipKey())]; _inc={};
+    var a1=[spAt('sn'), spAt('cf')], sk=payWeekModel().spend.filter(function(x){ return x.skipped; }).map(function(x){ return x.b.id; }).sort(), J4=JSON.parse(JSON.stringify(state)); sanitizeState(J4);
+    eq('Skip this week: the skipped spending is $0 in the forecast, shows as Skipped (with Undo), and survives export / import', [a0[0]>0 && a1[0]===0 ? 'gone' : a1[0], a0[1]>0, a1[1], sk, J4.bills.map(function(b){ return (b.skipped||[]).length; })], ['gone', true, 0, ['cf','sn'], [1,1]]);
+    setSkip(billById('sn'), dayNum(2026,2,5), false); _inc={};
+    eq('…Undo puts it back', spAt('sn'), 1);
     use(SA,{planCash:'500'}); var i0=pieces('ins').s, r0=pieces('rent').s;
     billById('ins').extra=[{id:'x1',date:'2026-03-02',amt:100}]; _inc={}; var i1=pieces('ins').s, r1=pieces('rent').s, AS=asideSet(billById('ins'));
     eq('Set aside extra: counts for the bill, later checks need less for it (money on hand moves to it)', [r2(i0-i1), r2(r1-r0), AS.set, AS.amt], [100, 100, 100, 600]);

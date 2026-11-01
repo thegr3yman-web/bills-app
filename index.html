@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; manifest-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="app-version" content="v13.27">
+<meta name="app-version" content="v13.28">
 <title>Bills</title>
 <meta name="description" content="Recurring bills, prorated to any period.">
 <meta name="color-scheme" content="light dark">
@@ -551,7 +551,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <button type="button" class="mfLink" id="allBillsBtn">📋 All bills <span>›</span></button>
   </section>
 
-  <div class="foot">Not financial advice · Your data is only on this device. Export a backup often; browsers can erase it (Safari after 7 days unused).<br>v13.27</div>
+  <div class="foot">Not financial advice · Your data is only on this device. Export a backup often; browsers can erase it (Safari after 7 days unused).<br>v13.28</div>
 </div>
 
 <button class="fab" id="addBtn" aria-label="Add bill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="fabL">Add bill</span></button>
@@ -798,6 +798,8 @@ var MONTHS_FULL=['January','February','March','April','May','June','July','Augus
 var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 function fmtDay(n, withYear){ var o=fromDayNum(n); var w=DOW[new Date(n*864e5).getUTCDay()];
   return w+', '+MON[o.m]+' '+o.d+(withYear?', '+o.y:''); }
+function fmtYear(n){ var o=fromDayNum(n); return MON[o.m]+' '+o.d+', '+o.y; }   // v13.28: always with the year
+function throughTxt(n){ var d=n-todayNum(); return d>300?'for about a year (through <b>'+fmtYear(n)+'</b>)':d>90?'for about '+Math.round(d/30.4)+' months (through <b>'+fmtYear(n)+'</b>)':'through <b>'+fmtYear(n)+'</b>'; }   // v13.28: far dates never look like the past
 function fmtShort(n){ var o=fromDayNum(n); return MON[o.m]+' '+o.d+(o.y!==fromDayNum(todayNum()).y?', '+o.y:''); }
 
 function stepDays(b){
@@ -2368,7 +2370,7 @@ function planLineHTML(o, pay){ o=o||planState(); var id=pay?'plStatePay':'plStat
   return '<div class="plSt plOk" id="'+id+'">Bills still on time.</div><div class="plNote" id="'+id+'Note">'+t+'</div>'; }
 function statusHTML(o){ var P=o.P, pw=perWord();
   if (o.kind==='unknown') return 'Bills status unknown — enter money you have now';
-  if (o.kind==='ok') return (o.Hm&&o.Hm.L&&o.Hm.L.length?'After paying what’s late, bills are covered through <b>':'You’re OK through <b>')+fmtShort(o.through)+'</b>';   // v13.10c: never "Late" next to "You're OK"
+  if (o.kind==='ok') return (o.Hm&&o.Hm.L&&o.Hm.L.length?'After paying what’s late, bills are covered ':'You’re OK ')+throughTxt(o.through);   // v13.28: year always shown; >90 days says how long   // v13.10c: never "Late" next to "You're OK"
   var pre=o.per==null&&o.nx!=null&&o.nx>todayNum(), fix=pre?' · needed by '+fmtShort(o.by)+', before your next check':' · set aside <b>'+money(o.per!=null?o.per:o.amt)+'</b> more '+pw;   // v13.13: no "more a week" when the money is needed before the next check   // v13.10c: every Short ends with the fix
   if (!o.nc && notCoveredModel().length) return 'Short <b>'+money(o.amt)+'</b>: you choose what waits'+fix;
   if (o.kind==='nc') return ncText(P);
@@ -3813,6 +3815,7 @@ function selfTest(){ var keep={state:state, today:__today, st:__st, sx:spendX, c
     billById('rt').short=[{due:'2026-03-20', have:0, done:true}]; var n1=rentSum(), p1=spendEdges().T1; __today=dayNum(2026,2,21); _inc={}; var L27=basicLate(catchupPlan()).map(function(x){ return x.b.id+':'+isoOf(x.due)+':'+x.c; }); __today=dayNum(2026,2,2); _inc={};
     eq('v13.27 N2 a missed set-aside marked covered: Rent Mar 20 stays in the forecast (same pieces and Profit as with no shortfall entry) and is late on Mar 21 if not marked paid',
       [n1, p1, L27], [n0, p0, ['rt:2026-03-20:90000']]);
+    __today=dayNum(2026,10,1); eq('v13.28 through wording always has the year; far dates say how long', [statusHTML({kind:'ok',through:dayNum(2027,9,13)}), statusHTML({kind:'ok',through:dayNum(2026,10,20)}), statusHTML({kind:'ok',through:dayNum(2027,2,24)}), statusHTML({kind:'ok',through:dayNum(2027,9,13),Hm:{L:[1]}})], ['You’re OK for about a year (through <b>Oct 13, 2027</b>)','You’re OK through <b>Nov 20, 2026</b>','You’re OK for about 5 months (through <b>Mar 24, 2027</b>)','After paying what’s late, bills are covered for about a year (through <b>Oct 13, 2027</b>)']);
     // v13.27 N3: first due date two cycles away — no phantom earlier payment
     use([{id:'gy',name:'Gym',amount:50,freq:'monthly',due:'2026-04-15',start:'2026-04-15'}],{planCash:'0'}); var gp={}; catchupPlan().rows.forEach(function(r){ r.pays.forEach(function(x){ if (x.b.id==='gy') gp[isoOf(x.due)]=Math.round(((gp[isoOf(x.due)]||0)+x.amt)*100)/100; }); });
     eq('v13.27 N3 Gym $50 first due Apr 15 (added Mar 2): next due Apr 15, nothing set aside for a phantom Mar 15, $50 spread before Apr 15', [isoOf(nextDue(billById('gy'))), gp['2026-03-15']||0, gp['2026-04-15']], ['2026-04-15', 0, 50]);

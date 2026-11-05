@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; manifest-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="app-version" content="v13.28">
+<meta name="app-version" content="v13.29">
 <title>Bills</title>
 <meta name="description" content="Recurring bills, prorated to any period.">
 <meta name="color-scheme" content="light dark">
@@ -551,7 +551,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <button type="button" class="mfLink" id="allBillsBtn">📋 All bills <span>›</span></button>
   </section>
 
-  <div class="foot">Not financial advice · Your data is only on this device. Export a backup often; browsers can erase it (Safari after 7 days unused).<br>v13.28</div>
+  <div class="foot">Not financial advice · Your data is only on this device. Export a backup often; browsers can erase it (Safari after 7 days unused).<br>v13.29</div>
 </div>
 
 <button class="fab" id="addBtn" aria-label="Add bill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="fabL">Add bill</span></button>
@@ -2325,6 +2325,8 @@ function headModel(){ var P=catchupPlan(), N=P&&P.needs, L=basicLate(P), t=today
   var all=HU?HU.list:[], NB=all.filter(function(x){ return x.by<r1; })[0]||null, rest=all.filter(function(x){ return x!==NB; });
   return {P:P, N:N, L:L, LT:lateTotC(L), TD:TD, NB:NB, HU:rest[0]||null, more:Math.max(0,rest.length-1), order:[L.length?'late':null, TD.length?'today':null, NB?'need':null, rest.length?'heads':null].filter(Boolean)}; }
 /* v13.10 status line: "You're OK through D" or "Short $X by D · set aside $Y more a week" (late bills first, in red) */
+function weekSpendTot(D){ D=D||payWeekModel(); return D.spend.reduce(function(a,x){ return a+(x.done||x.skipped?0:Math.round(x.amt*100)); },0); }   // v13.29 (2026-11-05): same cents as the Spending this week fold
+function weekSpendNeed(P){ if (!P || !P.cashSet) return 0; var st=weekSpendTot(); if (!(st>0)) return 0; var held=Math.round((+P.held||0)*100), free=Math.max(0,Math.round((+P.cash||0)*100)); return held<=0?st:Math.max(0,st-free); }   // v13.29 (2026-11-05): free cash vs this week's spending; $0 cash while spending > $0 always needs the full total
 function statusModel(){ var Hm=headModel(), P=Hm.P; if (!P) return {Hm:Hm};
   if (!P.cashSet) return {Hm:Hm, P:P, kind:'unknown', NC:false, more:0, nx:P.rows.length?P.rows[0].date:null};   // v13.10: blank Money you have now = unknown, never green, never all red
   var HU=headsUp(), all=(HU&&HU.list)||[], x=all[0]||null, NC=P.status!=='none'&&P.status!=='caught'&&!P.caughtNow&&!(HU&&HU.longOk), t=todayNum(), o={Hm:Hm, P:P, NC:NC, more:Math.max(0,all.length-1)};
@@ -2333,6 +2335,7 @@ function statusModel(){ var Hm=headModel(), P=Hm.P; if (!P) return {Hm:Hm};
   if (x){ o.kind='short'; o.amt=x.own; o.by=x.by; o.per=x.perCheck; o.names=x.names; o.x=x; }
   else if (NC && P.rows.length){ var last=P.rows[P.rows.length-1], amt=Math.max(last.rolledAmt||0, P.shortEnd||0); o.kind='short'; o.nc=true; o.amt=Math.round(amt*100)/100; o.by=last.we; o.per=amt>0.004?Math.ceil(Math.round(amt*100)/P.rows.length)/100:null; o.names=[]; if (!(amt>0.004)) o.kind='nc'; }
   else { o.kind='ok'; o.through=HU&&HU.cs&&HU.horizon<HU.cs.length?HU.cs[HU.horizon]-1:(P.rows.length?P.rows[P.rows.length-1].we:t); }
+  if (o.kind==='ok'){ var sn=weekSpendNeed(P); if (sn>0) o.spendNeed=sn; }   // v13.29 (2026-11-05): keep kind ok (spending is never Late) but note unfunded weekly spend
   o.nx=nx; return o; }
 /* v13.12 plan states. Behind plan = for each bill money is set aside for (not one-time, not paid in full from each check), what its prorated schedule says it should
    have by the last payday (amount × share of its cycle — last due date to next — gone by) minus what it has now (Money you have now split by due date + Set aside extra), when positive. */
@@ -2370,7 +2373,7 @@ function planLineHTML(o, pay){ o=o||planState(); var id=pay?'plStatePay':'plStat
   return '<div class="plSt plOk" id="'+id+'">Bills still on time.</div><div class="plNote" id="'+id+'Note">'+t+'</div>'; }
 function statusHTML(o){ var P=o.P, pw=perWord();
   if (o.kind==='unknown') return 'Bills status unknown — enter money you have now';
-  if (o.kind==='ok') return (o.Hm&&o.Hm.L&&o.Hm.L.length?'After paying what’s late, bills are covered ':'You’re OK ')+throughTxt(o.through);   // v13.28: year always shown; >90 days says how long   // v13.10c: never "Late" next to "You're OK"
+  if (o.kind==='ok') return o.spendNeed>0 ? 'Bills on schedule · this week’s spending still needs <b>'+mc(o.spendNeed)+'</b>' : (o.Hm&&o.Hm.L&&o.Hm.L.length?'After paying what’s late, bills are covered ':'You’re OK ')+throughTxt(o.through);   // v13.29 (2026-11-05): unfunded weekly spend is not green OK   // v13.28: year always shown; >90 days says how long   // v13.10c: never "Late" next to "You're OK"
   var pre=o.per==null&&o.nx!=null&&o.nx>todayNum(), fix=pre?' · needed by '+fmtShort(o.by)+', before your next check':' · set aside <b>'+money(o.per!=null?o.per:o.amt)+'</b> more '+pw;   // v13.13: no "more a week" when the money is needed before the next check   // v13.10c: every Short ends with the fix
   if (!o.nc && notCoveredModel().length) return 'Short <b>'+money(o.amt)+'</b>: you choose what waits'+fix;
   if (o.kind==='nc') return ncText(P);
@@ -2390,7 +2393,7 @@ function basicHeadHTML(onDue, md){
   var S=statusModel(), Hm=S.Hm, P=Hm.P, h='', L=Hm.L, LT=Hm.LT, card=P?moneyCardHTML(md||'due'):'';
   var TDn=Hm.TD.map(function(b){ return esc(b.name); }).join(', ');
   if (!P) h='<div class="bH" id="bHeadline">Add your pay to see what you need</div>'+(effMode()==='pay'?'<button type="button" class="goIncome bLink">Set up my pay ›</button>':'');   // v13.22: one Set up prompt per screen (the setup bar has it off Payday), both modes
-  else { var cls=S.kind==='ok'?(planStrict()&&planState().k==='behind'?'amb':'ok'):S.kind==='unknown'?'unk':'need', sub=statusSub(S);
+  else { var cls=S.kind==='ok'?(S.spendNeed>0||(planStrict()&&planState().k==='behind')?'amb':'ok'):S.kind==='unknown'?'unk':'need', sub=statusSub(S);   // v13.29 (2026-11-05): unfunded weekly spend is amber, not green
     if (L.length) h='<div class="bH need" id="bHeadline">Late: <b>'+mc(LT)+'</b></div><div class="bS">'+(L.length<=2?esc(L.map(function(x){ return x.b.name; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).join(' and ')):plural(L.length,'bill'))+' past due — pay '+(L.length===1?'it':'these')+' first</div><div class="bSt '+cls+'" id="bStatus">'+statusHTML(S)+'</div>'+(sub?'<div class="bS" id="bStatusSub">'+sub+'</div>':'');
     else { var la=S.kind==='short'?peStatusModel():null;   // v13.10c: "Late bill ahead" comes before "Short…"
       if (la && la.none){ var ne1=notCoveredModel().filter(function(e){ return !e.spend; })[0]; if (ne1) la={k:'late', name:ne1.b.name, c:ne1.c, due:ne1.due, past:ne1.due<todayNum()}; }   // v13.11: NC with no unfinished row still names the first uncovered bill
@@ -2702,7 +2705,7 @@ function spendEdges(){ if (_inc.se!==undefined) return _inc.se; var P=catchupPla
     if (!P.cashSet) o.kind='unknown';
     else { var L=basicLate(P); if (L.length){ o.kind='late'; o.late=L[0]; }
       else { var SM=statusModel(); if (SM.kind==='short' || SM.kind==='nc' || SM.NC){ var NCm=notCoveredModel(), nb=NCm.filter(function(e){ return !e.spend; })[0]||NCm[0]; o.kind='short'; o.nm=nb?nb.b.name:((SM.names||[]).filter(function(n){ return !state.bills.some(function(b){ return b.name===n && isSpend(b); }); })[0]||(SM.names||[])[0]||null); return (_inc.se=o); }   // v13.11a: never contradict a Short / Not covered headline
-        var HU=headsUp(); o.kind='ok'; o.H=Math.max(P.rows.length,(HU&&HU.horizon)||0); o.T1=Math.max(0,r0.left||0); o.E=Math.max(0,r0.extra||0); o.cap=Math.max(0,Math.round(r0.inc+(+P.held||0)*100)); } } }
+        var HU=headsUp(); o.kind='ok'; o.H=Math.max(P.rows.length,(HU&&HU.horizon)||0); o.T1=Math.max(0,r0.left||0); o.E=Math.max(0,r0.extra||0); o.cap=Math.max(0,Math.round(r0.inc+(+P.held||0)*100)); if (SM.spendNeed>0) o.spendNeed=SM.spendNeed; } } }   // v13.29 (2026-11-05)
   return (_inc.se=o); }
 function spendRun(o,c){ return catchupPlan(null,{horizon:o.H, spend:c/100}); }
 function spendNewLate(o,c){ if (!o.base) o.base=lateMap(spendRun(o,0)); var M=lateMap(spendRun(o,c)), best=null;   // late or unfinished vs the X=0 run (Pay first order applies: same plan)
@@ -2726,7 +2729,7 @@ function spendBodyHTML(){ var o=spendEdges(); if (!o) return '';
   else { var nl=X>T2&&X<=o.cap?spendNewLate(o,X):null; line=nl ? 'Makes '+esc(nl.b?nl.b.name:'a bill')+' '+mc(nl.amt)+' late on '+fmtShort(nl.due)+'.' : 'That’s more than this check plus money you have now.'; }
   return '<div class="spBar spZ-'+S.zone+(S.zone==='gold'&&!profGold()?' spProfN':'')+'"><i style="width:'+pct+'%"></i>'+(S.mid?'<b class="spMid"></b>':'')+'</div><div class="spL '+(S.noProfit?'unk':S.zone==='amber'?'amb':S.zone==='gold'&&!profGold()?'':S.zone)+'" role="status">'+line+'</div>'; }   // v13.22: the reason line sits under the headline
 /* v13.16: T2 without typing — the most this check can spend with no new late bill (same plan, so today's check not in yet counts the same way) */
-function awayInfo(o){ if (!o || o.kind!=='ok') return null; var T2=spendT2(o); if (!(T2>0)) return null; if (T2>=o.cap) return {all:true, c:T2}; return {c:T2, nl:spendNewLate(o,T2+1)}; }
+function awayInfo(o){ if (!o || o.kind!=='ok' || o.spendNeed>0) return null; var T2=spendT2(o); if (!(T2>0)) return null; if (T2>=o.cap) return {all:true, c:T2}; return {c:T2, nl:spendNewLate(o,T2+1)}; }   // v13.29 (2026-11-05): away is not spare cash when this week's spending isn't funded
 function awayTxt(o){ var A=awayInfo(o); if (!A) return ''; return A.all?'No late bills ahead':mc(A.c)+' away from a late bill'+(A.nl&&A.nl.due!=null?' ('+fmtShort(A.nl.due)+')':''); }   // v13.19: short, date only
 function awayHTML(o){ var t=awayTxt(o); return t?'<div class="spAway" id="spAway">'+t+'</div>':''; }
 /* v13.19: ONE money card, shown at the top of Payday (Basic + Advanced) and under the Home headline: Money you have now [change],
@@ -2737,8 +2740,9 @@ function cashAskHTML(){ return cashAsk?'<div class="bAsk cashAsk2" id="cashAsk" 
 function moneyCardHTML(where){ var P=catchupPlan(); if (!P) return ''; var o=P.cashSet?spendEdges():null, h='';
   h+=(!P.cashSet || bCashEdit) ? cashEditHTML(P) : '<div class="bS" id="bCashLine">Money you have now: <b>'+money(P.held)+'</b> · <button type="button" id="bCashChg">change</button></div>';
   h+=cashAskHTML()+ckPendHTML()+exLineHTML(P);
-  if (o && o.kind==='ok'){ var at=awayTxt(o); if (at) h+='<div class="mcAway" id="mcAway">'+at+'</div>';
-    h+='<div class="mcProf" id="mcProf"><span class="'+(o.T1>0?profCls():'profN')+'">Profit this check: '+mc(Math.max(0,o.T1))+'</span>'+profNote()+'</div>'; }
+  if (o && o.kind==='ok'){ if (o.spendNeed>0) h+='<div class="mcAway" id="mcAway">this week’s spending still needs '+mc(o.spendNeed)+'</div>';   // v13.29 (2026-11-05): no away / Profit while weekly spend isn’t funded from cash
+    else { var at=awayTxt(o); if (at) h+='<div class="mcAway" id="mcAway">'+at+'</div>';
+    h+='<div class="mcProf" id="mcProf"><span class="'+(o.T1>0?profCls():'profN')+'">Profit this check: '+mc(Math.max(0,o.T1))+'</span>'+profNote()+'</div>'; } }
   return '<div class="mCard" id="mCard" data-where="'+where+'">'+h+'</div>'; }
 /* v13.19: Home folds the spend box under "What if…" (closed by default; v13.25 renamed, adds a check amount and a set-aside-more line). Preview only — never changes data. */
 var spHomeOpen=false;
@@ -3816,6 +3820,20 @@ function selfTest(){ var keep={state:state, today:__today, st:__st, sx:spendX, c
     eq('v13.27 N2 a missed set-aside marked covered: Rent Mar 20 stays in the forecast (same pieces and Profit as with no shortfall entry) and is late on Mar 21 if not marked paid',
       [n1, p1, L27], [n0, p0, ['rt:2026-03-20:90000']]);
     __today=dayNum(2026,10,1); eq('v13.28 through wording always has the year; far dates say how long', [statusHTML({kind:'ok',through:dayNum(2027,9,13)}), statusHTML({kind:'ok',through:dayNum(2026,10,20)}), statusHTML({kind:'ok',through:dayNum(2027,2,24)}), statusHTML({kind:'ok',through:dayNum(2027,9,13),Hm:{L:[1]}})], ['You’re OK for about a year (through <b>Oct 13, 2027</b>)','You’re OK through <b>Nov 20, 2026</b>','You’re OK for about 5 months (through <b>Mar 24, 2027</b>)','After paying what’s late, bills are covered for about a year (through <b>Oct 13, 2027</b>)']);
+    eq('v13.29 split line when this week’s spending isn’t funded from cash', statusHTML({kind:'ok',through:dayNum(2026,10,20),spendNeed:4500}), 'Bills on schedule · this week’s spending still needs <b>$45.00</b>');
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'},{id:'sn',name:'Snacks',amount:40,freq:'weekly',due:'2026-03-05'}],{planCash:'0'});
+    var S29=statusModel(), se29=spendEdges(), h29=statusHTML(S29), c29=moneyCardHTML('due'), bh29=basicHeadHTML(true,'due');
+    eq('v13.29 $0 cash + weekly spend: kind stays ok (spend is never Late), headline is the split not You’re OK, no away/Profit', [S29.kind, S29.spendNeed, /You’re OK/.test(h29), /Bills on schedule · this week’s spending still needs/.test(h29), weekSpendTot(), awayInfo(se29), /away from a late bill|Profit this check/.test(c29), /this week’s spending still needs/.test(c29), /\bamb\b/.test(bh29)], ['ok', 4000, false, true, 4000, null, false, true, true]);
+    use([{id:'sn',name:'Snacks',amount:40,freq:'weekly',due:'2026-03-05'}],{planCash:'100'});
+    var S29b=statusModel(), se29b=spendEdges(), h29b=statusHTML(S29b), c29b=moneyCardHTML('due');
+    eq('v13.29 cash covers this week’s spending: You’re OK and away/Profit stay', [S29b.kind, !S29b.spendNeed, /You’re OK /.test(h29b), !!awayInfo(se29b), /away from a late bill|No late bills ahead/.test(awayTxt(se29b)||''), /Profit this check: /.test(c29b)], ['ok', true, true, true, true, true]);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-20'},{id:'sn',name:'Snacks',amount:40,freq:'weekly',due:'2026-03-05'}],{});
+    eq('v13.29 Money you have now unset: still unknown, never the split or green OK', [statusModel().kind, statusHTML(statusModel()), /this week’s spending still needs/.test(statusHTML(statusModel()))], ['unknown', 'Bills status unknown — enter money you have now', false]);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-01'}],{planCash:'100'});
+    var L29=basicLate(catchupPlan()), H29=basicHeadHTML(true,'due'), S29c=statusModel();
+    eq('v13.29 set-aside bill still goes Late: past-due Rent is Late, not the spending split', [L29.map(function(x){ return x.b.id+':'+x.c; }), /Late:/.test(H29), /this week’s spending still needs/.test(H29||'')], [['rt:80000'], true, false]);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-04'}],{planCash:'0'});
+    eq('v13.29 set-aside bill still goes Short when due before the next check', [statusModel().kind, /Short/.test(statusHTML(statusModel())), /this week’s spending still needs/.test(statusHTML(statusModel()))], ['short', true, false]);
     // v13.27 N3: first due date two cycles away — no phantom earlier payment
     use([{id:'gy',name:'Gym',amount:50,freq:'monthly',due:'2026-04-15',start:'2026-04-15'}],{planCash:'0'}); var gp={}; catchupPlan().rows.forEach(function(r){ r.pays.forEach(function(x){ if (x.b.id==='gy') gp[isoOf(x.due)]=Math.round(((gp[isoOf(x.due)]||0)+x.amt)*100)/100; }); });
     eq('v13.27 N3 Gym $50 first due Apr 15 (added Mar 2): next due Apr 15, nothing set aside for a phantom Mar 15, $50 spread before Apr 15', [isoOf(nextDue(billById('gy'))), gp['2026-03-15']||0, gp['2026-04-15']], ['2026-04-15', 0, 50]);

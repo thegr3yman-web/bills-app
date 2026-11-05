@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; manifest-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="app-version" content="v13.29">
+<meta name="app-version" content="v13.30">
 <title>Bills</title>
 <meta name="description" content="Recurring bills, prorated to any period.">
 <meta name="color-scheme" content="light dark">
@@ -551,7 +551,7 @@ details.more[open]>summary::after{transform:rotate(180deg)}
     <button type="button" class="mfLink" id="allBillsBtn">📋 All bills <span>›</span></button>
   </section>
 
-  <div class="foot">Not financial advice · Your data is only on this device. Export a backup often; browsers can erase it (Safari after 7 days unused).<br>v13.29</div>
+  <div class="foot">Not financial advice · Your data is only on this device. Export a backup often; browsers can erase it (Safari after 7 days unused).<br>v13.30</div>
 </div>
 
 <button class="fab" id="addBtn" aria-label="Add bill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="fabL">Add bill</span></button>
@@ -2681,10 +2681,11 @@ document.addEventListener('click',function(e){ var c=e.target.closest('[data-ckw
   var r=e.target.closest('[data-ckr]'); if (r){ ckOpen[r.dataset.ckr]=!ckOpen[r.dataset.ckr]; render(); return; }
   if (e.target.closest('#spNoteBtn')){ state.settings.spendNoticeSeen=true; bOpen.spend=true; save(); render(); return; }
   var ns=e.target.closest('[data-nospend]'); if (ns){ var b=billById(ns.dataset.nospend); if (b){ b.notSpend=true; save(); render(); toast(b.name+' moved to bills'); } } });
-/* ---- v13.11 "Extra money on hand": money you have now beyond what the bills and set-asides need (row 0 of Your checks, capped so no later check goes short) ---- */
-function exLineHTML(P){ if (!P) return ''; if (!P.cashSet) return '<div class="bS exLine unk" id="bExtra">Extra money on hand: <b>unknown</b></div>';
-  var R=ckRows(), x=R&&R[0], ex=x&&x.extra>0?x.extra:0; if (!ex && (+P.held||0)>0) return '<div class="bS exLine" id="bExtra">All of it is set aside for bills</div>';   // v13.11a: not a bare $0.00 next to the money you have
-  return '<div class="bS exLine" id="bExtra">Extra money on hand: <b>'+mc(ex)+'</b></div>'; }
+/* ---- v13.11 "Extra money on hand": still computed on ckRows (x.extra) and spendEdges().E for the spend bar; the money-card top line is v13.30's bills-due figure. ---- */
+function weekBillsDueCents(D){ D=D||payWeekModel(); return D.due.reduce(function(a,x){ return a+(x.done?0:Math.round(x.amt*100)); },0); }   // v13.30 (2026-11-05): unpaid payWeekModel().due only — same cents math as the '+ N more … still to pay' fold; excludes Spending this week and Late
+function exLineHTML(P){ if (!P || !P.cashSet) return '';   // v13.30 (2026-11-05): hide when Money you have now is unset (no "unknown" here)
+  var x=weekBillsDueCents(); if (!(x>0)) return '';   // never a $0.00 line
+  return '<div class="bS exLine" id="bExtra">This week’s bills due: <b>'+mc(x)+'</b></div>'; }
 /* ---- v13.11 Spend box: "Plan to spend this check" is a what-if. It never changes another number (nothing else reads spendX). ---- */
 var spendX=null;   // cents
 /* pure: X = planned spend, T1 = Profit this check, T2 = most you can spend with no NEW late bill, E = extra money on hand, cap (all cents).
@@ -3834,6 +3835,20 @@ function selfTest(){ var keep={state:state, today:__today, st:__st, sx:spendX, c
     eq('v13.29 set-aside bill still goes Late: past-due Rent is Late, not the spending split', [L29.map(function(x){ return x.b.id+':'+x.c; }), /Late:/.test(H29), /this week’s spending still needs/.test(H29||'')], [['rt:80000'], true, false]);
     use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-04'}],{planCash:'0'});
     eq('v13.29 set-aside bill still goes Short when due before the next check', [statusModel().kind, /Short/.test(statusHTML(statusModel())), /this week’s spending still needs/.test(statusHTML(statusModel()))], ['short', true, false]);
+    use([{id:'ph',name:'Phone',amount:60,freq:'monthly',due:'2026-03-04'},{id:'sn',name:'Snacks',amount:40,freq:'weekly',due:'2026-03-05'}],{planCash:'500'});
+    var c30a=moneyCardHTML('due');
+    eq('v13.30 unpaid bills due this week show “This week’s bills due”; Spending is not in $X', [weekBillsDueCents(), /This week’s bills due: <b>\$60\.00<\/b>/.test(c30a), /Extra money on hand|All of it is set aside for bills/.test(c30a)], [6000, true, false]);
+    use([{id:'ph',name:'Phone',amount:60,freq:'monthly',due:'2026-03-20'}],{planCash:'500'});
+    var c30b=moneyCardHTML('due');
+    eq('v13.30 $0 unpaid this week hides the bills-due line (never $0.00)', [weekBillsDueCents(), /This week’s bills due/.test(c30b), /id="bExtra"/.test(c30b)], [0, false, false]);
+    use([{id:'sn',name:'Snacks',amount:40,freq:'weekly',due:'2026-03-05'}],{planCash:'100'});
+    var se30=spendEdges(), c30c=moneyCardHTML('due'), r30=ckRows()&&ckRows()[0];
+    eq('v13.30 Extra is gone from the money card; spendEdges E is still set when cash has a surplus', [se30.E>0, !!(r30&&r30.extra>0), /Extra money on hand|All of it is set aside for bills/.test(c30c), /This week’s bills due/.test(c30c), /Profit this check: /.test(c30c)], [true, true, false, false, true]);
+    use([{id:'ph',name:'Phone',amount:60,freq:'monthly',due:'2026-03-04'}],{});
+    var c30u=moneyCardHTML('due');
+    eq('v13.30 Money you have now unset: no bills-due line and no Extra unknown', [/This week’s bills due/.test(c30u), /Extra money on hand/.test(c30u), /id="bExtra"/.test(c30u)], [false, false, false]);
+    use([{id:'rt',name:'Rent',amount:800,freq:'monthly',due:'2026-03-01'}],{planCash:'100'});
+    eq('v13.30 Late is not folded into this week’s bills due', [weekBillsDueCents(), /This week’s bills due/.test(moneyCardHTML('due')), basicLate(catchupPlan()).length>0], [0, false, true]);
     // v13.27 N3: first due date two cycles away — no phantom earlier payment
     use([{id:'gy',name:'Gym',amount:50,freq:'monthly',due:'2026-04-15',start:'2026-04-15'}],{planCash:'0'}); var gp={}; catchupPlan().rows.forEach(function(r){ r.pays.forEach(function(x){ if (x.b.id==='gy') gp[isoOf(x.due)]=Math.round(((gp[isoOf(x.due)]||0)+x.amt)*100)/100; }); });
     eq('v13.27 N3 Gym $50 first due Apr 15 (added Mar 2): next due Apr 15, nothing set aside for a phantom Mar 15, $50 spread before Apr 15', [isoOf(nextDue(billById('gy'))), gp['2026-03-15']||0, gp['2026-04-15']], ['2026-04-15', 0, 50]);
